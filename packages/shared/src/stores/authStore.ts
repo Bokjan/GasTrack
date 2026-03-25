@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { User, AuthTokens } from '../types';
+import type { User, AuthResponse } from '../types';
 import { authApi, userApi } from '../api';
 
 interface AuthState {
@@ -11,11 +11,11 @@ interface AuthState {
   register: (email: string, password: string, nickname: string) => Promise<void>;
   logout: () => Promise<void>;
   fetchProfile: () => Promise<void>;
-  setTokens: (tokens: AuthTokens) => void;
+  setTokens: (tokens: AuthResponse) => void;
   reset: () => void;
 }
 
-const saveTokens = (tokens: AuthTokens) => {
+const saveTokens = (tokens: AuthResponse) => {
   localStorage.setItem('access_token', tokens.access_token);
   localStorage.setItem('refresh_token', tokens.refresh_token);
 };
@@ -34,12 +34,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       const { data } = await authApi.login({ email, password });
-      saveTokens(data.data);
-      set({ isAuthenticated: true });
-
-      // 获取用户资料
-      const profile = await userApi.getProfile();
-      set({ user: profile.data.data });
+      const authData = data.data;
+      saveTokens(authData);
+      set({ isAuthenticated: true, user: authData.user });
     } finally {
       set({ isLoading: false });
     }
@@ -49,11 +46,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       const { data } = await authApi.register({ email, password, nickname });
-      saveTokens(data.data);
-      set({ isAuthenticated: true });
-
-      const profile = await userApi.getProfile();
-      set({ user: profile.data.data });
+      const authData = data.data;
+      saveTokens(authData);
+      set({ isAuthenticated: true, user: authData.user });
     } finally {
       set({ isLoading: false });
     }

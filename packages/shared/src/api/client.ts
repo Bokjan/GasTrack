@@ -1,8 +1,8 @@
 import axios from 'axios';
-import type { ApiResponse, AuthTokens } from '../types';
+import type { ApiResponse, AuthResponse } from '../types';
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8098/api/v1',
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -60,7 +60,7 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const { data } = await axios.post<ApiResponse<AuthTokens>>(
+        const { data } = await axios.post<ApiResponse<AuthResponse>>(
           `${apiClient.defaults.baseURL}/auth/refresh`,
           { refresh_token: refreshToken },
         );

@@ -16,7 +16,7 @@ type CORSConfig struct {
 // DefaultCORSConfig 返回默认 CORS 配置
 func DefaultCORSConfig() CORSConfig {
 	return CORSConfig{
-		AllowedOrigins: []string{"http://localhost:5173"},
+		AllowedOrigins: []string{"http://localhost:3000", "http://localhost:5173"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Content-Type", "Authorization", "Accept-Language"},
 		MaxAge:         "86400", // 24 hours

@@ -45,7 +45,11 @@ export function milesToKm(miles: number): number {
 }
 
 /** 格式化数字：添加千分位 */
-export function formatNumber(num: number, decimals = 2): string {
+export function formatNumber(num: number | undefined | null, decimals = 2): string {
+  if (num == null || isNaN(num)) return (0).toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
   return num.toLocaleString(undefined, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -53,7 +57,7 @@ export function formatNumber(num: number, decimals = 2): string {
 }
 
 /** 格式化金额 */
-export function formatCurrency(amount: number, currency: string): string {
+export function formatCurrency(amount: number | undefined | null, currency: string): string {
   const symbols: Record<string, string> = {
     CNY: '¥',
     USD: '$',
@@ -64,5 +68,5 @@ export function formatCurrency(amount: number, currency: string): string {
   };
   const symbol = symbols[currency] || currency;
   const decimals = currency === 'JPY' || currency === 'KRW' ? 0 : 2;
-  return `${symbol}${formatNumber(amount, decimals)}`;
+  return `${symbol}${formatNumber(amount ?? 0, decimals)}`;
 }

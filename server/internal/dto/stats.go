@@ -21,11 +21,14 @@ type VehicleStatsResponse struct {
 
 // OverviewStatsResponse 全局统计总览响应
 type OverviewStatsResponse struct {
-	TotalVehicles int64                  `json:"total_vehicles"`
-	TotalRecords  int64                  `json:"total_records"`
-	TotalCost     float64                `json:"total_cost"`
-	CurrencyCode  string                 `json:"currency_code"`
-	Vehicles      []VehicleStatsResponse `json:"vehicles"`
+	TotalVehicles  int64                  `json:"total_vehicles"`
+	TotalRecords   int64                  `json:"total_records"`
+	TotalFuel      float64                `json:"total_fuel"`
+	TotalCost      float64                `json:"total_cost"`
+	TotalDistance  float64                `json:"total_distance"`
+	AvgConsumption float64                `json:"avg_consumption"`
+	CurrencyCode   string                 `json:"currency_code"`
+	Vehicles       []VehicleStatsResponse `json:"vehicles"`
 }
 
 // ExpenseStatsRequest 费用统计请求参数

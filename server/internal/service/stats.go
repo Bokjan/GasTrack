@@ -105,6 +105,8 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 
 	var totalRecords int64
 	var totalCost float64
+	var totalFuel float64
+	var totalDistance float64
 	vehicleStats := make([]dto.VehicleStatsResponse, 0, len(vehicles))
 
 	for _, v := range vehicles {
@@ -115,6 +117,8 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 
 		totalRecords += stats.TotalRecords
 		totalCost += stats.TotalCost
+		totalFuel += stats.TotalFuel
+		totalDistance += stats.TotalDistance
 
 		targetUnit := convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
 		vehicleStats = append(vehicleStats, dto.VehicleStatsResponse{
@@ -130,12 +134,21 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 		})
 	}
 
+	// 计算平均油耗 (L/100km)
+	var avgConsumption float64
+	if totalDistance > 0 {
+		avgConsumption = totalFuel / totalDistance * 100
+	}
+
 	return &dto.OverviewStatsResponse{
-		TotalVehicles: int64(len(vehicles)),
-		TotalRecords:  totalRecords,
-		TotalCost:     totalCost,
-		CurrencyCode:  user.CurrencyCode,
-		Vehicles:      vehicleStats,
+		TotalVehicles:  int64(len(vehicles)),
+		TotalRecords:   totalRecords,
+		TotalFuel:      totalFuel,
+		TotalCost:      totalCost,
+		TotalDistance:  totalDistance,
+		AvgConsumption: avgConsumption,
+		CurrencyCode:   user.CurrencyCode,
+		Vehicles:       vehicleStats,
 	}, nil
 }
 

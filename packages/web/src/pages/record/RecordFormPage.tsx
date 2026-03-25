@@ -14,7 +14,7 @@ import {
 } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { fuelRecordApi } from '@gastrack/shared';
+import { fuelRecordApi, useAuthStore } from '@gastrack/shared';
 import type { CreateFuelRecordRequest } from '@gastrack/shared';
 import dayjs from 'dayjs';
 
@@ -28,6 +28,7 @@ export default function RecordFormPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const user = useAuthStore((s) => s.user);
 
   const isEdit = !!recordId;
 
@@ -40,7 +41,7 @@ export default function RecordFormPage() {
           const record = data.data;
           form.setFieldsValue({
             ...record,
-            fuel_date: dayjs(record.fuel_date),
+            refuel_date: dayjs(record.refuel_date),
           });
         })
         .catch(() => message.error(t('common.error')))
@@ -51,17 +52,18 @@ export default function RecordFormPage() {
   // 自动计算总费用
   const handleCalcTotal = () => {
     const amount = form.getFieldValue('fuel_amount');
-    const price = form.getFieldValue('price_per_unit');
+    const price = form.getFieldValue('unit_price');
     if (amount && price) {
       form.setFieldValue('total_cost', Math.round(amount * price * 100) / 100);
     }
   };
 
-  const onFinish = async (values: CreateFuelRecordRequest & { fuel_date: dayjs.Dayjs }) => {
+  const onFinish = async (values: CreateFuelRecordRequest & { refuel_date: dayjs.Dayjs }) => {
     setLoading(true);
-    const payload = {
+    const payload: CreateFuelRecordRequest = {
       ...values,
-      fuel_date: values.fuel_date.format('YYYY-MM-DDTHH:mm:ssZ'),
+      refuel_date: values.refuel_date.format('YYYY-MM-DDTHH:mm:ssZ'),
+      currency_code: user?.currency_code || 'CNY',
     };
 
     try {
@@ -108,12 +110,12 @@ export default function RecordFormPage() {
           layout="vertical"
           onFinish={onFinish}
           initialValues={{
-            fuel_date: dayjs(),
+            refuel_date: dayjs(),
             is_full_tank: true,
           }}
         >
           <Form.Item
-            name="fuel_date"
+            name="refuel_date"
             label={t('fuelRecord.fuelDate')}
             rules={[{ required: true, message: t('common.required') }]}
           >
@@ -124,7 +126,7 @@ export default function RecordFormPage() {
             />
           </Form.Item>
 
-          <Form.Item name="station" label={t('fuelRecord.station')}>
+          <Form.Item name="station_name" label={t('fuelRecord.station')}>
             <Input placeholder={t('fuelRecord.station')} />
           </Form.Item>
 
@@ -145,7 +147,7 @@ export default function RecordFormPage() {
             </Form.Item>
 
             <Form.Item
-              name="price_per_unit"
+              name="unit_price"
               label={t('fuelRecord.pricePerUnit')}
               rules={[{ required: true, message: t('common.required') }]}
               style={{ flex: 1 }}
@@ -192,7 +194,7 @@ export default function RecordFormPage() {
             <Switch />
           </Form.Item>
 
-          <Form.Item name="notes" label={t('fuelRecord.notes')}>
+          <Form.Item name="note" label={t('fuelRecord.notes')}>
             <Input.TextArea rows={3} placeholder={t('fuelRecord.notes')} />
           </Form.Item>
 

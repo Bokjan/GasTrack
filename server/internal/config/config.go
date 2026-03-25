@@ -116,11 +116,11 @@ func Load(configPath string) (*Config, error) {
 func setDefaults(v *viper.Viper) {
 	// 服务器
 	v.SetDefault("server.host", "0.0.0.0")
-	v.SetDefault("server.port", 8080)
+	v.SetDefault("server.port", 8098)
 	v.SetDefault("server.read_timeout", 15*time.Second)
 	v.SetDefault("server.write_timeout", 15*time.Second)
 	v.SetDefault("server.shutdown_timeout", 10*time.Second)
-	v.SetDefault("server.cors_origins", []string{"http://localhost:5173"})
+	v.SetDefault("server.cors_origins", []string{"http://localhost:3000", "http://localhost:5173"})
 
 	// 数据库
 	v.SetDefault("database.host", "localhost")

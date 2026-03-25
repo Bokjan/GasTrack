@@ -44,7 +44,7 @@ export default function DashboardPage() {
     }
   };
 
-  const currency = user?.currency || 'CNY';
+  const currency = user?.currency_code || 'CNY';
 
   return (
     <div className="page-container">

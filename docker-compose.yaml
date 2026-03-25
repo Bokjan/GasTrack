@@ -1,0 +1,36 @@
+# GasTrack 开发环境依赖服务
+# 使用方式: docker compose up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gastrack-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: gastrack
+      POSTGRES_PASSWORD: gastrack
+      POSTGRES_DB: gastrack
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gastrack -d gastrack"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 邮件测试服务（开发用，可选）
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: gastrack-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    profiles:
+      - full
+
+volumes:
+  pgdata:
+    driver: local

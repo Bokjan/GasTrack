@@ -1,7 +1,7 @@
 import apiClient from './client';
 import type {
   ApiResponse,
-  AuthTokens,
+  AuthResponse,
   LoginRequest,
   RegisterRequest,
   RefreshRequest,
@@ -16,7 +16,7 @@ import type {
   UpdateFuelRecordRequest,
   VehicleStats,
   OverviewStats,
-  ConsumptionTrend,
+  FuelEfficiencyTrendResponse,
   PaginatedResponse,
 } from '../types';
 
@@ -24,13 +24,13 @@ import type {
 
 export const authApi = {
   login: (data: LoginRequest) =>
-    apiClient.post<ApiResponse<AuthTokens>>('/auth/login', data),
+    apiClient.post<ApiResponse<AuthResponse>>('/auth/login', data),
 
   register: (data: RegisterRequest) =>
-    apiClient.post<ApiResponse<AuthTokens>>('/auth/register', data),
+    apiClient.post<ApiResponse<AuthResponse>>('/auth/register', data),
 
   refresh: (data: RefreshRequest) =>
-    apiClient.post<ApiResponse<AuthTokens>>('/auth/refresh', data),
+    apiClient.post<ApiResponse<AuthResponse>>('/auth/refresh', data),
 
   logout: () => apiClient.post<ApiResponse<null>>('/auth/logout'),
 };
@@ -111,9 +111,10 @@ export const statsApi = {
   overview: () =>
     apiClient.get<ApiResponse<OverviewStats>>('/stats/overview'),
 
-  consumptionTrend: (vehicleId: string, params?: { months?: number }) =>
-    apiClient.get<ApiResponse<ConsumptionTrend[]>>(
-      `/vehicles/${vehicleId}/stats/trend`,
+  /** 后端路由: GET /vehicles/:id/efficiency-trend */
+  efficiencyTrend: (vehicleId: string, params?: { limit?: number }) =>
+    apiClient.get<ApiResponse<FuelEfficiencyTrendResponse>>(
+      `/vehicles/${vehicleId}/efficiency-trend`,
       { params },
     ),
 };

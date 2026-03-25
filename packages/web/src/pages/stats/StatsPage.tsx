@@ -25,9 +25,10 @@ export default function StatsPage() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [stats, setStats] = useState<VehicleStats | null>(null);
   const [trend, setTrend] = useState<ConsumptionTrend[]>([]);
+  const [efficiencyUnit, setEfficiencyUnit] = useState<string>('L/100km');
   const [loading, setLoading] = useState(false);
 
-  const currency = user?.currency || 'CNY';
+  const currency = user?.currency_code || 'CNY';
 
   useEffect(() => {
     fetchVehicles();
@@ -51,10 +52,12 @@ export default function StatsPage() {
     try {
       const [statsRes, trendRes] = await Promise.all([
         statsApi.vehicleStats(selectedVehicleId),
-        statsApi.consumptionTrend(selectedVehicleId, { months: 12 }),
+        statsApi.efficiencyTrend(selectedVehicleId, { limit: 30 }),
       ]);
       setStats(statsRes.data.data);
-      setTrend(trendRes.data.data);
+      const trendData = trendRes.data.data;
+      setTrend(trendData.items || []);
+      setEfficiencyUnit(trendData.efficiency_unit || 'L/100km');
     } catch {
       // 可能没有数据
     } finally {
@@ -69,12 +72,12 @@ export default function StatsPage() {
       type: 'category' as const,
       data: trend.map((item) => item.date),
     },
-    yAxis: { type: 'value' as const, name: 'L/100km' },
+    yAxis: { type: 'value' as const, name: efficiencyUnit },
     series: [
       {
         name: t('stats.avgConsumption'),
         type: 'line',
-        data: trend.map((item) => item.consumption),
+        data: trend.map((item) => item.fuel_efficiency),
         smooth: true,
         areaStyle: { opacity: 0.15 },
         itemStyle: { color: '#1677ff' },
@@ -83,19 +86,19 @@ export default function StatsPage() {
     grid: { left: 50, right: 20, top: 40, bottom: 30 },
   };
 
-  // 费用趋势图配置
-  const costChartOption = {
+  // 里程趋势图配置
+  const distanceChartOption = {
     tooltip: { trigger: 'axis' as const },
     xAxis: {
       type: 'category' as const,
       data: trend.map((item) => item.date),
     },
-    yAxis: { type: 'value' as const, name: currency },
+    yAxis: { type: 'value' as const, name: 'km' },
     series: [
       {
-        name: t('stats.totalCost'),
+        name: t('stats.totalDistance'),
         type: 'bar',
-        data: trend.map((item) => item.cost),
+        data: trend.map((item) => item.trip_distance),
         itemStyle: { color: '#52c41a', borderRadius: [4, 4, 0, 0] },
       },
     ],
@@ -160,7 +163,7 @@ export default function StatsPage() {
               <Statistic
                 title={t('stats.avgConsumption')}
                 value={
-                  stats ? `${formatNumber(stats.avg_consumption)} L/100km` : '-'
+                  stats ? `${formatNumber(stats.avg_efficiency)} ${stats.fuel_efficiency_unit || 'L/100km'}` : '-'
                 }
                 prefix={<DashboardOutlined />}
               />
@@ -189,9 +192,9 @@ export default function StatsPage() {
             </Card>
           </Col>
           <Col xs={24} lg={12}>
-            <Card title={t('stats.costTrend')}>
+            <Card title={t('stats.distanceTrend')}>
               {trend.length > 0 ? (
-                <ReactECharts option={costChartOption} style={{ height: 300 }} />
+                <ReactECharts option={distanceChartOption} style={{ height: 300 }} />
               ) : (
                 <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
               )}

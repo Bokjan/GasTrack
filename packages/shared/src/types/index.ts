@@ -1,5 +1,6 @@
 // ============================================================
 // GasTrack 共享类型定义
+// 与后端 DTO JSON 字段完全对齐
 // ============================================================
 
 // ---------- 通用 ----------
@@ -32,11 +33,16 @@ export interface RegisterRequest {
   nickname: string;
 }
 
-export interface AuthTokens {
+/** 后端 AuthResponse: { access_token, refresh_token, expires_in, user } */
+export interface AuthResponse {
   access_token: string;
   refresh_token: string;
   expires_in: number;
+  user: User;
 }
+
+/** 兼容旧代码的 alias */
+export type AuthTokens = AuthResponse;
 
 export interface RefreshRequest {
   refresh_token: string;
@@ -44,28 +50,33 @@ export interface RefreshRequest {
 
 // ---------- User ----------
 
-export type MeasurementSystem = 'metric_eu' | 'metric_jp' | 'imperial';
-
+/** 后端 UserResponse 字段对齐 */
 export interface User {
   id: string;
   email: string;
   nickname: string;
-  avatar_url: string;
-  timezone: string;
+  avatar_url?: string;
   locale: string;
-  currency: string;
-  measurement_system: MeasurementSystem;
+  timezone: string;
+  country_code?: string;
+  currency_code: string;
+  unit_system: string;
+  fuel_efficiency_unit: string;
+  status: string;
+  last_login_at?: string;
   created_at: string;
-  updated_at: string;
 }
 
+/** 后端 UpdateUserRequest 字段对齐 */
 export interface UpdateUserRequest {
   nickname?: string;
   avatar_url?: string;
-  timezone?: string;
   locale?: string;
-  currency?: string;
-  measurement_system?: MeasurementSystem;
+  timezone?: string;
+  country_code?: string;
+  currency_code?: string;
+  unit_system?: string;
+  fuel_efficiency_unit?: string;
 }
 
 export interface ChangePasswordRequest {
@@ -76,11 +87,11 @@ export interface ChangePasswordRequest {
 // ---------- Vehicle ----------
 
 export type VehicleType = 'car' | 'motorcycle' | 'other';
-export type FuelType = 'gasoline' | 'diesel' | 'hybrid';
+export type FuelType = 'gasoline' | 'diesel' | 'hybrid' | 'electric';
 
+/** 后端 VehicleResponse 字段对齐 */
 export interface Vehicle {
   id: string;
-  user_id: string;
   name: string;
   vehicle_type: VehicleType;
   brand: string;
@@ -89,12 +100,15 @@ export interface Vehicle {
   fuel_type: FuelType;
   tank_capacity: number;
   engine_cc?: number;
+  license_plate?: string;
+  photo_url?: string;
   is_default: boolean;
-  photo_url: string;
+  is_archived: boolean;
   created_at: string;
   updated_at: string;
 }
 
+/** 后端 CreateVehicleRequest 字段对齐 */
 export interface CreateVehicleRequest {
   name: string;
   vehicle_type: VehicleType;
@@ -104,56 +118,81 @@ export interface CreateVehicleRequest {
   fuel_type: FuelType;
   tank_capacity: number;
   engine_cc?: number;
+  license_plate?: string;
   is_default?: boolean;
 }
 
-export type UpdateVehicleRequest = Partial<CreateVehicleRequest>;
+export type UpdateVehicleRequest = Partial<CreateVehicleRequest> & {
+  is_archived?: boolean;
+};
 
 // ---------- Fuel Record ----------
 
+/** 后端 FuelRecordResponse 字段对齐 */
 export interface FuelRecord {
   id: string;
   vehicle_id: string;
-  fuel_date: string;
-  station: string;
   fuel_amount: number;
-  price_per_unit: number;
+  fuel_unit: string;
+  unit_price?: number;
   total_cost: number;
+  currency_code: string;
   odometer: number;
+  distance_unit: string;
   is_full_tank: boolean;
-  fuel_consumption?: number;
-  notes: string;
+  fuel_grade?: string;
+  station_name?: string;
+  station_lat?: number;
+  station_lng?: number;
+  note?: string;
+  receipt_url?: string;
+  trip_distance?: number;
+  fuel_efficiency?: number;
+  refuel_date: string;
   created_at: string;
   updated_at: string;
 }
 
+/** 后端 CreateFuelRecordRequest 字段对齐 */
 export interface CreateFuelRecordRequest {
-  fuel_date: string;
-  station?: string;
   fuel_amount: number;
-  price_per_unit: number;
+  fuel_unit?: string;
+  unit_price?: number;
   total_cost: number;
+  currency_code: string;
   odometer: number;
+  distance_unit?: string;
   is_full_tank: boolean;
-  notes?: string;
+  fuel_grade?: string;
+  station_name?: string;
+  station_lat?: number;
+  station_lng?: number;
+  note?: string;
+  refuel_date: string;
 }
 
 export type UpdateFuelRecordRequest = Partial<CreateFuelRecordRequest>;
 
 // ---------- Stats ----------
 
+/** 后端 VehicleStatsResponse 字段对齐 */
 export interface VehicleStats {
   vehicle_id: string;
+  vehicle_name: string;
   total_records: number;
   total_fuel: number;
   total_cost: number;
   total_distance: number;
-  avg_consumption: number;
-  best_consumption: number;
-  worst_consumption: number;
-  avg_price_per_unit: number;
+  avg_efficiency: number;
+  best_efficiency: number;
+  worst_efficiency: number;
+  avg_cost_per_km: number;
+  avg_cost_per_fill: number;
+  currency_code: string;
+  fuel_efficiency_unit: string;
 }
 
+/** 后端 OverviewStatsResponse 字段对齐 */
 export interface OverviewStats {
   total_vehicles: number;
   total_records: number;
@@ -161,11 +200,21 @@ export interface OverviewStats {
   total_cost: number;
   total_distance: number;
   avg_consumption: number;
+  currency_code: string;
+  vehicles: VehicleStats[];
 }
 
+/** 后端 FuelEfficiencyTrendItem 字段对齐 */
 export interface ConsumptionTrend {
   date: string;
-  consumption: number;
-  cost: number;
-  distance: number;
+  fuel_efficiency: number;
+  trip_distance: number;
+}
+
+/** 后端 FuelEfficiencyTrendResponse 字段对齐 */
+export interface FuelEfficiencyTrendResponse {
+  vehicle_id: string;
+  vehicle_name: string;
+  efficiency_unit: string;
+  items: ConsumptionTrend[];
 }

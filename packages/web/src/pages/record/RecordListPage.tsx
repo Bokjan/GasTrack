@@ -40,7 +40,7 @@ export default function RecordListPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  const currency = user?.currency || 'CNY';
+  const currency = user?.currency_code || 'CNY';
 
   useEffect(() => {
     if (vehicleId) {
@@ -88,13 +88,13 @@ export default function RecordListPage() {
   const columns: ColumnsType<FuelRecord> = [
     {
       title: t('fuelRecord.fuelDate'),
-      dataIndex: 'fuel_date',
+      dataIndex: 'refuel_date',
       width: 120,
       render: (v: string) => dayjs(v).format('YYYY-MM-DD'),
     },
     {
       title: t('fuelRecord.station'),
-      dataIndex: 'station',
+      dataIndex: 'station_name',
       ellipsis: true,
       render: (v: string) => v || '-',
     },
@@ -106,7 +106,7 @@ export default function RecordListPage() {
     },
     {
       title: t('fuelRecord.pricePerUnit'),
-      dataIndex: 'price_per_unit',
+      dataIndex: 'unit_price',
       width: 100,
       render: (v: number) => formatCurrency(v, currency),
     },
@@ -124,7 +124,7 @@ export default function RecordListPage() {
     },
     {
       title: t('fuelRecord.consumption'),
-      dataIndex: 'fuel_consumption',
+      dataIndex: 'fuel_efficiency',
       width: 110,
       render: (v?: number) =>
         v ? (
