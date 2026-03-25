@@ -1,13 +1,51 @@
+# ========================
+# Dependencies
+# ========================
 node_modules/
+
+# ========================
+# Build output
+# ========================
 dist/
 build/
+
+# ========================
+# Environment variables
+# ========================
 .env
 .env.local
 .env.*.local
+
+# ========================
+# Logs
+# ========================
 *.log
 npm-debug.log*
+pnpm-debug.log*
+
+# ========================
+# OS files
+# ========================
 .DS_Store
+Thumbs.db
+
+# ========================
+# IDE / Editor
+# ========================
+.idea/
+.vscode/
 *.swp
 *.swo
+*~
+
+# ========================
+# Go backend
+# ========================
 server/server
 server/tmp/
+server/uploads/
+
+# ========================
+# Docker volumes (local)
+# ========================
+pgdata/
