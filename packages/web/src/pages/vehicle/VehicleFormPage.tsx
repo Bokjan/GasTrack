@@ -18,8 +18,12 @@ import {
   useVehicleStore,
   FUEL_TYPES,
   VEHICLE_TYPES,
+  FUEL_UNITS,
+  ENERGY_UNITS,
+  isElectricVehicle,
+  hasEngineCC,
 } from '@gastrack/shared';
-import type { CreateVehicleRequest, VehicleType } from '@gastrack/shared';
+import type { CreateVehicleRequest, FuelType } from '@gastrack/shared';
 
 export default function VehicleFormPage() {
   const { t } = useTranslation();
@@ -28,7 +32,7 @@ export default function VehicleFormPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
-  const [vehicleType, setVehicleType] = useState<VehicleType>('car');
+  const [fuelType, setFuelType] = useState<FuelType>('gasoline');
   const { addVehicle, updateVehicle } = useVehicleStore();
 
   const isEdit = !!id;
@@ -40,7 +44,7 @@ export default function VehicleFormPage() {
         .getById(id)
         .then(({ data }) => {
           form.setFieldsValue(data.data);
-          setVehicleType(data.data.vehicle_type);
+          setFuelType(data.data.fuel_type);
         })
         .catch(() => message.error(t('common.error')))
         .finally(() => setFetching(false));
@@ -90,6 +94,7 @@ export default function VehicleFormPage() {
           initialValues={{
             vehicle_type: 'car',
             fuel_type: 'gasoline',
+            tank_capacity_unit: 'L',
             is_default: false,
           }}
         >
@@ -103,11 +108,10 @@ export default function VehicleFormPage() {
 
           <Form.Item
             name="vehicle_type"
-            label={t('vehicleType.car')}
+            label={t('vehicle.vehicleType')}
             rules={[{ required: true }]}
           >
             <Select
-              onChange={(v: VehicleType) => setVehicleType(v)}
               options={VEHICLE_TYPES.map((item) => ({
                 value: item.value,
                 label: t(item.label),
@@ -156,6 +160,16 @@ export default function VehicleFormPage() {
               style={{ flex: 1 }}
             >
               <Select
+                popupMatchSelectWidth={false}
+                onChange={(v: FuelType) => {
+                  setFuelType(v);
+                  // 切换为电动时，自动将容量单位改为 kWh
+                  if (isElectricVehicle(v)) {
+                    form.setFieldValue('tank_capacity_unit', 'kWh');
+                  } else if (form.getFieldValue('tank_capacity_unit') === 'kWh') {
+                    form.setFieldValue('tank_capacity_unit', 'L');
+                  }
+                }}
                 options={FUEL_TYPES.map((item) => ({
                   value: item.value,
                   label: t(item.label),
@@ -167,23 +181,35 @@ export default function VehicleFormPage() {
           <Space style={{ width: '100%' }} size="middle">
             <Form.Item
               name="tank_capacity"
-              label={t('vehicle.tankCapacity')}
+              label={isElectricVehicle(fuelType) ? t('vehicle.batteryCapacity') : t('vehicle.tankCapacity')}
               rules={[{ required: true, message: t('common.required') }]}
               style={{ flex: 1 }}
             >
-              <InputNumber min={1} max={500} style={{ width: '100%' }} suffix="L" />
+              <InputNumber min={1} max={isElectricVehicle(fuelType) ? 200 : 500} style={{ width: '100%' }} />
             </Form.Item>
 
-            {vehicleType === 'motorcycle' && (
-              <Form.Item
-                name="engine_cc"
-                label={t('vehicle.engineCc')}
-                style={{ flex: 1 }}
-              >
-                <InputNumber min={50} max={3000} style={{ width: '100%' }} suffix="cc" />
-              </Form.Item>
-            )}
+            <Form.Item
+              name="tank_capacity_unit"
+              label={isElectricVehicle(fuelType) ? t('fuelRecord.energyUnit') : t('fuelRecord.fuelUnit')}
+              style={{ width: 140 }}
+            >
+              <Select
+                options={(isElectricVehicle(fuelType) ? ENERGY_UNITS : FUEL_UNITS).map((u) => ({
+                  value: u.value,
+                  label: t(u.label),
+                }))}
+              />
+            </Form.Item>
           </Space>
+
+          {hasEngineCC(fuelType) && (
+            <Form.Item
+              name="engine_cc"
+              label={t('vehicle.engineCc')}
+            >
+              <InputNumber min={50} max={10000} style={{ width: '100%', maxWidth: 300 }} suffix="cc" />
+            </Form.Item>
+          )}
 
           <Form.Item name="is_default" label={t('vehicle.setDefault')} valuePropName="checked">
             <Switch />

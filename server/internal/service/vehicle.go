@@ -28,17 +28,18 @@ func NewVehicleService(vehicleRepo *repository.VehicleRepository, logger *zap.Lo
 // Create 创建车辆
 func (s *VehicleService) Create(ctx context.Context, userID uuid.UUID, req *dto.CreateVehicleRequest) (*dto.VehicleResponse, error) {
 	vehicle := &model.Vehicle{
-		UserID:       userID,
-		Name:         req.Name,
-		VehicleType:  model.VehicleType(req.VehicleType),
-		Brand:        req.Brand,
-		Model:        req.Model,
-		Year:         req.Year,
-		FuelType:     model.FuelType(req.FuelType),
-		TankCapacity: req.TankCapacity,
-		EngineCC:     req.EngineCC,
-		LicensePlate: req.LicensePlate,
-		IsDefault:    req.IsDefault,
+		UserID:          userID,
+		Name:            req.Name,
+		VehicleType:     model.VehicleType(req.VehicleType),
+		Brand:           req.Brand,
+		Model:           req.Model,
+		Year:            req.Year,
+		FuelType:        model.FuelType(req.FuelType),
+		TankCapacity:    req.TankCapacity,
+		BatteryCapacity: req.BatteryCapacity,
+		EngineCC:        req.EngineCC,
+		LicensePlate:    req.LicensePlate,
+		IsDefault:       req.IsDefault,
 	}
 
 	// 如果设为默认车辆，先清除其他默认
@@ -116,6 +117,9 @@ func (s *VehicleService) Update(ctx context.Context, vehicleID, userID uuid.UUID
 	if req.TankCapacity != nil {
 		vehicle.TankCapacity = *req.TankCapacity
 	}
+	if req.BatteryCapacity != nil {
+		vehicle.BatteryCapacity = *req.BatteryCapacity
+	}
 	if req.EngineCC != nil {
 		vehicle.EngineCC = *req.EngineCC
 	}
@@ -164,20 +168,21 @@ func (s *VehicleService) Delete(ctx context.Context, vehicleID, userID uuid.UUID
 // vehicleToResponse 将 model 转为 DTO
 func vehicleToResponse(v *model.Vehicle) dto.VehicleResponse {
 	return dto.VehicleResponse{
-		ID:           v.ID.String(),
-		Name:         v.Name,
-		VehicleType:  string(v.VehicleType),
-		Brand:        v.Brand,
-		Model:        v.Model,
-		Year:         v.Year,
-		FuelType:     string(v.FuelType),
-		TankCapacity: v.TankCapacity,
-		EngineCC:     v.EngineCC,
-		LicensePlate: v.LicensePlate,
-		PhotoURL:     v.PhotoURL,
-		IsDefault:    v.IsDefault,
-		IsArchived:   v.IsArchived,
-		CreatedAt:    v.CreatedAt,
-		UpdatedAt:    v.UpdatedAt,
+		ID:              v.ID.String(),
+		Name:            v.Name,
+		VehicleType:     string(v.VehicleType),
+		Brand:           v.Brand,
+		Model:           v.Model,
+		Year:            v.Year,
+		FuelType:        string(v.FuelType),
+		TankCapacity:    v.TankCapacity,
+		BatteryCapacity: v.BatteryCapacity,
+		EngineCC:        v.EngineCC,
+		LicensePlate:    v.LicensePlate,
+		PhotoURL:        v.PhotoURL,
+		IsDefault:       v.IsDefault,
+		IsArchived:      v.IsArchived,
+		CreatedAt:       v.CreatedAt,
+		UpdatedAt:       v.UpdatedAt,
 	}
 }

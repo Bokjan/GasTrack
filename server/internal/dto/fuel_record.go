@@ -7,7 +7,7 @@ import "time"
 // CreateFuelRecordRequest 添加加油记录请求
 type CreateFuelRecordRequest struct {
 	FuelAmount   float64 `json:"fuel_amount" validate:"required,gt=0"`
-	FuelUnit     string  `json:"fuel_unit" validate:"omitempty,oneof=L gal"`
+	FuelUnit     string  `json:"fuel_unit" validate:"omitempty,oneof=L gal kWh"`
 	UnitPrice    float64 `json:"unit_price" validate:"omitempty,gte=0"`
 	TotalCost    float64 `json:"total_cost" validate:"required,gt=0"`
 	CurrencyCode string  `json:"currency_code" validate:"required,len=3"`
@@ -25,7 +25,7 @@ type CreateFuelRecordRequest struct {
 // UpdateFuelRecordRequest 编辑加油记录请求
 type UpdateFuelRecordRequest struct {
 	FuelAmount   *float64 `json:"fuel_amount" validate:"omitempty,gt=0"`
-	FuelUnit     *string  `json:"fuel_unit" validate:"omitempty,oneof=L gal"`
+	FuelUnit     *string  `json:"fuel_unit" validate:"omitempty,oneof=L gal kWh"`
 	UnitPrice    *float64 `json:"unit_price" validate:"omitempty,gte=0"`
 	TotalCost    *float64 `json:"total_cost" validate:"omitempty,gt=0"`
 	CurrencyCode *string  `json:"currency_code" validate:"omitempty,len=3"`

@@ -1,4 +1,7 @@
 {
+  "app": {
+    "title": "GasTrack - Fuel Tracking & Analysis"
+  },
   "common": {
     "confirm": "Confirm",
     "cancel": "Cancel",
@@ -37,58 +40,85 @@
     "title": "Vehicles",
     "addVehicle": "Add Vehicle",
     "editVehicle": "Edit Vehicle",
+    "vehicleType": "Vehicle Type",
     "name": "Vehicle Name",
     "brand": "Brand",
     "model": "Model",
     "year": "Year",
-    "fuelType": "Fuel Type",
-    "tankCapacity": "Tank Capacity (L)",
+    "fuelType": "Fuel / Energy Type",
+    "tankCapacity": "Tank Capacity",
+    "batteryCapacity": "Battery Capacity",
     "engineCc": "Engine (cc)",
     "setDefault": "Set as Default",
-    "deleteConfirm": "Are you sure to delete this vehicle? Related fuel records will also be deleted.",
+    "deleteConfirm": "Are you sure to delete this vehicle? Related fuel/charging records will also be deleted.",
     "noVehicle": "No vehicles yet",
     "addFirst": "Add your first vehicle to start tracking"
   },
   "fuelRecord": {
     "title": "Fuel Records",
+    "titleEv": "Charging Records",
     "addRecord": "Add Record",
     "editRecord": "Edit Record",
     "fuelDate": "Fuel Date",
+    "chargingDate": "Charging Date",
     "station": "Station",
+    "chargingStation": "Charging Station",
     "fuelAmount": "Fuel Amount",
+    "chargingAmount": "Charging Amount",
+    "fuelUnit": "Fuel Unit",
+    "energyUnit": "Energy Unit",
     "pricePerUnit": "Price per Unit",
     "totalCost": "Total Cost",
+    "currency": "Currency",
     "odometer": "Odometer",
+    "distanceUnit": "Distance Unit",
     "isFullTank": "Full Tank",
+    "isFullCharge": "Full Charge",
     "notes": "Notes",
     "consumption": "Consumption",
-    "deleteConfirm": "Are you sure to delete this fuel record?"
+    "energyConsumption": "Energy Consumption",
+    "deleteConfirm": "Are you sure to delete this record?"
   },
   "stats": {
     "title": "Statistics",
     "overview": "Overview",
     "totalRecords": "Total Records",
     "totalFuel": "Total Fuel",
+    "totalEnergy": "Total Energy",
     "totalCost": "Total Cost",
     "totalDistance": "Total Distance",
     "avgConsumption": "Avg Consumption",
+    "avgEnergyConsumption": "Avg Energy Consumption",
     "consumptionTrend": "Consumption Trend",
+    "energyConsumptionTrend": "Energy Consumption Trend",
+    "distanceTrend": "Distance Trend",
     "costTrend": "Cost Trend"
   },
   "fuelType": {
     "gasoline": "Gasoline",
     "diesel": "Diesel",
-    "hybrid": "Hybrid"
+    "hybrid": "Hybrid",
+    "electric": "Electric"
   },
   "vehicleType": {
     "car": "Car",
     "motorcycle": "Motorcycle",
     "other": "Other"
   },
+  "unit": {
+    "liter": "L (Liter)",
+    "gallon": "gal (Gallon)",
+    "kwh": "kWh",
+    "km": "km (Kilometer)",
+    "mile": "mi (Mile)"
+  },
   "measurement": {
     "metricEu": "Metric (L/100km)",
     "metricJp": "Metric (km/L)",
-    "imperial": "Imperial (MPG)"
+    "imperial": "Imperial (MPG)",
+    "kwh100km": "kWh/100km",
+    "kmKwh": "km/kWh",
+    "miKwh": "mi/kWh"
   },
   "nav": {
     "dashboard": "Dashboard",

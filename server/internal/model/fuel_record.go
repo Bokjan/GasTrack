@@ -15,7 +15,7 @@ type FuelRecord struct {
 
 	// 加油数据（存原始值）
 	FuelAmount   float64 `gorm:"type:decimal(8,3);not null" json:"fuel_amount"`    // 加油量
-	FuelUnit     string  `gorm:"size:5;default:L" json:"fuel_unit"`                // L / gal
+	FuelUnit     string  `gorm:"size:5;default:L" json:"fuel_unit"`                // L / gal / kWh
 	UnitPrice    float64 `gorm:"type:decimal(10,4)" json:"unit_price,omitempty"`   // 单价
 	TotalCost    float64 `gorm:"type:decimal(10,2);not null" json:"total_cost"`    // 总费用
 	CurrencyCode string  `gorm:"size:3;not null" json:"currency_code"`             // 币种
@@ -35,7 +35,7 @@ type FuelRecord struct {
 
 	// 计算字段（冗余存储，提高查询性能）
 	TripDistance   float64 `gorm:"type:decimal(10,1)" json:"trip_distance,omitempty"`   // 本次行驶距离
-	FuelEfficiency float64 `gorm:"type:decimal(6,2)" json:"fuel_efficiency,omitempty"` // 油耗（L/100km 存储基准）
+	FuelEfficiency float64 `gorm:"type:decimal(6,2)" json:"fuel_efficiency,omitempty"` // 油耗/电耗（L/100km 或 kWh/100km 存储基准）
 
 	RefuelDate time.Time `gorm:"not null;index:idx_fuel_records_vehicle;index:idx_fuel_records_user" json:"refuel_date"`
 

@@ -1,4 +1,7 @@
 {
+  "app": {
+    "title": "GasTrack - 燃費記録＆分析"
+  },
   "common": {
     "confirm": "確認",
     "cancel": "キャンセル",
@@ -37,58 +40,85 @@
     "title": "車両管理",
     "addVehicle": "車両追加",
     "editVehicle": "車両編集",
+    "vehicleType": "車両タイプ",
     "name": "車両名",
     "brand": "ブランド",
     "model": "モデル",
     "year": "年式",
-    "fuelType": "燃料タイプ",
-    "tankCapacity": "タンク容量 (L)",
+    "fuelType": "燃料/エネルギータイプ",
+    "tankCapacity": "タンク容量",
+    "batteryCapacity": "バッテリー容量",
     "engineCc": "排気量 (cc)",
     "setDefault": "デフォルトに設定",
-    "deleteConfirm": "この車両を削除しますか？関連する給油記録も削除されます。",
+    "deleteConfirm": "この車両を削除しますか？関連する給油/充電記録も削除されます。",
     "noVehicle": "車両がありません",
     "addFirst": "最初の車両を追加して記録を開始しましょう"
   },
   "fuelRecord": {
     "title": "給油記録",
+    "titleEv": "充電記録",
     "addRecord": "記録追加",
     "editRecord": "記録編集",
     "fuelDate": "給油日",
+    "chargingDate": "充電日",
     "station": "ガソリンスタンド",
+    "chargingStation": "充電ステーション",
     "fuelAmount": "給油量",
+    "chargingAmount": "充電量",
+    "fuelUnit": "燃料単位",
+    "energyUnit": "エネルギー単位",
     "pricePerUnit": "単価",
     "totalCost": "合計金額",
+    "currency": "通貨",
     "odometer": "走行距離",
+    "distanceUnit": "距離単位",
     "isFullTank": "満タン",
+    "isFullCharge": "フル充電",
     "notes": "メモ",
     "consumption": "燃費",
-    "deleteConfirm": "この給油記録を削除しますか？"
+    "energyConsumption": "電費",
+    "deleteConfirm": "この記録を削除しますか？"
   },
   "stats": {
     "title": "統計",
     "overview": "概要",
     "totalRecords": "総記録数",
     "totalFuel": "総給油量",
+    "totalEnergy": "総充電量",
     "totalCost": "総費用",
     "totalDistance": "総走行距離",
     "avgConsumption": "平均燃費",
+    "avgEnergyConsumption": "平均電費",
     "consumptionTrend": "燃費推移",
+    "energyConsumptionTrend": "電費推移",
+    "distanceTrend": "走行距離推移",
     "costTrend": "費用推移"
   },
   "fuelType": {
     "gasoline": "ガソリン",
     "diesel": "ディーゼル",
-    "hybrid": "ハイブリッド"
+    "hybrid": "ハイブリッド",
+    "electric": "電気"
   },
   "vehicleType": {
     "car": "自動車",
     "motorcycle": "バイク",
     "other": "その他"
   },
+  "unit": {
+    "liter": "L (リットル)",
+    "gallon": "gal (ガロン)",
+    "kwh": "kWh",
+    "km": "km (キロメートル)",
+    "mile": "mi (マイル)"
+  },
   "measurement": {
     "metricEu": "メートル法 (L/100km)",
     "metricJp": "メートル法 (km/L)",
-    "imperial": "ヤード法 (MPG)"
+    "imperial": "ヤード法 (MPG)",
+    "kwh100km": "kWh/100km",
+    "kmKwh": "km/kWh",
+    "miKwh": "mi/kWh"
   },
   "nav": {
     "dashboard": "ダッシュボード",

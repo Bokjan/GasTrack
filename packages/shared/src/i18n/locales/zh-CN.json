@@ -1,4 +1,7 @@
 {
+  "app": {
+    "title": "GasTrack - 油耗记录与分析"
+  },
   "common": {
     "confirm": "确认",
     "cancel": "取消",
@@ -37,58 +40,85 @@
     "title": "车辆管理",
     "addVehicle": "添加车辆",
     "editVehicle": "编辑车辆",
+    "vehicleType": "车辆类型",
     "name": "车辆名称",
     "brand": "品牌",
     "model": "型号",
     "year": "年份",
-    "fuelType": "燃油类型",
-    "tankCapacity": "油箱容量 (L)",
+    "fuelType": "燃油/能源类型",
+    "tankCapacity": "油箱容量",
+    "batteryCapacity": "电池容量",
     "engineCc": "排量 (cc)",
     "setDefault": "设为默认",
-    "deleteConfirm": "确定要删除这辆车吗？相关的加油记录也会被删除。",
+    "deleteConfirm": "确定要删除这辆车吗？相关的加油/充电记录也会被删除。",
     "noVehicle": "还没有添加车辆",
     "addFirst": "添加你的第一辆车开始记录"
   },
   "fuelRecord": {
     "title": "加油记录",
+    "titleEv": "充电记录",
     "addRecord": "添加记录",
     "editRecord": "编辑记录",
     "fuelDate": "加油日期",
+    "chargingDate": "充电日期",
     "station": "加油站",
+    "chargingStation": "充电站",
     "fuelAmount": "加油量",
+    "chargingAmount": "充电量",
+    "fuelUnit": "燃油单位",
+    "energyUnit": "能量单位",
     "pricePerUnit": "单价",
     "totalCost": "总费用",
+    "currency": "货币",
     "odometer": "当前里程",
+    "distanceUnit": "里程单位",
     "isFullTank": "是否加满",
+    "isFullCharge": "是否充满",
     "notes": "备注",
     "consumption": "油耗",
-    "deleteConfirm": "确定要删除这条加油记录吗？"
+    "energyConsumption": "电耗",
+    "deleteConfirm": "确定要删除这条记录吗？"
   },
   "stats": {
     "title": "统计分析",
     "overview": "总览",
     "totalRecords": "总记录数",
     "totalFuel": "总加油量",
+    "totalEnergy": "总充电量",
     "totalCost": "总费用",
     "totalDistance": "总里程",
     "avgConsumption": "平均油耗",
+    "avgEnergyConsumption": "平均电耗",
     "consumptionTrend": "油耗趋势",
+    "energyConsumptionTrend": "电耗趋势",
+    "distanceTrend": "里程趋势",
     "costTrend": "费用趋势"
   },
   "fuelType": {
     "gasoline": "汽油",
     "diesel": "柴油",
-    "hybrid": "混合动力"
+    "hybrid": "混合动力",
+    "electric": "电动"
   },
   "vehicleType": {
     "car": "汽车",
     "motorcycle": "摩托车",
     "other": "其他"
   },
+  "unit": {
+    "liter": "L (升)",
+    "gallon": "gal (加仑)",
+    "kwh": "kWh (千瓦时)",
+    "km": "km (公里)",
+    "mile": "mi (英里)"
+  },
   "measurement": {
     "metricEu": "公制 (L/100km)",
     "metricJp": "公制 (km/L)",
-    "imperial": "英制 (MPG)"
+    "imperial": "英制 (MPG)",
+    "kwh100km": "kWh/100km",
+    "kmKwh": "km/kWh",
+    "miKwh": "mi/kWh"
   },
   "nav": {
     "dashboard": "仪表盘",

@@ -21,6 +21,13 @@ export const MEASUREMENT_SYSTEMS = [
   { value: 'imperial', label: 'measurement.imperial', unit: 'MPG' },
 ] as const;
 
+/** 电动车能效计量体系 */
+export const EV_MEASUREMENT_SYSTEMS = [
+  { value: 'kwh_100km', label: 'measurement.kwh100km', unit: 'kWh/100km' },
+  { value: 'km_kwh', label: 'measurement.kmKwh', unit: 'km/kWh' },
+  { value: 'mi_kwh', label: 'measurement.miKwh', unit: 'mi/kWh' },
+] as const;
+
 export const CURRENCIES = [
   { value: 'CNY', label: '¥ CNY', symbol: '¥' },
   { value: 'USD', label: '$ USD', symbol: '$' },
@@ -29,6 +36,27 @@ export const CURRENCIES = [
   { value: 'GBP', label: '£ GBP', symbol: '£' },
   { value: 'KRW', label: '₩ KRW', symbol: '₩' },
 ] as const;
+
+export const FUEL_UNITS = [
+  { value: 'L', label: 'unit.liter' },
+  { value: 'gal', label: 'unit.gallon' },
+] as const;
+
+/** 电动车能量单位 */
+export const ENERGY_UNITS = [
+  { value: 'kWh', label: 'unit.kwh' },
+] as const;
+
+export const DISTANCE_UNITS = [
+  { value: 'km', label: 'unit.km' },
+  { value: 'mi', label: 'unit.mile' },
+] as const;
+
+/** 判断是否为纯电车型 */
+export const isElectricVehicle = (fuelType: string) => fuelType === 'electric';
+
+/** 判断是否需要显示排量（非电动车型） */
+export const hasEngineCC = (fuelType: string) => fuelType !== 'electric';
 
 export const SUPPORTED_LOCALES = [
   { value: 'zh-CN', label: '简体中文' },

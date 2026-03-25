@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Avatar, Dropdown, Space, Typography } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Typography } from 'antd';
 import {
   DashboardOutlined,
   CarOutlined,
@@ -23,6 +23,12 @@ export default function MainLayout() {
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const { user, logout } = useAuthStore();
+
+  // 同步浏览器标题和 html lang 属性
+  useEffect(() => {
+    document.title = t('app.title');
+    document.documentElement.lang = i18n.language;
+  }, [i18n.language, t]);
 
   const menuItems: MenuProps['items'] = [
     {
@@ -57,8 +63,8 @@ export default function MainLayout() {
     { key: 'ja-JP', label: '日本語' },
   ];
 
-  const handleLanguageChange: MenuProps['onClick'] = ({ key }) => {
-    i18n.changeLanguage(key);
+  const handleLanguageChange: MenuProps['onClick'] = async ({ key }) => {
+    await i18n.changeLanguage(key);
     localStorage.setItem('locale', key);
   };
 
@@ -142,19 +148,19 @@ export default function MainLayout() {
             {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           </div>
 
-          <Space size="middle">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             <Dropdown
               menu={{ items: languageItems, onClick: handleLanguageChange }}
               placement="bottomRight"
             >
-              <GlobalOutlined style={{ fontSize: 18, cursor: 'pointer' }} />
+              <GlobalOutlined style={{ fontSize: 18, cursor: 'pointer', verticalAlign: 'middle' }} />
             </Dropdown>
 
             <Dropdown
               menu={{ items: userMenuItems, onClick: handleUserMenu }}
               placement="bottomRight"
             >
-              <Space style={{ cursor: 'pointer' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
                 <Avatar
                   size="small"
                   icon={<UserOutlined />}
@@ -163,9 +169,9 @@ export default function MainLayout() {
                 {!collapsed && (
                   <span>{user?.nickname || user?.email || ''}</span>
                 )}
-              </Space>
+              </div>
             </Dropdown>
-          </Space>
+          </div>
         </Header>
 
         <Content style={{ margin: 0, overflow: 'auto' }}>
