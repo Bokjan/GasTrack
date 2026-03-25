@@ -1,51 +1,68 @@
 # GasTrack 项目规划
 
-## 1. 项目结构（Monorepo）
+## 1. 项目结构
 
 ```
 GasTrack/
-├── docs/                    # 设计文档
-├── packages/
-│   ├── shared/              # 共享代码
-│   │   ├── types/           # TypeScript 类型定义
-│   │   ├── utils/           # 工具函数（单位换算、格式化）
-│   │   ├── api/             # API 调用层
-│   │   ├── stores/          # 状态管理
-│   │   ├── i18n/            # 国际化资源
-│   │   └── constants/       # 常量（国家/币种/燃油类型）
-│   ├── web/                 # Web 前端
+├── docs/                        # 设计文档
+├── server/                      # Go 后端（独立 Go Module）
+│   ├── cmd/
+│   │   └── server/
+│   │       └── main.go          # 入口：创建 mux、注册路由、启动服务
+│   ├── internal/
+│   │   ├── config/              # 配置加载（Viper）
+│   │   ├── router/              # 路由注册（基于 net/http.ServeMux）
+│   │   │   └── router.go        # 统一注册所有路由
+│   │   ├── middleware/          # 中间件（认证/日志/CORS/限流/Recovery）
+│   │   ├── handler/             # HTTP 处理器（按模块分）
+│   │   │   ├── auth.go
+│   │   │   ├── user.go
+│   │   │   ├── vehicle.go
+│   │   │   ├── fuel_record.go
+│   │   │   ├── stats.go
+│   │   │   └── upload.go
+│   │   ├── service/             # 业务逻辑层
+│   │   ├── repository/          # 数据访问层
+│   │   ├── model/               # 数据库模型（GORM）
+│   │   ├── dto/                 # 请求/响应结构体
+│   │   ├── i18n/                # 多语言资源
+│   │   │   ├── en-US.toml
+│   │   │   ├── zh-CN.toml
+│   │   │   └── ja-JP.toml
+│   │   └── pkg/                 # 内部工具
+│   │       ├── respond/         # JSON 响应辅助 (respond.JSON/Error)
+│   │       ├── decode/          # 请求解析辅助 (decode.JSON/PathParam)
+│   │       └── convert/         # 单位换算引擎
+│   ├── migrations/              # 数据库迁移文件
+│   ├── go.mod
+│   ├── go.sum
+│   └── Dockerfile
+├── packages/                    # 前端 Monorepo (pnpm workspace)
+│   ├── shared/                  # 共享代码
+│   │   ├── types/               # TypeScript 类型定义
+│   │   ├── utils/               # 工具函数（单位换算、格式化）
+│   │   ├── api/                 # API 调用层
+│   │   ├── stores/              # 状态管理
+│   │   ├── i18n/                # 国际化资源
+│   │   └── constants/           # 常量（国家/币种/燃油类型）
+│   ├── web/                     # Web 前端
 │   │   ├── src/
-│   │   │   ├── components/  # 通用组件
-│   │   │   ├── pages/       # 页面
-│   │   │   ├── layouts/     # 布局
-│   │   │   ├── hooks/       # 自定义 Hooks
-│   │   │   └── styles/      # 全局样式
+│   │   │   ├── components/      # 通用组件
+│   │   │   ├── pages/           # 页面
+│   │   │   ├── layouts/         # 布局
+│   │   │   ├── hooks/           # 自定义 Hooks
+│   │   │   └── styles/          # 全局样式
 │   │   ├── public/
 │   │   └── vite.config.ts
-│   ├── server/              # 后端服务
-│   │   ├── src/
-│   │   │   ├── modules/     # 业务模块
-│   │   │   │   ├── auth/
-│   │   │   │   ├── user/
-│   │   │   │   ├── vehicle/
-│   │   │   │   ├── fuel-record/
-│   │   │   │   ├── stats/
-│   │   │   │   ├── group/
-│   │   │   │   └── upload/
-│   │   │   ├── common/      # 公共模块（守卫/过滤器/管道）
-│   │   │   ├── config/      # 配置
-│   │   │   └── database/    # 数据库迁移与种子
-│   │   └── nest-cli.json
-│   └── miniprogram/         # 小程序（第二阶段）
-├── docker/                  # Docker 配置
+│   └── miniprogram/             # 小程序（第三阶段）
+├── docker/                      # Docker 配置
 │   ├── docker-compose.yml
 │   ├── docker-compose.prod.yml
 │   └── nginx/
-├── .github/                 # CI/CD
+├── .github/                     # CI/CD
 │   └── workflows/
 ├── pnpm-workspace.yaml
 ├── package.json
-├── tsconfig.base.json
 └── .env.example
 ```
 
@@ -55,25 +72,25 @@ GasTrack/
 
 | 周次 | 任务 | 交付物 |
 |------|------|--------|
-| W1-W2 | 项目搭建 + 基础设施 | Monorepo 骨架、Docker 环境、CI/CD |
+| W1-W2 | 项目搭建 + 基础设施 | Go 后端骨架、前端 Monorepo、Docker 环境、CI/CD |
 | W3 | 用户认证（邮箱注册/登录） | Auth API + 登录/注册页面 |
-| W4 | 用户资料 + 多语言框架 | 个人设置页、中英文切换 |
-| W5 | 车辆管理 CRUD | 车辆列表/添加/编辑页 |
+| W4 | 用户资料 + 多语言框架 | 个人设置页、中英日三语切换 |
+| W5 | 车辆管理 CRUD（汽车+摩托车） | 车辆列表/添加/编辑页 |
 | W6-W7 | 加油记录 CRUD + 油耗计算 | 加油记录页、记录详情页 |
 | W8 | 统计报表 | 油耗趋势图、费用统计页 |
-| W9 | 多币种/单位支持 + UI 打磨 | 单位换算、响应式适配 |
+| W9 | 多币种/单位支持(含km/L) + UI 打磨 | 单位换算、响应式适配 |
 | W10 | 测试 + Bug 修复 + 部署 | 生产环境上线 |
 
 ### 第二期：增强（4-6 周）
 
 | 任务 | 说明 |
 |------|------|
-| 第三方登录 | Google + Apple 登录 |
 | 家庭群组 | 群组 CRUD + 邀请 + 数据汇总 |
 | 数据导出 | CSV / PDF 导出 |
 | PWA 支持 | 离线访问、安装到桌面 |
-| 更多语言 | 日语、韩语、繁中等 |
+| 更多语言 | 韩语、繁中、西班牙语等 |
 | 多车对比 | 车辆油耗/费用对比图表 |
+| 第三方登录 | Google + Apple 登录 (P2，可选) |
 
 ### 第三期：扩展（持续）
 

@@ -29,23 +29,21 @@ users ──1:N──► vehicles ──1:N──► fuel_records
 CREATE TABLE users (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email           VARCHAR(255) UNIQUE NOT NULL,
-    password_hash   VARCHAR(255),          -- 第三方登录时可为空
+    password_hash   VARCHAR(255) NOT NULL,
     nickname        VARCHAR(100) NOT NULL,
     avatar_url      VARCHAR(500),
-    locale          VARCHAR(10) DEFAULT 'en-US',  -- 偏好语言
+    locale          VARCHAR(10) DEFAULT 'en-US',  -- 偏好语言: zh-CN/en-US/ja-JP
     timezone        VARCHAR(50) DEFAULT 'UTC',
     country_code    VARCHAR(5),            -- ISO 3166-1 alpha-2
     currency_code   VARCHAR(3) DEFAULT 'USD', -- ISO 4217
     unit_system     VARCHAR(10) DEFAULT 'metric', -- metric / imperial
+    fuel_efficiency_unit VARCHAR(10) DEFAULT 'L/100km', -- L/100km / km/L / MPG
     status          VARCHAR(20) DEFAULT 'active', -- active/suspended/deleted
-    oauth_provider  VARCHAR(20),           -- google/apple/wechat
-    oauth_id        VARCHAR(255),
     last_login_at   TIMESTAMPTZ,
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     updated_at      TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_oauth ON users(oauth_provider, oauth_id);
 ```
 
 ### 3.2 vehicles - 车辆表
@@ -54,11 +52,13 @@ CREATE TABLE vehicles (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name            VARCHAR(100) NOT NULL,  -- 用户自定义名称，如"家用车"
+    vehicle_type    VARCHAR(20) NOT NULL DEFAULT 'car', -- car/motorcycle/other
     brand           VARCHAR(100),
     model           VARCHAR(100),
     year            INT,
     fuel_type       VARCHAR(20) NOT NULL,   -- gasoline/diesel/hybrid/electric
     tank_capacity   DECIMAL(6,2),           -- 油箱容量（升）
+    engine_cc       INT,                    -- 排量(cc)，摩托车常用
     license_plate   VARCHAR(20),
     photo_url       VARCHAR(500),
     is_default      BOOLEAN DEFAULT false,
@@ -141,12 +141,27 @@ CREATE TABLE refresh_tokens (
 CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
 ```
 
-## 4. Redis 缓存策略
+## 4. 缓存策略（无 Redis，进程内缓存）
 
-| Key 模式 | 用途 | TTL |
-|----------|------|-----|
-| `user:{id}:profile` | 用户资料缓存 | 30 min |
-| `vehicle:{id}:stats` | 车辆统计缓存 | 10 min |
-| `rate:{ip}` | API 限流计数器 | 1 min |
-| `i18n:{locale}:{ns}` | 翻译资源缓存 | 1 hour |
-| `session:{userId}` | 在线会话 | 7 days |
+本项目初期不引入 Redis，使用 Go 进程内缓存（`go-cache` 或 `sync.Map`）替代：
+
+**可行性分析：**
+- 油耗记录系统属于**读多写少、用户数据隔离**的场景
+- 初期用户量不大，单实例部署，进程内缓存完全够用
+- 省去 Redis 运维成本，降低部署复杂度
+- 当未来需要多实例部署或需要分布式缓存时，再引入 Redis
+
+**缓存项：**
+
+| 缓存内容 | 实现方式 | TTL |
+|----------|---------|-----|
+| 用户资料 | go-cache (内存) | 30 min |
+| 车辆统计 | go-cache (内存) | 10 min |
+| 翻译资源 | 启动时全量加载到内存 | 不过期 |
+| API 限流 | Nginx `limit_req` 模块 | - |
+| JWT 黑名单 | PostgreSQL 表 + 内存缓存 | Token 剩余有效期 |
+
+**限流方案（替代 Redis）：**
+- 全局限流：Nginx `limit_req_zone` 实现 IP 级别限流
+- 业务限流：Go 内置 `golang.org/x/time/rate` 令牌桶算法
+- 登录防暴力破解：PostgreSQL 记录失败次数 + 内存缓存
