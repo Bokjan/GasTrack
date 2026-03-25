@@ -1,0 +1,17 @@
+{
+  "name": "gastrack",
+  "version": "0.1.0",
+  "private": true,
+  "description": "GasTrack - 油耗记录与分析系统",
+  "scripts": {
+    "dev": "pnpm --filter @gastrack/web dev",
+    "build": "pnpm --filter @gastrack/web build",
+    "preview": "pnpm --filter @gastrack/web preview",
+    "lint": "pnpm -r run lint",
+    "type-check": "pnpm -r run type-check"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

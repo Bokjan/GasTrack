@@ -1,0 +1,100 @@
+{
+  "common": {
+    "confirm": "確認",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "delete": "削除",
+    "edit": "編集",
+    "add": "追加",
+    "back": "戻る",
+    "loading": "読み込み中...",
+    "noData": "データなし",
+    "success": "成功",
+    "error": "失敗",
+    "required": "必須項目",
+    "search": "検索",
+    "reset": "リセット",
+    "all": "すべて"
+  },
+  "auth": {
+    "login": "ログイン",
+    "register": "新規登録",
+    "logout": "ログアウト",
+    "email": "メール",
+    "password": "パスワード",
+    "confirmPassword": "パスワード確認",
+    "nickname": "ニックネーム",
+    "forgotPassword": "パスワードをお忘れですか？",
+    "hasAccount": "アカウントをお持ちですか？",
+    "noAccount": "アカウントをお持ちでないですか？",
+    "goLogin": "ログイン",
+    "goRegister": "新規登録",
+    "loginSuccess": "ログインしました",
+    "registerSuccess": "登録しました",
+    "logoutSuccess": "ログアウトしました"
+  },
+  "vehicle": {
+    "title": "車両管理",
+    "addVehicle": "車両追加",
+    "editVehicle": "車両編集",
+    "name": "車両名",
+    "brand": "ブランド",
+    "model": "モデル",
+    "year": "年式",
+    "fuelType": "燃料タイプ",
+    "tankCapacity": "タンク容量 (L)",
+    "engineCc": "排気量 (cc)",
+    "setDefault": "デフォルトに設定",
+    "deleteConfirm": "この車両を削除しますか？関連する給油記録も削除されます。",
+    "noVehicle": "車両がありません",
+    "addFirst": "最初の車両を追加して記録を開始しましょう"
+  },
+  "fuelRecord": {
+    "title": "給油記録",
+    "addRecord": "記録追加",
+    "editRecord": "記録編集",
+    "fuelDate": "給油日",
+    "station": "ガソリンスタンド",
+    "fuelAmount": "給油量",
+    "pricePerUnit": "単価",
+    "totalCost": "合計金額",
+    "odometer": "走行距離",
+    "isFullTank": "満タン",
+    "notes": "メモ",
+    "consumption": "燃費",
+    "deleteConfirm": "この給油記録を削除しますか？"
+  },
+  "stats": {
+    "title": "統計",
+    "overview": "概要",
+    "totalRecords": "総記録数",
+    "totalFuel": "総給油量",
+    "totalCost": "総費用",
+    "totalDistance": "総走行距離",
+    "avgConsumption": "平均燃費",
+    "consumptionTrend": "燃費推移",
+    "costTrend": "費用推移"
+  },
+  "fuelType": {
+    "gasoline": "ガソリン",
+    "diesel": "ディーゼル",
+    "hybrid": "ハイブリッド"
+  },
+  "vehicleType": {
+    "car": "自動車",
+    "motorcycle": "バイク",
+    "other": "その他"
+  },
+  "measurement": {
+    "metricEu": "メートル法 (L/100km)",
+    "metricJp": "メートル法 (km/L)",
+    "imperial": "ヤード法 (MPG)"
+  },
+  "nav": {
+    "dashboard": "ダッシュボード",
+    "vehicles": "車両",
+    "records": "記録",
+    "stats": "統計",
+    "settings": "設定"
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "back": "Back",
+    "loading": "Loading...",
+    "noData": "No data",
+    "success": "Success",
+    "error": "Failed",
+    "required": "Required",
+    "search": "Search",
+    "reset": "Reset",
+    "all": "All"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "nickname": "Nickname",
+    "forgotPassword": "Forgot password?",
+    "hasAccount": "Already have an account?",
+    "noAccount": "Don't have an account?",
+    "goLogin": "Login",
+    "goRegister": "Register",
+    "loginSuccess": "Login successful",
+    "registerSuccess": "Register successful",
+    "logoutSuccess": "Logged out"
+  },
+  "vehicle": {
+    "title": "Vehicles",
+    "addVehicle": "Add Vehicle",
+    "editVehicle": "Edit Vehicle",
+    "name": "Vehicle Name",
+    "brand": "Brand",
+    "model": "Model",
+    "year": "Year",
+    "fuelType": "Fuel Type",
+    "tankCapacity": "Tank Capacity (L)",
+    "engineCc": "Engine (cc)",
+    "setDefault": "Set as Default",
+    "deleteConfirm": "Are you sure to delete this vehicle? Related fuel records will also be deleted.",
+    "noVehicle": "No vehicles yet",
+    "addFirst": "Add your first vehicle to start tracking"
+  },
+  "fuelRecord": {
+    "title": "Fuel Records",
+    "addRecord": "Add Record",
+    "editRecord": "Edit Record",
+    "fuelDate": "Fuel Date",
+    "station": "Station",
+    "fuelAmount": "Fuel Amount",
+    "pricePerUnit": "Price per Unit",
+    "totalCost": "Total Cost",
+    "odometer": "Odometer",
+    "isFullTank": "Full Tank",
+    "notes": "Notes",
+    "consumption": "Consumption",
+    "deleteConfirm": "Are you sure to delete this fuel record?"
+  },
+  "stats": {
+    "title": "Statistics",
+    "overview": "Overview",
+    "totalRecords": "Total Records",
+    "totalFuel": "Total Fuel",
+    "totalCost": "Total Cost",
+    "totalDistance": "Total Distance",
+    "avgConsumption": "Avg Consumption",
+    "consumptionTrend": "Consumption Trend",
+    "costTrend": "Cost Trend"
+  },
+  "fuelType": {
+    "gasoline": "Gasoline",
+    "diesel": "Diesel",
+    "hybrid": "Hybrid"
+  },
+  "vehicleType": {
+    "car": "Car",
+    "motorcycle": "Motorcycle",
+    "other": "Other"
+  },
+  "measurement": {
+    "metricEu": "Metric (L/100km)",
+    "metricJp": "Metric (km/L)",
+    "imperial": "Imperial (MPG)"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "vehicles": "Vehicles",
+    "records": "Records",
+    "stats": "Statistics",
+    "settings": "Settings"
+  }
+}
