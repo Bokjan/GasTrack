@@ -61,12 +61,13 @@ export default function RecordListPage() {
   const loadRecords = async (p: number) => {
     setLoading(true);
     try {
-      const { data } = await fuelRecordApi.list(vehicleId!, {
+      const { data: resp } = await fuelRecordApi.list(vehicleId!, {
         page: p,
         page_size: 20,
       });
-      setRecords(data.data.list);
-      setTotal(data.data.total);
+      // 后端分页格式: { code, message, data: FuelRecord[], meta: { page, page_size, total, total_pages } }
+      setRecords(resp.data);
+      setTotal(resp.meta.total);
       setPage(p);
     } catch {
       message.error(t('common.error'));

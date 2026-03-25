@@ -141,7 +141,7 @@ export default function RecordFormPage() {
                 min={0.01}
                 step={0.01}
                 style={{ width: '100%' }}
-                addonAfter="L"
+                suffix="L"
                 onChange={handleCalcTotal}
               />
             </Form.Item>
@@ -181,7 +181,7 @@ export default function RecordFormPage() {
                 min={0}
                 step={1}
                 style={{ width: '100%' }}
-                addonAfter="km"
+                suffix="km"
               />
             </Form.Item>
           </Space>

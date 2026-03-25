@@ -171,7 +171,7 @@ export default function VehicleFormPage() {
               rules={[{ required: true, message: t('common.required') }]}
               style={{ flex: 1 }}
             >
-              <InputNumber min={1} max={500} style={{ width: '100%' }} addonAfter="L" />
+              <InputNumber min={1} max={500} style={{ width: '100%' }} suffix="L" />
             </Form.Item>
 
             {vehicleType === 'motorcycle' && (
@@ -180,7 +180,7 @@ export default function VehicleFormPage() {
                 label={t('vehicle.engineCc')}
                 style={{ flex: 1 }}
               >
-                <InputNumber min={50} max={3000} style={{ width: '100%' }} addonAfter="cc" />
+                <InputNumber min={50} max={3000} style={{ width: '100%' }} suffix="cc" />
               </Form.Item>
             )}
           </Space>

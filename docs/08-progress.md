@@ -217,9 +217,11 @@
 
 | # | 问题 | 严重度 | 状态 |
 |---|------|--------|------|
-| 1 | 后端 `Paged()` 响应格式为 `{data, meta: {page, page_size, total, total_pages}}`，前端 `PaginatedData<T>` 定义为 `{list, total, page, page_size}` 嵌在 `data` 内——两端分页响应结构不一致 | ⚠️ 中 | 需确认前端实际使用的解析逻辑 |
-| 2 | `RecordFormPage.tsx` 中 Ant Design `addonAfter` 属性标记为 deprecated（Hint 级别） | 💡 低 | 不影响功能 |
-| 3 | `shared` 包 TypeScript 编译有 `ImportMeta.env` 类型缺失警告 | 💡 低 | 需要添加 `vite/client` 类型引用 |
+| 1 | ~~后端 `Paged()` 响应格式为 `{data, meta: {page, page_size, total, total_pages}}`，前端 `PaginatedData<T>` 定义为 `{list, total, page, page_size}` 嵌在 `data` 内——两端分页响应结构不一致~~ | ⚠️ 中 | ✅ 已修复 (2026-03-26) |
+| 2 | ~~`RecordFormPage.tsx` / `VehicleFormPage.tsx` 中 Ant Design `addonAfter` 属性标记为 deprecated（Hint 级别）~~ | 💡 低 | ✅ 已修复 (2026-03-26) |
+| 3 | ~~`shared` 包 TypeScript 编译有 `ImportMeta.env` 类型缺失警告~~ | 💡 低 | ✅ 已修复 (2026-03-26) |
+
+> **当前无未修复的已知问题** 🎉
 
 ---
 
@@ -233,3 +235,14 @@
 - ✅ 修复 `formatNumber` TypeError（null 防护 + 后端补全缺失字段）
 - ✅ 全面前后端 API 一致性审查并修复（10 项问题）
 - ✅ 编写 API 详细文档、数据库文档、进度文档、开发调试文档
+- ✅ **修复已知问题 #1**：前后端分页响应结构不一致
+  - 废弃 `PaginatedData<T>`（嵌套在 `data` 内的 `{list, total, page, page_size}`）
+  - 新增 `PageMeta` 接口 + 重写 `PaginatedResponse<T>` = `{ code, message, data: T[], meta: PageMeta }`
+  - 更新 `RecordListPage.tsx` 解析逻辑：`data.data.list` → `resp.data`，`data.data.total` → `resp.meta.total`
+  - 涉及文件：`shared/src/types/index.ts`、`shared/src/api/index.ts`、`web/src/pages/record/RecordListPage.tsx`
+- ✅ **修复已知问题 #2**：InputNumber `addonAfter` deprecated hint
+  - 将 `addonAfter` 替换为 `suffix`（fuel_amount、odometer、tank_capacity、engine_cc 共 4 处）
+  - 涉及文件：`web/src/pages/record/RecordFormPage.tsx`、`web/src/pages/vehicle/VehicleFormPage.tsx`
+- ✅ **修复已知问题 #3**：shared 包 `import.meta.env` 类型缺失
+  - 新增 `shared/src/vite-env.d.ts`，声明 `ImportMetaEnv` 和 `ImportMeta` 接口
+  - tsconfig.json 的 `include: ["src/**/*"]` 自动包含该声明文件

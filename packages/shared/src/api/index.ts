@@ -20,6 +20,9 @@ import type {
   PaginatedResponse,
 } from '../types';
 
+// 注意: PaginatedResponse<T> 的 Axios 响应为 AxiosResponse<PaginatedResponse<T>>
+// 即 response.data = { code, message, data: T[], meta: { page, page_size, total, total_pages } }
+
 // ==================== Auth ====================
 
 export const authApi = {

@@ -11,14 +11,24 @@ export interface ApiResponse<T = unknown> {
   data: T;
 }
 
-export interface PaginatedData<T> {
-  list: T[];
-  total: number;
+/** 分页元信息，与后端 PageMeta 对齐 */
+export interface PageMeta {
   page: number;
   page_size: number;
+  total: number;
+  total_pages: number;
 }
 
-export type PaginatedResponse<T> = ApiResponse<PaginatedData<T>>;
+/**
+ * 后端分页响应格式：
+ * { code: 0, message: "success", data: T[], meta: { page, page_size, total, total_pages } }
+ */
+export interface PaginatedResponse<T> {
+  code: number;
+  message: string;
+  data: T[];
+  meta: PageMeta;
+}
 
 // ---------- Auth ----------
 
