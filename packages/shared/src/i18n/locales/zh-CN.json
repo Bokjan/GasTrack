@@ -96,7 +96,8 @@
     "consumptionTrend": "油耗趋势",
     "energyConsumptionTrend": "电耗趋势",
     "distanceTrend": "里程趋势",
-    "costTrend": "费用趋势"
+    "costTrend": "费用趋势",
+    "perVehicle": "各车辆统计"
   },
   "fuelType": {
     "gasoline": "汽油",

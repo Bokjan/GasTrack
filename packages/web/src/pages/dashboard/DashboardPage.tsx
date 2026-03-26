@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Row, Col, Card, Statistic, Button, Empty, Space, List, Tag } from 'antd';
+import { Row, Col, Card, Statistic, Button, Empty, Space, List, Tag, Divider } from 'antd';
 import {
   CarOutlined,
   FileTextOutlined,
   DashboardOutlined,
   DollarOutlined,
+  ThunderboltOutlined,
   PlusOutlined,
   RightOutlined,
 } from '@ant-design/icons';
@@ -16,8 +17,9 @@ import {
   formatCurrency,
   formatNumber,
   useAuthStore,
+  isElectricVehicle,
 } from '@gastrack/shared';
-import type { OverviewStats } from '@gastrack/shared';
+import type { OverviewStats, VehicleStats, Vehicle } from '@gastrack/shared';
 
 export default function DashboardPage() {
   const { t } = useTranslation();
@@ -49,51 +51,135 @@ export default function DashboardPage() {
   const distanceUnit = isImperial ? 'mi' : 'km';
   const efficiencyUnit = user?.fuel_efficiency_unit || 'L/100km';
 
+  /** 根据 vehicle_id 找到对应车辆信息 */
+  const findVehicle = (vehicleId: string): Vehicle | undefined =>
+    vehicles.find((v) => v.id === vehicleId);
+
+  /** 渲染单辆车的统计卡片 */
+  const renderVehicleStats = (vs: VehicleStats, vehicle?: Vehicle) => {
+    const isEv = vehicle ? isElectricVehicle(vehicle.fuel_type) : false;
+    return (
+      <Row gutter={[16, 16]}>
+        <Col xs={12} sm={6}>
+          <Card loading={statsLoading} size="small">
+            <Statistic
+              title={t('stats.totalRecords')}
+              value={vs.total_records || 0}
+              prefix={<FileTextOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card loading={statsLoading} size="small">
+            <Statistic
+              title={t('stats.totalCost')}
+              value={formatCurrency(vs.total_cost, currency)}
+              prefix={<DollarOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card loading={statsLoading} size="small">
+            <Statistic
+              title={t('stats.totalDistance')}
+              value={`${formatNumber(vs.total_distance, 0)} ${distanceUnit}`}
+              prefix={<DashboardOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card loading={statsLoading} size="small">
+            <Statistic
+              title={isEv ? t('stats.avgEnergyConsumption') : t('stats.avgConsumption')}
+              value={vs.avg_efficiency ? `${formatNumber(vs.avg_efficiency)} ${vs.fuel_efficiency_unit || efficiencyUnit}` : '-'}
+              prefix={isEv ? <ThunderboltOutlined /> : <DashboardOutlined />}
+            />
+          </Card>
+        </Col>
+      </Row>
+    );
+  };
+
+  const hasMultipleVehicles = vehicles.length > 1;
+  const vehicleStatsList = overview?.vehicles || [];
+
   return (
     <div className="page-container">
       <div className="page-header">
         <h2>{t('nav.dashboard')}</h2>
       </div>
 
-      {/* 统计卡片 */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={12} sm={6}>
-          <Card loading={statsLoading}>
-            <Statistic
-              title={t('stats.totalRecords')}
-              value={overview?.total_records || 0}
-              prefix={<FileTextOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card loading={statsLoading}>
-            <Statistic
-              title={t('stats.totalCost')}
-              value={overview ? formatCurrency(overview.total_cost, currency) : '-'}
-              prefix={<DollarOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card loading={statsLoading}>
-            <Statistic
-              title={t('stats.totalDistance')}
-              value={overview ? `${formatNumber(overview.total_distance, 0)} ${distanceUnit}` : '-'}
-              prefix={<DashboardOutlined />}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card loading={statsLoading}>
-            <Statistic
-              title={t('stats.avgConsumption')}
-              value={overview ? `${formatNumber(overview.avg_consumption)} ${efficiencyUnit}` : '-'}
-              prefix={<DashboardOutlined />}
-            />
-          </Card>
-        </Col>
-      </Row>
+      {/* 统计卡片 — 按车辆维度展示 */}
+      {vehicleStatsList.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          {hasMultipleVehicles ? (
+            // 多辆车：按车辆分组展示独立统计
+            <>
+              {/* 全局概览：仅总车辆数 + 总费用（跨车有意义的指标） */}
+              <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+                <Col xs={12} sm={6}>
+                  <Card loading={statsLoading}>
+                    <Statistic
+                      title={t('stats.totalRecords')}
+                      value={overview?.total_records || 0}
+                      prefix={<FileTextOutlined />}
+                    />
+                  </Card>
+                </Col>
+                <Col xs={12} sm={6}>
+                  <Card loading={statsLoading}>
+                    <Statistic
+                      title={t('stats.totalCost')}
+                      value={overview ? formatCurrency(overview.total_cost, currency) : '-'}
+                      prefix={<DollarOutlined />}
+                    />
+                  </Card>
+                </Col>
+              </Row>
+
+              <Divider orientation="left" style={{ margin: '8px 0 16px' }}>
+                {t('stats.perVehicle')}
+              </Divider>
+
+              {vehicleStatsList.map((vs) => {
+                const vehicle = findVehicle(vs.vehicle_id);
+                return (
+                  <div key={vs.vehicle_id} style={{ marginBottom: 16 }}>
+                    <div
+                      style={{
+                        marginBottom: 8,
+                        fontWeight: 500,
+                        fontSize: 14,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        cursor: 'pointer',
+                      }}
+                      onClick={() => navigate(`/vehicles/${vs.vehicle_id}/records`)}
+                    >
+                      <span>
+                        {vehicle?.fuel_type === 'electric' ? '⚡' :
+                         vehicle?.vehicle_type === 'motorcycle' ? '🏍️' : '🚗'}
+                      </span>
+                      <span>{vs.vehicle_name}</span>
+                      {vehicle && (
+                        <Tag color={vehicle.fuel_type === 'electric' ? 'green' : 'blue'} style={{ marginLeft: 4 }}>
+                          {t(`fuelType.${vehicle.fuel_type}`)}
+                        </Tag>
+                      )}
+                      <RightOutlined style={{ fontSize: 12, color: '#999' }} />
+                    </div>
+                    {renderVehicleStats(vs, vehicle)}
+                  </div>
+                );
+              })}
+            </>
+          ) : (
+            // 单辆车：直接展示完整统计（不需要标题）
+            renderVehicleStats(vehicleStatsList[0], findVehicle(vehicleStatsList[0].vehicle_id))
+          )}
+        </div>
+      )}
 
       {/* 我的车辆 */}
       <Card

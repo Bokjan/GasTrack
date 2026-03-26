@@ -96,7 +96,8 @@
     "consumptionTrend": "燃費推移",
     "energyConsumptionTrend": "電費推移",
     "distanceTrend": "走行距離推移",
-    "costTrend": "費用推移"
+    "costTrend": "費用推移",
+    "perVehicle": "車両別統計"
   },
   "fuelType": {
     "gasoline": "ガソリン",

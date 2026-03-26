@@ -96,7 +96,8 @@
     "consumptionTrend": "Consumption Trend",
     "energyConsumptionTrend": "Energy Consumption Trend",
     "distanceTrend": "Distance Trend",
-    "costTrend": "Cost Trend"
+    "costTrend": "Cost Trend",
+    "perVehicle": "Per Vehicle"
   },
   "fuelType": {
     "gasoline": "Gasoline",
