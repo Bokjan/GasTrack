@@ -91,6 +91,12 @@ func (h *FuelRecordHandler) Create(w http.ResponseWriter, r *http.Request) {
 // GetByID 获取加油记录详情
 // GET /api/v1/vehicles/{id}/records/{rid}
 func (h *FuelRecordHandler) GetByID(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		respond.Unauthorized(w, "missing user identity")
+		return
+	}
+
 	vehicleID, err := decode.PathParamUUID(r, "id")
 	if err != nil {
 		respond.BadRequest(w, err.Error())
@@ -103,7 +109,7 @@ func (h *FuelRecordHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.recordService.GetByID(r.Context(), recordID, vehicleID)
+	result, err := h.recordService.GetByID(r.Context(), recordID, vehicleID, userID)
 	if err != nil {
 		handleAppError(w, h.logger, err)
 		return
@@ -115,6 +121,12 @@ func (h *FuelRecordHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 // Update 编辑加油记录
 // PATCH /api/v1/vehicles/{id}/records/{rid}
 func (h *FuelRecordHandler) Update(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		respond.Unauthorized(w, "missing user identity")
+		return
+	}
+
 	vehicleID, err := decode.PathParamUUID(r, "id")
 	if err != nil {
 		respond.BadRequest(w, err.Error())
@@ -133,7 +145,7 @@ func (h *FuelRecordHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.recordService.Update(r.Context(), recordID, vehicleID, &req)
+	result, err := h.recordService.Update(r.Context(), recordID, vehicleID, userID, &req)
 	if err != nil {
 		handleAppError(w, h.logger, err)
 		return
@@ -163,4 +175,28 @@ func (h *FuelRecordHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond.NoContent(w)
+}
+
+// GetStationSuggestions 获取加油站/充电站名称建议
+// GET /api/v1/vehicles/{id}/stations
+func (h *FuelRecordHandler) GetStationSuggestions(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		respond.Unauthorized(w, "missing user identity")
+		return
+	}
+
+	vehicleID, err := decode.PathParamUUID(r, "id")
+	if err != nil {
+		respond.BadRequest(w, err.Error())
+		return
+	}
+
+	names, err := h.recordService.GetStationSuggestions(r.Context(), userID, vehicleID)
+	if err != nil {
+		handleAppError(w, h.logger, err)
+		return
+	}
+
+	respond.OK(w, names)
 }

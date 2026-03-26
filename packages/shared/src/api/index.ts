@@ -103,6 +103,12 @@ export const fuelRecordApi = {
     apiClient.delete<ApiResponse<null>>(
       `/vehicles/${vehicleId}/records/${recordId}`,
     ),
+
+  /** 获取加油站/充电站名称建议列表 */
+  getStationSuggestions: (vehicleId: string) =>
+    apiClient.get<ApiResponse<string[]>>(
+      `/vehicles/${vehicleId}/stations`,
+    ),
 };
 
 // ==================== Stats ====================

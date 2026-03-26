@@ -84,6 +84,27 @@ func (r *FuelRecordRepository) Delete(ctx context.Context, id, vehicleID uuid.UU
 	return r.db.WithContext(ctx).Where("id = ? AND vehicle_id = ?", id, vehicleID).Delete(&model.FuelRecord{}).Error
 }
 
+// GetDistinctStationNames 获取某车辆（或用户所有车辆）去重的加油站名列表（按使用频次降序）
+func (r *FuelRecordRepository) GetDistinctStationNames(ctx context.Context, userID uuid.UUID, vehicleID *uuid.UUID, limit int) ([]string, error) {
+	var names []string
+	query := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
+		Select("station_name").
+		Where("user_id = ? AND station_name != ''", userID).
+		Group("station_name").
+		Order("COUNT(*) DESC")
+
+	if vehicleID != nil {
+		query = query.Where("vehicle_id = ?", *vehicleID)
+	}
+
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+
+	err := query.Pluck("station_name", &names).Error
+	return names, err
+}
+
 // --- 统计查询 ---
 
 // StatsResult 统计查询结果

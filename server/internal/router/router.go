@@ -62,6 +62,7 @@ func New(
 	mux.Handle("GET /api/v1/vehicles/{id}/records/{rid}", auth(http.HandlerFunc(fuelRecordHandler.GetByID)))
 	mux.Handle("PATCH /api/v1/vehicles/{id}/records/{rid}", auth(http.HandlerFunc(fuelRecordHandler.Update)))
 	mux.Handle("DELETE /api/v1/vehicles/{id}/records/{rid}", auth(http.HandlerFunc(fuelRecordHandler.Delete)))
+	mux.Handle("GET /api/v1/vehicles/{id}/stations", auth(http.HandlerFunc(fuelRecordHandler.GetStationSuggestions)))
 
 	// 统计
 	mux.Handle("GET /api/v1/vehicles/{id}/stats", auth(http.HandlerFunc(statsHandler.GetVehicleStats)))
