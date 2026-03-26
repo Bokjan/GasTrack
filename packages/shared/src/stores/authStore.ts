@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { User, AuthResponse } from '../types';
+import type { User, AuthResponse, UpdateUserRequest } from '../types';
 import { authApi, userApi } from '../api';
 
 interface AuthState {
@@ -11,6 +11,7 @@ interface AuthState {
   register: (email: string, password: string, nickname: string) => Promise<void>;
   logout: () => Promise<void>;
   fetchProfile: () => Promise<void>;
+  updateProfile: (data: UpdateUserRequest) => Promise<void>;
   setTokens: (tokens: AuthResponse) => void;
   reset: () => void;
 }
@@ -76,6 +77,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     } finally {
       set({ isLoading: false });
     }
+  },
+
+  updateProfile: async (req) => {
+    const { data } = await userApi.updateProfile(req);
+    set({ user: data.data });
   },
 
   setTokens: (tokens) => {

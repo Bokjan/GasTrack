@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Card,
@@ -12,6 +12,7 @@ import {
   Space,
   message,
   Spin,
+  AutoComplete,
 } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -20,9 +21,8 @@ import {
   vehicleApi,
   useAuthStore,
   CURRENCIES,
-  FUEL_UNITS,
-  ENERGY_UNITS,
-  DISTANCE_UNITS,
+  FUEL_GRADES,
+  getFuelGradesByLocale,
   isElectricVehicle,
 } from '@gastrack/shared';
 import type { CreateFuelRecordRequest } from '@gastrack/shared';
@@ -36,7 +36,7 @@ import dayjs from 'dayjs';
  */
 
 export default function RecordFormPage() {
-  const { t } = useTranslation();
+  const { t, i18n: i18nInstance } = useTranslation();
   const navigate = useNavigate();
   const { vehicleId, recordId } = useParams<{
     vehicleId: string;
@@ -46,20 +46,49 @@ export default function RecordFormPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [isEv, setIsEv] = useState(false);
+  const [stationSuggestions, setStationSuggestions] = useState<string[]>([]);
+  const [stationSearch, setStationSearch] = useState('');
   const user = useAuthStore((s) => s.user);
 
   const isEdit = !!recordId;
+
+  // 根据用户设置推断默认单位
+  const isImperial = user?.unit_system === 'imperial';
+  const defaultFuelUnit = isImperial ? 'gal' : 'L';
+  const defaultDistanceUnit = isImperial ? 'mi' : 'km';
+  const defaultCurrency = user?.currency_code || 'CNY';
+
+  // 加油站建议：根据输入文字模糊过滤
+  const stationOptions = useMemo(() => {
+    if (!stationSearch) {
+      return stationSuggestions.map((name) => ({ value: name, label: name }));
+    }
+    const lower = stationSearch.toLowerCase();
+    return stationSuggestions
+      .filter((name) => name.toLowerCase().includes(lower))
+      .map((name) => ({ value: name, label: name }));
+  }, [stationSuggestions, stationSearch]);
 
   // 获取车辆信息以判断是否为电动车
   useEffect(() => {
     if (vehicleId) {
       vehicleApi.getById(vehicleId).then(({ data }) => {
-        const ev = isElectricVehicle(data.data.fuel_type);
+        const vehicle = data.data;
+        const ev = isElectricVehicle(vehicle.fuel_type);
         setIsEv(ev);
         // 电动车默认能量单位为 kWh
         if (ev && !isEdit) {
           form.setFieldValue('fuel_unit', 'kWh');
         }
+        // 自动带入车辆的默认燃油标号（仅新建时）
+        if (!ev && !isEdit && vehicle.fuel_grade) {
+          form.setFieldValue('fuel_grade', vehicle.fuel_grade);
+        }
+      }).catch(() => { /* ignore */ });
+
+      // 加载加油站/充电站建议列表
+      fuelRecordApi.getStationSuggestions(vehicleId).then(({ data }) => {
+        setStationSuggestions(data.data || []);
       }).catch(() => { /* ignore */ });
     }
   }, [vehicleId]);
@@ -129,9 +158,9 @@ export default function RecordFormPage() {
     const payload: CreateFuelRecordRequest = {
       ...values,
       refuel_date: values.refuel_date.format('YYYY-MM-DDTHH:mm:ssZ'),
-      currency_code: values.currency_code || user?.currency_code || 'CNY',
-      fuel_unit: values.fuel_unit || 'L',
-      distance_unit: values.distance_unit || 'km',
+      currency_code: values.currency_code || defaultCurrency,
+      fuel_unit: values.fuel_unit || defaultFuelUnit,
+      distance_unit: values.distance_unit || defaultDistanceUnit,
     };
 
     try {
@@ -180,9 +209,9 @@ export default function RecordFormPage() {
           initialValues={{
             refuel_date: dayjs(),
             is_full_tank: true,
-            fuel_unit: 'L',
-            currency_code: user?.currency_code || 'CNY',
-            distance_unit: 'km',
+            fuel_unit: defaultFuelUnit,
+            currency_code: defaultCurrency,
+            distance_unit: defaultDistanceUnit,
           }}
         >
           <Form.Item
@@ -198,66 +227,45 @@ export default function RecordFormPage() {
           </Form.Item>
 
           <Form.Item name="station_name" label={isEv ? t('fuelRecord.chargingStation') : t('fuelRecord.station')}>
-            <Input placeholder={isEv ? t('fuelRecord.chargingStation') : t('fuelRecord.station')} />
+            <AutoComplete
+              options={stationOptions}
+              onSearch={setStationSearch}
+              placeholder={isEv ? t('fuelRecord.chargingStationPlaceholder') : t('fuelRecord.stationPlaceholder')}
+              allowClear
+              filterOption={false}
+            />
           </Form.Item>
 
-          {/* 加油量/充电量 + 燃油/能量单位 */}
-          <Space style={{ width: '100%' }} size="middle">
-            <Form.Item
-              name="fuel_amount"
-              label={isEv ? t('fuelRecord.chargingAmount') : t('fuelRecord.fuelAmount')}
-              style={{ flex: 1 }}
-            >
-              <InputNumber
-                min={0.01}
-                step={0.01}
-                style={{ width: '100%' }}
-                onChange={() => autoCalc('fuel_amount')}
-              />
-            </Form.Item>
+          {/* 加油量/充电量（单位跟随用户设置） */}
+          <Form.Item
+            name="fuel_amount"
+            label={isEv ? t('fuelRecord.chargingAmount') : t('fuelRecord.fuelAmount')}
+          >
+            <InputNumber
+              min={0.01}
+              step={0.01}
+              style={{ width: '100%' }}
+              suffix={isEv ? 'kWh' : defaultFuelUnit}
+              onChange={() => autoCalc('fuel_amount')}
+            />
+          </Form.Item>
+          <Form.Item name="fuel_unit" hidden><Input /></Form.Item>
 
-            <Form.Item
-              name="fuel_unit"
-              label={isEv ? t('fuelRecord.energyUnit') : t('fuelRecord.fuelUnit')}
-              style={{ width: 120 }}
-            >
-              <Select
-                options={(isEv ? ENERGY_UNITS : FUEL_UNITS).map((u) => ({
-                  value: u.value,
-                  label: t(u.label),
-                }))}
-              />
-            </Form.Item>
-          </Space>
-
-          {/* 单价 + 货币 */}
-          <Space style={{ width: '100%' }} size="middle">
-            <Form.Item
-              name="unit_price"
-              label={t('fuelRecord.pricePerUnit')}
-              style={{ flex: 1 }}
-            >
-              <InputNumber
-                min={0.01}
-                step={0.01}
-                style={{ width: '100%' }}
-                onChange={() => autoCalc('unit_price')}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="currency_code"
-              label={t('fuelRecord.currency')}
-              style={{ width: 140 }}
-            >
-              <Select
-                options={CURRENCIES.map((c) => ({
-                  value: c.value,
-                  label: c.label,
-                }))}
-              />
-            </Form.Item>
-          </Space>
+          {/* 单价（货币跟随用户设置） */}
+          <Form.Item
+            name="unit_price"
+            label={t('fuelRecord.pricePerUnit')}
+          >
+            <InputNumber
+              min={0.01}
+              step={0.01}
+              style={{ width: '100%' }}
+              prefix={CURRENCIES.find((c) => c.value === defaultCurrency)?.symbol || defaultCurrency}
+              suffix={`/${isEv ? 'kWh' : defaultFuelUnit}`}
+              onChange={() => autoCalc('unit_price')}
+            />
+          </Form.Item>
+          <Form.Item name="currency_code" hidden><Input /></Form.Item>
 
           {/* 总费用 */}
           <Form.Item
@@ -269,34 +277,53 @@ export default function RecordFormPage() {
               min={0}
               step={0.01}
               style={{ width: '100%' }}
+              prefix={CURRENCIES.find((c) => c.value === defaultCurrency)?.symbol || defaultCurrency}
               onChange={() => autoCalc('total_cost')}
             />
           </Form.Item>
 
-          {/* 里程 + 里程单位 */}
-          <Space style={{ width: '100%' }} size="middle">
-            <Form.Item
-              name="odometer"
-              label={t('fuelRecord.odometer')}
-              rules={[{ required: true, message: t('common.required') }]}
-              style={{ flex: 1 }}
-            >
-              <InputNumber min={0} step={1} style={{ width: '100%' }} />
-            </Form.Item>
+          {/* 里程（单位跟随用户设置） */}
+          <Form.Item
+            name="odometer"
+            label={t('fuelRecord.odometer')}
+            rules={[{ required: true, message: t('common.required') }]}
+          >
+            <InputNumber min={0} step={1} style={{ width: '100%' }} suffix={defaultDistanceUnit} />
+          </Form.Item>
+          <Form.Item name="distance_unit" hidden><Input /></Form.Item>
 
-            <Form.Item
-              name="distance_unit"
-              label={t('fuelRecord.distanceUnit')}
-              style={{ width: 120 }}
-            >
-              <Select
-                options={DISTANCE_UNITS.map((u) => ({
-                  value: u.value,
-                  label: t(u.label),
-                }))}
-              />
-            </Form.Item>
-          </Space>
+          {/* 燃油标号（仅燃油车显示）——按当前语言优先显示本地区标号 */}
+          {!isEv && (() => {
+            const localGrades = getFuelGradesByLocale(i18nInstance.language);
+            const allGrades = FUEL_GRADES;
+            const localValues = new Set(localGrades.map((g) => g.value));
+            const otherGrades = allGrades.filter((g) => !localValues.has(g.value));
+
+            return (
+              <Form.Item name="fuel_grade" label={t('fuelRecord.fuelGrade')}>
+                <Select
+                  allowClear
+                  placeholder={t('fuelRecord.fuelGradePlaceholder')}
+                  options={[
+                    {
+                      label: t('fuelGrade.localGroup'),
+                      options: localGrades.map((g) => ({
+                        value: g.value,
+                        label: t(g.label),
+                      })),
+                    },
+                    {
+                      label: t('fuelGrade.otherGroup'),
+                      options: otherGrades.map((g) => ({
+                        value: g.value,
+                        label: t(g.label),
+                      })),
+                    },
+                  ]}
+                />
+              </Form.Item>
+            );
+          })()}
 
           <Form.Item
             name="is_full_tank"
