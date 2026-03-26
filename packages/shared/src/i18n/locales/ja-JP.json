@@ -17,7 +17,8 @@
     "required": "必須項目",
     "search": "検索",
     "reset": "リセット",
-    "all": "すべて"
+    "all": "すべて",
+    "totalItems": "全 {{total}} 件"
   },
   "auth": {
     "login": "ログイン",

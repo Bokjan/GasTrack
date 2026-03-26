@@ -17,7 +17,8 @@
     "required": "Required",
     "search": "Search",
     "reset": "Reset",
-    "all": "All"
+    "all": "All",
+    "totalItems": "{{total}} items"
   },
   "auth": {
     "login": "Login",

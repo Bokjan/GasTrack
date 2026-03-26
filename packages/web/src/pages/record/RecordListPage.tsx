@@ -219,7 +219,7 @@ export default function RecordListPage() {
             total,
             pageSize: 20,
             onChange: loadRecords,
-            showTotal: (total) => `共 ${total} 条`,
+            showTotal: (total) => t('common.totalItems', { total }),
           }}
           scroll={{ x: 900 }}
           size="middle"
