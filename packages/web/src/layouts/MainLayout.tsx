@@ -13,7 +13,7 @@ import {
   MenuUnfoldOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore, useThemeStore } from '@gastrack/shared';
+import { useAuthStore, useThemeStore, SUPPORTED_LOCALES } from '@gastrack/shared';
 import type { MenuProps } from 'antd';
 
 const { Header, Sider, Content } = Layout;
@@ -65,11 +65,10 @@ export default function MainLayout() {
     navigate('/login');
   };
 
-  const languageItems: MenuProps['items'] = [
-    { key: 'zh-CN', label: '简体中文' },
-    { key: 'en-US', label: 'English' },
-    { key: 'ja-JP', label: '日本語' },
-  ];
+  const languageItems: MenuProps['items'] = SUPPORTED_LOCALES.map((l) => ({
+    key: l.value,
+    label: l.label,
+  }));
 
   const handleLanguageChange: MenuProps['onClick'] = async ({ key }) => {
     await i18n.changeLanguage(key);

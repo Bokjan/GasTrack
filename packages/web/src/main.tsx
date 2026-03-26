@@ -1,15 +1,26 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { ConfigProvider, theme } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
+import enUS from 'antd/locale/en_US';
+import jaJP from 'antd/locale/ja_JP';
+import { useTranslation } from 'react-i18next';
 import { useThemeStore } from '@gastrack/shared';
 import '@gastrack/shared/src/i18n';
 import App from './App';
 import './styles/global.css';
 
+const antdLocaleMap: Record<string, typeof zhCN> = {
+  'zh-CN': zhCN,
+  'en-US': enUS,
+  'ja-JP': jaJP,
+};
+
 function ThemeRoot() {
   const resolved = useThemeStore((s) => s.resolved);
+  const { i18n } = useTranslation();
+  const antdLocale = useMemo(() => antdLocaleMap[i18n.language] || enUS, [i18n.language]);
 
   // 同步 data-theme 到 <html>，让 CSS 变量生效
   useEffect(() => {
@@ -20,7 +31,7 @@ function ThemeRoot() {
 
   return (
     <ConfigProvider
-      locale={zhCN}
+      locale={antdLocale}
       theme={{
         algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {

@@ -35,7 +35,10 @@
     "goRegister": "新規登録",
     "loginSuccess": "ログインしました",
     "registerSuccess": "登録しました",
-    "logoutSuccess": "ログアウトしました"
+    "logoutSuccess": "ログアウトしました",
+    "invalidEmail": "有効なメールアドレスを入力してください",
+    "passwordMinLength": "パスワードは8文字以上で入力してください",
+    "passwordMismatch": "パスワードが一致しません"
   },
   "vehicle": {
     "title": "車両管理",

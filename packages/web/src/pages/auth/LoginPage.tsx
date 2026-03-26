@@ -39,7 +39,7 @@ export default function LoginPage() {
             name="email"
             rules={[
               { required: true, message: t('common.required') },
-              { type: 'email', message: '请输入有效的邮箱地址' },
+              { type: 'email', message: t('auth.invalidEmail') },
             ]}
           >
             <Input prefix={<MailOutlined />} placeholder={t('auth.email')} />

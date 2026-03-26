@@ -50,7 +50,7 @@ export default function RegisterPage() {
             name="email"
             rules={[
               { required: true, message: t('common.required') },
-              { type: 'email', message: '请输入有效的邮箱地址' },
+              { type: 'email', message: t('auth.invalidEmail') },
             ]}
           >
             <Input prefix={<MailOutlined />} placeholder={t('auth.email')} />
@@ -60,7 +60,7 @@ export default function RegisterPage() {
             name="password"
             rules={[
               { required: true, message: t('common.required') },
-              { min: 8, message: '密码至少 8 个字符' },
+              { min: 8, message: t('auth.passwordMinLength') },
             ]}
           >
             <Input.Password
@@ -79,7 +79,7 @@ export default function RegisterPage() {
                   if (!value || getFieldValue('password') === value) {
                     return Promise.resolve();
                   }
-                  return Promise.reject(new Error('两次密码不一致'));
+                  return Promise.reject(new Error(t('auth.passwordMismatch')));
                 },
               }),
             ]}

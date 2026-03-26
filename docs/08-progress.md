@@ -238,12 +238,31 @@
 | 16 | ~~右上角切换语言后不会同步保存到用户后端设置（仅存 localStorage，换设备/清缓存后丢失）~~ | 🐛 中 | ✅ 已修复 (2026-03-26) |
 | 17 | ~~仪表盘顶部统计卡片把所有车数据混合汇总（总里程/平均油耗），多车场景无意义，油车+电车混算油耗更不合理~~ | 🐛 中 | ✅ 已修复 (2026-03-26) |
 | 18 | ~~加油记录列表分页组件"共 N 条"硬编码中文，切换语言后不翻译~~ | 🐛 低 | ✅ 已修复 (2026-03-26) |
+| 19 | ~~登录页邮箱验证消息"请输入有效的邮箱地址"硬编码中文~~ | 🐛 中 | ✅ 已修复 (2026-03-26) |
+| 20 | ~~注册页邮箱验证/密码最小长度/密码不一致 3 处硬编码中文~~ | 🐛 中 | ✅ 已修复 (2026-03-26) |
+| 21 | ~~Ant Design ConfigProvider locale 硬编码为 zh_CN，切换语言后分页/DatePicker 等组件内置文本仍为中文~~ | 🐛 高 | ✅ 已修复 (2026-03-26) |
 
 > **当前无未修复的已知问题** 🎉
 
 ---
 
 ## 6. 变更日志
+
+### 2026-03-26 — i18n 全面排查修复
+
+- ✅ **修复**：登录/注册页表单验证消息硬编码中文（共 4 处）
+  - `LoginPage.tsx:42` — `'请输入有效的邮箱地址'` → `t('auth.invalidEmail')`
+  - `RegisterPage.tsx:53` — `'请输入有效的邮箱地址'` → `t('auth.invalidEmail')`
+  - `RegisterPage.tsx:63` — `'密码至少 8 个字符'` → `t('auth.passwordMinLength')`
+  - `RegisterPage.tsx:82` — `'两次密码不一致'` → `t('auth.passwordMismatch')`
+  - 三语 locale JSON 的 `auth` 节点新增 `invalidEmail` / `passwordMinLength` / `passwordMismatch` 翻译
+- ✅ **修复**：Ant Design 组件内置文本不随语言切换
+  - `main.tsx` 从硬编码 `locale={zhCN}` 改为根据 `i18n.language` 动态选择 `antd/locale/zh_CN`、`en_US`、`ja_JP`
+  - 新增 `antdLocaleMap` 映射表 + `useMemo` 缓存
+  - 修复后切换语言时 Table 分页、DatePicker、Popconfirm 等 antd 内置组件文本同步切换
+- ✅ **优化**：MainLayout 语言列表从硬编码改为复用 `SUPPORTED_LOCALES` 常量
+  - 消除与 `constants/index.ts` 的重复定义
+  - 涉及文件：`MainLayout.tsx`（import `SUPPORTED_LOCALES`，`languageItems` 改为 `.map()`）
 
 ### 2026-03-26 — 深色模式
 

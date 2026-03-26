@@ -35,7 +35,10 @@
     "goRegister": "Register",
     "loginSuccess": "Login successful",
     "registerSuccess": "Register successful",
-    "logoutSuccess": "Logged out"
+    "logoutSuccess": "Logged out",
+    "invalidEmail": "Please enter a valid email address",
+    "passwordMinLength": "Password must be at least 8 characters",
+    "passwordMismatch": "Passwords do not match"
   },
   "vehicle": {
     "title": "Vehicles",
