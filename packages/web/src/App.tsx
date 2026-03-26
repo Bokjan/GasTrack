@@ -9,6 +9,7 @@ import VehicleFormPage from './pages/vehicle/VehicleFormPage';
 import RecordListPage from './pages/record/RecordListPage';
 import RecordFormPage from './pages/record/RecordFormPage';
 import StatsPage from './pages/stats/StatsPage';
+import SettingsPage from './pages/settings/SettingsPage';
 import { useEffect } from 'react';
 
 /** 需要认证的路由守卫 */
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="vehicles/:vehicleId/records/new" element={<RecordFormPage />} />
         <Route path="vehicles/:vehicleId/records/:recordId/edit" element={<RecordFormPage />} />
         <Route path="stats" element={<StatsPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
 
       {/* 404 重定向 */}
