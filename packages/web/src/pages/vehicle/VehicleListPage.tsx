@@ -119,7 +119,7 @@ export default function VehicleListPage() {
                   title={
                     <Space>
                       <span>{vehicle.name}</span>
-                      {vehicle.is_default && <Tag color="blue">默认</Tag>}
+                      {vehicle.is_default && <Tag color="blue">{t('vehicle.default')}</Tag>}
                     </Space>
                   }
                   description={

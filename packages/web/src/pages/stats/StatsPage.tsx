@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Row, Col, Card, Statistic, Select, Empty, Spin, Segmented, Space } from 'antd';
+import { Row, Col, Card, Statistic, Select, Empty, Spin, Segmented, Space, theme } from 'antd';
 import {
   DashboardOutlined,
   DollarOutlined,
@@ -16,6 +16,7 @@ import {
   formatNumber,
   formatCurrency,
   useAuthStore,
+  useThemeStore,
 } from '@gastrack/shared';
 import type { VehicleStats, PeriodStatsItem, PeriodStatsResponse } from '@gastrack/shared';
 
@@ -23,6 +24,8 @@ export default function StatsPage() {
   const { t } = useTranslation();
   const { vehicles, fetchVehicles } = useVehicleStore();
   const user = useAuthStore((s) => s.user);
+  const resolved = useThemeStore((s) => s.resolved);
+  const { token } = theme.useToken();
 
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [stats, setStats] = useState<VehicleStats | null>(null);
@@ -129,6 +132,12 @@ export default function StatsPage() {
 
   const hasPrevData = prevItems.length > 0 && prevItems.some((item) => item.total_records > 0);
 
+  // ECharts 暗色主题文字/坐标轴颜色
+  const isDark = resolved === 'dark';
+  const chartTextColor = isDark ? 'rgba(255,255,255,0.65)' : '#666';
+  const chartAxisLineColor = isDark ? '#303030' : '#e0e0e0';
+  const chartSplitLineColor = isDark ? '#303030' : '#f0f0f0';
+
   /** 构建含同比的图表 option */
   const buildChartOption = (
     field: keyof Pick<PeriodStatsItem, 'total_cost' | 'total_distance' | 'avg_efficiency' | 'total_records'>,
@@ -164,7 +173,7 @@ export default function StatsPage() {
         smooth: type === 'line',
         areaStyle: type === 'line' ? { opacity: 0.05 } : undefined,
         itemStyle: {
-          color: '#d9d9d9',
+          color: isDark ? '#555' : '#d9d9d9',
           borderRadius: type === 'bar' ? [4, 4, 0, 0] : undefined,
         },
         lineStyle: type === 'line' ? { type: 'dashed' as const } : undefined,
@@ -174,13 +183,22 @@ export default function StatsPage() {
 
     return {
       tooltip: { trigger: 'axis' as const },
-      legend: hasPrevData && period === 'month' ? { top: 0 } : undefined,
+      legend: hasPrevData && period === 'month'
+        ? { top: 0, textStyle: { color: chartTextColor } }
+        : undefined,
       xAxis: {
         type: 'category' as const,
         data: xLabels,
-        axisLabel: { fontSize: 11 },
+        axisLabel: { fontSize: 11, color: chartTextColor },
+        axisLine: { lineStyle: { color: chartAxisLineColor } },
       },
-      yAxis: { type: 'value' as const, name: yAxisName },
+      yAxis: {
+        type: 'value' as const,
+        name: yAxisName,
+        nameTextStyle: { color: chartTextColor },
+        axisLabel: { color: chartTextColor },
+        splitLine: { lineStyle: { color: chartSplitLineColor } },
+      },
       series,
       grid: { left: 55, right: 20, top: hasPrevData && period === 'month' ? 40 : 30, bottom: 30 },
     };
@@ -234,7 +252,7 @@ export default function StatsPage() {
           {period === 'month' && (
             <Space size={4}>
               <LeftOutlined
-                style={{ cursor: 'pointer', fontSize: 14, color: '#666' }}
+                style={{ cursor: 'pointer', fontSize: 14, color: token.colorTextSecondary }}
                 onClick={() => setSelectedYear((y) => y - 1)}
               />
               <Select
@@ -247,7 +265,9 @@ export default function StatsPage() {
                 style={{
                   cursor: selectedYear >= new Date().getFullYear() ? 'not-allowed' : 'pointer',
                   fontSize: 14,
-                  color: selectedYear >= new Date().getFullYear() ? '#ccc' : '#666',
+                  color: selectedYear >= new Date().getFullYear()
+                    ? token.colorTextDisabled
+                    : token.colorTextSecondary,
                 }}
                 onClick={() => {
                   if (selectedYear < new Date().getFullYear()) {
@@ -320,6 +340,7 @@ export default function StatsPage() {
                     '#1677ff',
                   )}
                   style={{ height: 300 }}
+                  theme={isDark ? 'dark' : undefined}
                 />
               </Card>
             </Col>
@@ -333,6 +354,7 @@ export default function StatsPage() {
                     '#faad14',
                   )}
                   style={{ height: 300 }}
+                  theme={isDark ? 'dark' : undefined}
                 />
               </Card>
             </Col>
@@ -346,6 +368,7 @@ export default function StatsPage() {
                     '#52c41a',
                   )}
                   style={{ height: 300 }}
+                  theme={isDark ? 'dark' : undefined}
                 />
               </Card>
             </Col>
@@ -359,6 +382,7 @@ export default function StatsPage() {
                     '#722ed1',
                   )}
                   style={{ height: 300 }}
+                  theme={isDark ? 'dark' : undefined}
                 />
               </Card>
             </Col>

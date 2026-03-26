@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Avatar, Dropdown, Typography } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Typography, theme } from 'antd';
 import {
   DashboardOutlined,
   CarOutlined,
@@ -13,7 +13,7 @@ import {
   MenuUnfoldOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore } from '@gastrack/shared';
+import { useAuthStore, useThemeStore } from '@gastrack/shared';
 import type { MenuProps } from 'antd';
 
 const { Header, Sider, Content } = Layout;
@@ -24,6 +24,8 @@ export default function MainLayout() {
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const { user, logout, updateProfile } = useAuthStore();
+  const resolved = useThemeStore((s) => s.resolved);
+  const { token } = theme.useToken();
 
   // 同步浏览器标题和 html lang 属性
   useEffect(() => {
@@ -118,10 +120,11 @@ export default function MainLayout() {
         collapsed={collapsed}
         onCollapse={setCollapsed}
         breakpoint="lg"
-        theme="light"
+        theme={resolved === 'dark' ? 'dark' : 'light'}
         style={{
-          borderRight: '1px solid #f0f0f0',
-          boxShadow: '2px 0 8px rgba(0,0,0,0.04)',
+          borderRight: `1px solid ${token.colorBorderSecondary}`,
+          boxShadow: 'var(--gt-shadow-sider)',
+          background: token.colorBgContainer,
         }}
       >
         <div
@@ -130,12 +133,12 @@ export default function MainLayout() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            borderBottom: '1px solid #f0f0f0',
+            borderBottom: `1px solid ${token.colorBorderSecondary}`,
           }}
         >
           <Typography.Title
             level={4}
-            style={{ margin: 0, color: '#1677ff', whiteSpace: 'nowrap' }}
+            style={{ margin: 0, color: token.colorPrimary, whiteSpace: 'nowrap' }}
           >
             {collapsed ? '⛽' : '⛽ GasTrack'}
           </Typography.Title>
@@ -152,13 +155,13 @@ export default function MainLayout() {
       <Layout>
         <Header
           style={{
-            background: '#fff',
+            background: token.colorBgContainer,
             padding: '0 24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid #f0f0f0',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            borderBottom: `1px solid ${token.colorBorderSecondary}`,
+            boxShadow: 'var(--gt-shadow-header)',
           }}
         >
           <div

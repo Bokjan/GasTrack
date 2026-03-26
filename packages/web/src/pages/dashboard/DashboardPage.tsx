@@ -167,7 +167,7 @@ export default function DashboardPage() {
                           {t(`fuelType.${vehicle.fuel_type}`)}
                         </Tag>
                       )}
-                      <RightOutlined style={{ fontSize: 12, color: '#999' }} />
+                      <RightOutlined style={{ fontSize: 12, color: 'var(--gt-text-tertiary)' }} />
                     </div>
                     {renderVehicleStats(vs, vehicle)}
                   </div>
@@ -227,7 +227,7 @@ export default function DashboardPage() {
                   title={
                     <Space>
                       <span>{vehicle.name}</span>
-                      {vehicle.is_default && <Tag color="blue">默认</Tag>}
+                      {vehicle.is_default && <Tag color="blue">{t('vehicle.default')}</Tag>}
                     </Space>
                   }
                   description={`${vehicle.brand} ${vehicle.model} · ${vehicle.year} · ${t(`fuelType.${vehicle.fuel_type}`)}`}

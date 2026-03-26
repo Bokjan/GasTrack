@@ -49,6 +49,7 @@
     "tankCapacity": "タンク容量",
     "batteryCapacity": "バッテリー容量",
     "engineCc": "排気量 (cc)",
+    "default": "デフォルト",
     "setDefault": "デフォルトに設定",
     "deleteConfirm": "この車両を削除しますか？関連する給油/充電記録も削除されます。",
     "noVehicle": "車両がありません",
@@ -195,6 +196,10 @@
     "passwordMismatch": "パスワードが一致しません",
     "passwordChanged": "パスワードを変更しました",
     "profileUpdated": "設定を保存しました",
+    "theme": "外観テーマ",
+    "themeLight": "ライト",
+    "themeDark": "ダーク",
+    "themeSystem": "システムに従う",
     "deleteAccount": "アカウント削除",
     "deleteAccountConfirm": "本当にアカウントを削除しますか？この操作は元に戻せず、すべてのデータが完全に削除されます。",
     "deleteAccountWarning": "危険な操作"

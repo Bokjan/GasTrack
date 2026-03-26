@@ -19,6 +19,7 @@
 | 多语言 | 🔲 待实现 | ✅ 完成 | 🔨 进行中 |
 | 多币种/单位 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
 | 前后端 API 对齐 | - | ✅ 完成 | ✅ 完成 |
+| 深色模式 | - | ✅ 完成 | ✅ 完成 |
 
 **图例**: ✅ 完成 | 🔨 进行中 | 🔲 待实现 | ❌ 已放弃
 
@@ -242,6 +243,62 @@
 ---
 
 ## 6. 变更日志
+
+### 2026-03-26 — 深色模式
+
+- ✅ **新增功能**：全站深色模式（Dark Mode）支持
+  - **三种主题模式**：浅色（Light）、深色（Dark）、跟随系统（System，默认值）
+  - 默认跟随系统 `prefers-color-scheme` 偏好，实时监听系统主题变化自动切换
+  - 用户手动选择的主题偏好持久化至 `localStorage`（key: `theme_mode`），纯前端存储，无需后端改动
+  - **新增文件**：
+    - `packages/shared/src/stores/themeStore.ts` — Zustand 主题状态管理（mode / resolved / setMode / _syncSystem）
+  - **核心架构改动**：
+    - `packages/web/src/main.tsx` — 从静态 `ConfigProvider` 重构为 `ThemeRoot` 组件，根据 `resolved` 动态切换 `theme.darkAlgorithm` / `theme.defaultAlgorithm`；同步 `data-theme` 属性到 `<html>` 元素
+    - `packages/web/src/styles/global.css` — 所有硬编码颜色改为 CSS 变量（`--gt-bg-body`、`--gt-bg-card`、`--gt-border-color`、`--gt-text-primary` 等），通过 `[data-theme="dark"]` 选择器覆盖暗色变量值
+  - **页面级改动**：
+    - `MainLayout.tsx` — Sider `theme` 属性动态切换 `'light'`/`'dark'`；所有硬编码的 `#fff`、`#f0f0f0`、`#1677ff` 替换为 `token.colorBgContainer`、`token.colorBorderSecondary`、`token.colorPrimary`（通过 `theme.useToken()`）
+    - `SettingsPage.tsx` — 新增"外观主题"设置卡片，使用 `Segmented` 组件提供三选一切换（浅色/深色/跟随系统）
+    - `StatsPage.tsx` — 年份导航箭头颜色改用 `token.colorTextSecondary` / `token.colorTextDisabled`；ECharts 图表添加暗色模式适配（`theme="dark"`、坐标轴/图例/分割线颜色动态切换）；往年同比柱状图暗色模式使用 `#555` 替代 `#d9d9d9`
+    - `DashboardPage.tsx` — `RightOutlined` 的 `#999` 替换为 `var(--gt-text-tertiary)`
+  - **i18n 三语翻译**新增 4 个 key：
+    - `settings.theme`（外观主题 / Appearance / 外観テーマ）
+    - `settings.themeLight`（浅色 / Light / ライト）
+    - `settings.themeDark`（深色 / Dark / ダーク）
+    - `settings.themeSystem`（跟随系统 / System / システムに従う）
+  - **涉及文件清单**：
+    - `packages/shared/src/stores/themeStore.ts`（新增）
+    - `packages/shared/src/stores/index.ts`（导出 useThemeStore + ThemeMode）
+    - `packages/shared/src/i18n/locales/zh-CN.json`、`en-US.json`、`ja-JP.json`
+    - `packages/web/src/main.tsx`
+    - `packages/web/src/styles/global.css`
+    - `packages/web/src/layouts/MainLayout.tsx`
+    - `packages/web/src/pages/settings/SettingsPage.tsx`
+    - `packages/web/src/pages/stats/StatsPage.tsx`
+    - `packages/web/src/pages/dashboard/DashboardPage.tsx`
+
+### 2026-03-26 — 深色模式样式微调
+
+- ✅ **改进**：暗色模式下 hover 效果 / 按钮颜色 / Tag 颜色 / 菜单高亮全面优化
+  - **ConfigProvider 组件级 token 覆盖**（`main.tsx`）：
+    - `colorPrimary` 暗色下从 `#1677ff` → `#4096ff`（降低饱和度，减少刺眼感）
+    - `Tag`：默认 Tag 半透明白底 + 柔和白色文字
+    - `Card`：actions 区域使用 `rgba(255,255,255,0.04)` 底色
+    - `Button`：default 按钮透明底色 + 可见的 `rgba(255,255,255,0.25)` 边框 → hover 时蓝色高亮
+    - `Menu`：选中项背景从默认亮蓝改为 `rgba(64,150,255,0.15)` 半透明淡蓝
+    - `Input` / `Switch`：与主色一致的 hover/active 颜色
+  - **CSS `[data-theme='dark']` 规则**（`global.css`，新增约 80 行）：
+    - 带色彩 Tag（blue/green/red/orange）使用低饱和度颜色 + 半透明底色 + 柔和边框
+    - Card hoverable 悬停：淡蓝色边框 + 更深阴影
+    - Card actions 分隔线：`rgba(255,255,255,0.08)` 柔和分割
+    - danger text 按钮：使用柔和的 `#ff7875` 红色
+    - Sider 折叠按钮区域：半透明底色 + 分隔线
+    - Primary 按钮：降低饱和度 + 柔和阴影
+    - Popconfirm / Popover：暗色背景适配
+- ✅ **修复**：Dashboard 页面"默认"Tag 硬编码中文
+  - `DashboardPage.tsx` 第 230 行 `<Tag color="blue">默认</Tag>` → `<Tag color="blue">{t('vehicle.default')}</Tag>`
+  - `VehicleListPage.tsx` 同步修复
+  - 三语 locale JSON 新增 `vehicle.default` 翻译（默认 / Default / デフォルト）
+  - 涉及文件：`DashboardPage.tsx`、`VehicleListPage.tsx`、`zh-CN.json`、`en-US.json`、`ja-JP.json`
 
 ### 2026-03-26 (续)
 

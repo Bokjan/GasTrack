@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Card, Form, Input, Select, Button, Space, message, Divider, Popconfirm, Typography } from 'antd';
+import { Card, Form, Input, Select, Button, Space, message, Divider, Popconfirm, Typography, Segmented } from 'antd';
+import { BulbOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   useAuthStore,
+  useThemeStore,
   userApi,
   CURRENCIES,
   MEASUREMENT_SYSTEMS,
@@ -11,6 +13,7 @@ import {
   SUPPORTED_LOCALES,
 } from '@gastrack/shared';
 import type { ChangePasswordRequest } from '@gastrack/shared';
+import type { ThemeMode } from '@gastrack/shared';
 
 const { Title, Text } = Typography;
 
@@ -18,6 +21,7 @@ export default function SettingsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const { user, updateProfile, logout } = useAuthStore();
+  const { mode: themeMode, setMode: setThemeMode } = useThemeStore();
   const [profileForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const [saving, setSaving] = useState(false);
@@ -87,6 +91,12 @@ export default function SettingsPage() {
     }
   };
 
+  const themeOptions: { label: string; value: ThemeMode }[] = [
+    { label: t('settings.themeLight'), value: 'light' },
+    { label: t('settings.themeDark'), value: 'dark' },
+    { label: t('settings.themeSystem'), value: 'system' },
+  ];
+
   return (
     <div className="page-container">
       <div className="page-header">
@@ -94,6 +104,23 @@ export default function SettingsPage() {
       </div>
 
       <Space direction="vertical" size="large" style={{ width: '100%', maxWidth: 600 }}>
+        {/* 外观主题 */}
+        <Card
+          title={
+            <Space>
+              <BulbOutlined />
+              <span>{t('settings.theme')}</span>
+            </Space>
+          }
+        >
+          <Segmented
+            value={themeMode}
+            onChange={(val) => setThemeMode(val as ThemeMode)}
+            options={themeOptions}
+            block
+          />
+        </Card>
+
         {/* 个人资料 & 偏好设置 */}
         <Card title={t('settings.preferences')}>
           <Form

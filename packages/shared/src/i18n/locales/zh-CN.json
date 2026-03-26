@@ -49,6 +49,7 @@
     "tankCapacity": "油箱容量",
     "batteryCapacity": "电池容量",
     "engineCc": "排量 (cc)",
+    "default": "默认",
     "setDefault": "设为默认",
     "deleteConfirm": "确定要删除这辆车吗？相关的加油/充电记录也会被删除。",
     "noVehicle": "还没有添加车辆",
@@ -195,6 +196,10 @@
     "passwordMismatch": "两次输入的密码不一致",
     "passwordChanged": "密码修改成功",
     "profileUpdated": "设置已保存",
+    "theme": "外观主题",
+    "themeLight": "浅色",
+    "themeDark": "深色",
+    "themeSystem": "跟随系统",
     "deleteAccount": "注销账号",
     "deleteAccountConfirm": "确定要注销账号吗？此操作不可逆，所有数据将被永久删除。",
     "deleteAccountWarning": "危险操作"

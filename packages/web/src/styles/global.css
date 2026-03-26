@@ -1,4 +1,39 @@
-/* GasTrack 全局样式 */
+/* GasTrack 全局样式 — CSS 变量驱动亮/暗色主题 */
+
+:root {
+  /* 亮色主题变量 */
+  --gt-bg-body: #f5f5f5;
+  --gt-bg-card: #fff;
+  --gt-bg-sider: #fff;
+  --gt-bg-header: #fff;
+  --gt-border-color: #f0f0f0;
+  --gt-text-primary: rgba(0, 0, 0, 0.88);
+  --gt-text-secondary: #666;
+  --gt-text-tertiary: #999;
+  --gt-color-primary: #1677ff;
+  --gt-shadow-card: 0 8px 24px rgba(0, 0, 0, 0.1);
+  --gt-shadow-sider: 2px 0 8px rgba(0, 0, 0, 0.04);
+  --gt-shadow-header: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --gt-auth-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gt-auth-card-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme='dark'] {
+  --gt-bg-body: #141414;
+  --gt-bg-card: #1f1f1f;
+  --gt-bg-sider: #1f1f1f;
+  --gt-bg-header: #1f1f1f;
+  --gt-border-color: #303030;
+  --gt-text-primary: rgba(255, 255, 255, 0.85);
+  --gt-text-secondary: rgba(255, 255, 255, 0.65);
+  --gt-text-tertiary: rgba(255, 255, 255, 0.45);
+  --gt-color-primary: #1668dc;
+  --gt-shadow-card: 0 8px 24px rgba(0, 0, 0, 0.3);
+  --gt-shadow-sider: 2px 0 8px rgba(0, 0, 0, 0.2);
+  --gt-shadow-header: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --gt-auth-gradient: linear-gradient(135deg, #3a3f7a 0%, #4e2f6e 100%);
+  --gt-auth-card-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
 
 * {
   margin: 0;
@@ -16,7 +51,9 @@ body {
     Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f5f5f5;
+  background-color: var(--gt-bg-body);
+  color: var(--gt-text-primary);
+  transition: background-color 0.3s, color 0.3s;
 }
 
 /* 登录/注册页面居中 */
@@ -25,17 +62,17 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--gt-auth-gradient);
   padding: 24px;
 }
 
 .auth-card {
   width: 100%;
   max-width: 420px;
-  background: #fff;
+  background: var(--gt-bg-card);
   border-radius: 16px;
   padding: 40px 32px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--gt-auth-card-shadow);
 }
 
 .auth-card .logo {
@@ -46,12 +83,12 @@ body {
 .auth-card .logo h1 {
   font-size: 28px;
   font-weight: 700;
-  color: #1677ff;
+  color: var(--gt-color-primary);
   margin-top: 8px;
 }
 
 .auth-card .logo p {
-  color: #666;
+  color: var(--gt-text-secondary);
   margin-top: 4px;
 }
 
@@ -84,12 +121,12 @@ body {
 .stat-card .stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #1677ff;
+  color: var(--gt-color-primary);
 }
 
 .stat-card .stat-label {
   font-size: 14px;
-  color: #666;
+  color: var(--gt-text-secondary);
   margin-top: 4px;
 }
 
@@ -102,12 +139,12 @@ body {
 
 .vehicle-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--gt-shadow-card);
 }
 
 .vehicle-card .vehicle-icon {
   font-size: 40px;
-  color: #1677ff;
+  color: var(--gt-color-primary);
 }
 
 /* 空状态 */
@@ -117,6 +154,111 @@ body {
 }
 
 .empty-state p {
-  color: #999;
+  color: var(--gt-text-tertiary);
   margin-top: 12px;
+}
+
+/* ===== 暗色模式深度微调 ===== */
+
+/* Tag — 带色彩的 Tag 在暗色模式下降低饱和度、加透明底色 */
+[data-theme='dark'] .ant-tag-blue {
+  color: #69b1ff;
+  background: rgba(64, 150, 255, 0.15);
+  border-color: rgba(64, 150, 255, 0.3);
+}
+
+[data-theme='dark'] .ant-tag-green {
+  color: #73d13d;
+  background: rgba(82, 196, 26, 0.15);
+  border-color: rgba(82, 196, 26, 0.3);
+}
+
+[data-theme='dark'] .ant-tag-red {
+  color: #ff7875;
+  background: rgba(255, 77, 79, 0.15);
+  border-color: rgba(255, 77, 79, 0.3);
+}
+
+[data-theme='dark'] .ant-tag-orange {
+  color: #ffc069;
+  background: rgba(250, 173, 20, 0.15);
+  border-color: rgba(250, 173, 20, 0.3);
+}
+
+/* Card — hoverable 效果在暗色模式下优化 */
+[data-theme='dark'] .ant-card-hoverable:hover {
+  border-color: rgba(64, 150, 255, 0.35);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Card actions 区域分隔线 */
+[data-theme='dark'] .ant-card-actions {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .ant-card-actions > li:not(:last-child) {
+  border-inline-end: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Card actions 内按钮 hover 效果 */
+[data-theme='dark'] .ant-card-actions .ant-btn-text:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* danger 按钮在暗色下柔和处理 */
+[data-theme='dark'] .ant-btn-text.ant-btn-dangerous {
+  color: #ff7875;
+}
+[data-theme='dark'] .ant-btn-text.ant-btn-dangerous:hover {
+  color: #ff4d4f;
+  background: rgba(255, 77, 79, 0.12);
+}
+
+/* vehicle-card 暗色 hover 优化 */
+[data-theme='dark'] .vehicle-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  border-color: rgba(64, 150, 255, 0.3);
+}
+
+/* Sider 折叠按钮区域暗色优化 */
+[data-theme='dark'] .ant-layout-sider-trigger {
+  background: rgba(255, 255, 255, 0.04);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+[data-theme='dark'] .ant-layout-sider-trigger:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Popconfirm / Popover 暗色 */
+[data-theme='dark'] .ant-popover .ant-popover-inner {
+  background: #2a2a2a;
+}
+[data-theme='dark'] .ant-popover .ant-popover-arrow::before {
+  background: #2a2a2a;
+}
+
+/* Switch 暗色优化 */
+[data-theme='dark'] .ant-switch {
+  background: rgba(255, 255, 255, 0.2);
+}
+[data-theme='dark'] .ant-switch-checked {
+  background: #4096ff;
+}
+
+/* 主按钮暗色柔和 */
+[data-theme='dark'] .ant-btn-primary {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+[data-theme='dark'] .ant-btn-primary:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* default 按钮暗色下边框可见 */
+[data-theme='dark'] .ant-btn-default {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.85);
+}
+[data-theme='dark'] .ant-btn-default:hover {
+  border-color: #4096ff;
+  color: #4096ff;
 }

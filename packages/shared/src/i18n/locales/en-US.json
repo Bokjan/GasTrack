@@ -49,6 +49,7 @@
     "tankCapacity": "Tank Capacity",
     "batteryCapacity": "Battery Capacity",
     "engineCc": "Engine (cc)",
+    "default": "Default",
     "setDefault": "Set as Default",
     "deleteConfirm": "Are you sure to delete this vehicle? Related fuel/charging records will also be deleted.",
     "noVehicle": "No vehicles yet",
@@ -195,6 +196,10 @@
     "passwordMismatch": "Passwords do not match",
     "passwordChanged": "Password changed successfully",
     "profileUpdated": "Settings saved",
+    "theme": "Appearance",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
     "deleteAccount": "Delete Account",
     "deleteAccountConfirm": "Are you sure you want to delete your account? This action is irreversible and all data will be permanently deleted.",
     "deleteAccountWarning": "Danger Zone"
