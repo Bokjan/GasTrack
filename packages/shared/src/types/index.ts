@@ -232,3 +232,27 @@ export interface FuelEfficiencyTrendResponse {
   efficiency_unit: string;
   items: ConsumptionTrend[];
 }
+
+// ---------- Period Stats ----------
+
+/** 后端 PeriodStatsItem 字段对齐 */
+export interface PeriodStatsItem {
+  period: string;         // "2026-01" 或 "2026"
+  total_records: number;
+  total_fuel: number;
+  total_cost: number;
+  total_distance: number;
+  avg_efficiency: number;
+}
+
+/** 后端 PeriodStatsResponse 字段对齐 */
+export interface PeriodStatsResponse {
+  vehicle_id: string;
+  vehicle_name: string;
+  period: string;         // "month" | "year"
+  year?: number;
+  currency_code: string;
+  fuel_efficiency_unit: string;
+  items: PeriodStatsItem[];
+  prev_items: PeriodStatsItem[];
+}

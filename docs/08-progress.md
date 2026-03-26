@@ -98,6 +98,7 @@
 | 车辆统计 | GET | `/vehicles/{id}/stats` | ✅ |
 | 全局总览 | GET | `/stats/overview` | ✅ 含各车辆子统计 |
 | 油耗趋势 | GET | `/vehicles/{id}/efficiency-trend` | ✅ 支持 limit 参数 |
+| 按时段聚合 | GET | `/vehicles/{id}/period-stats` | ✅ 按月/按年 + 往年同比 |
 | 费用统计 | GET | `/stats/expenses` | 🔲 DTO 已定义，Handler 未实现 |
 
 ### 2.8 其他
@@ -149,7 +150,7 @@
 | 添加/编辑车辆 | `/vehicles/new`, `/vehicles/:id/edit` | ✅ | 车辆表单（含 electric 类型） |
 | 加油记录列表 | `/vehicles/:id/records` | ✅ | 分页表格 |
 | 添加/编辑记录 | `/vehicles/:id/records/new`, `.../edit` | ✅ | 加油表单（站点自动补全 + 燃油标号 + 自动计算 + EV 适配） |
-| 统计页 | `/stats` | ✅ | 油耗趋势图 + 距离图 + 统计卡片 |
+| 统计页 | `/stats` | ✅ | 按月/按年维度切换 + 往年同比图表 + 统计卡片（费用/油耗/里程/加油次数） |
 | 个人设置 | `/settings` | 🔨 | 基础框架，待完善 |
 
 ### 3.4 通用组件
@@ -199,7 +200,7 @@
 | PWA 支持 | 离线访问 | 🔲 |
 | 多车辆对比图表 | 油耗/费用对比 | 🔲 |
 | 车辆照片上传 | 文件上传接口 | 🔲 |
-| 费用统计 API | 按月/季度/年汇总 | 🔲 DTO 已定义 |
+| 费用统计 API | 按月/季度/年汇总 | ✅ 已被 period-stats 覆盖 |
 | 忘记密码 | 邮件重置 | 🔲 DTO 已定义 |
 
 ### 4.3 第三期 (P2)
@@ -241,6 +242,30 @@
 ---
 
 ## 6. 变更日志
+
+### 2026-03-26 (续)
+
+- ✅ **改进**：加油量/单价/总费用三字段自动计算逻辑重写
+  - 原逻辑硬编码优先级，三个字段都有值时乱猜应该计算哪个，导致用户填写的值被错误覆盖
+  - 新增 `editStackRef`（编辑栈），追踪用户最后手动编辑的两个字段，始终以这两个为准自动计算第三个
+  - 例：先填加油量再填单价 → 自动算总费用；接着改总费用 → 以单价+总费用为准算加油量
+  - 涉及文件：`packages/web/src/pages/record/RecordFormPage.tsx`
+- ✅ **新增功能**：统计分析页支持按月/按年维度 + 往年同比对比
+  - **后端新增 API**：`GET /api/v1/vehicles/{id}/period-stats?period=month&year=2026`
+    - 支持 `period=month`（按月聚合某年数据 + 上一年同期同比）和 `period=year`（按年聚合全部年份数据）
+    - 返回当前周期 `items` + 往年同比 `prev_items`
+    - 涉及文件：`dto/stats.go`（`PeriodStatsItem`/`PeriodStatsResponse`）、`repository/fuel_record.go`（`GetStatsByMonth`/`GetStatsByYear`）、`service/stats.go`（`GetPeriodStats`）、`handler/stats.go`（`GetPeriodStats`）、`router/router.go`
+  - **前端统计页完全重写**：
+    - 新增按月/按年分段切换控件（`Segmented`）
+    - 按月模式下支持年份选择器（⬅ ➡ 箭头 + 下拉选择）
+    - 4 个维度图表：费用（柱状图）、平均油耗（折线图）、里程（柱状图）、加油次数（柱状图）
+    - 按月模式自动显示往年同期数据叠加对比（灰色虚线/柱）
+    - 涉及文件：`packages/web/src/pages/stats/StatsPage.tsx`、`packages/shared/src/types/index.ts`、`packages/shared/src/api/index.ts`
+  - **i18n 三语翻译**新增 26 个 key（按月/按年、年份、同期、月度/年度各统计维度、12 个月名）
+- ✅ **修复**：`vite.config.ts` TypeScript 类型报错
+  - 缺少 `@types/node` 导致 `path` 模块和 `__dirname` 无法识别
+  - 新增 `tsconfig.node.json`（`composite: true`），安装 `@types/node`
+  - `tsconfig.json` 添加 `references` 引用 `tsconfig.node.json`
 
 ### 2026-03-26
 

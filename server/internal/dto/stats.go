@@ -53,6 +53,28 @@ type ExpenseStatsResponse struct {
 	Items        []ExpenseStatsItem `json:"items"`
 }
 
+// PeriodStatsItem 时段统计单项（按月或按年）
+type PeriodStatsItem struct {
+	Period        string  `json:"period"`         // "2026-01" 或 "2026"
+	TotalRecords  int     `json:"total_records"`  // 加油次数
+	TotalFuel     float64 `json:"total_fuel"`     // 总加油量
+	TotalCost     float64 `json:"total_cost"`     // 总费用
+	TotalDistance float64 `json:"total_distance"` // 总行驶距离
+	AvgEfficiency float64 `json:"avg_efficiency"` // 平均油耗
+}
+
+// PeriodStatsResponse 时段统计响应（含往年同比数据）
+type PeriodStatsResponse struct {
+	VehicleID      string            `json:"vehicle_id"`
+	VehicleName    string            `json:"vehicle_name"`
+	Period         string            `json:"period"`          // "month" 或 "year"
+	Year           int               `json:"year,omitempty"`  // 查询年份（按月时有值）
+	CurrencyCode   string            `json:"currency_code"`
+	FuelUnit       string            `json:"fuel_efficiency_unit"`
+	Items          []PeriodStatsItem `json:"items"`           // 当前周期数据
+	PrevItems      []PeriodStatsItem `json:"prev_items"`      // 上一周期同比数据
+}
+
 // FuelEfficiencyTrendItem 油耗趋势单项
 type FuelEfficiencyTrendItem struct {
 	Date           string  `json:"date"`            // ISO date

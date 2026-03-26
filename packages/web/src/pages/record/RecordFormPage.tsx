@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Card,
@@ -29,11 +29,13 @@ import type { CreateFuelRecordRequest } from '@gastrack/shared';
 import dayjs from 'dayjs';
 
 /**
- * 自动计算逻辑：
+ * 自动计算逻辑（改进版）：
  * - 加油量 × 单价 = 总费用
- * - 填写任意两个，自动算出第三个
- * - 只在另外两个字段都有值、且当前字段为空或未手动修改时才自动填充
+ * - 追踪用户最后手动编辑的两个字段（editStack），以这两个为准自动计算第三个
+ * - 例：先填加油量再填单价 → 自动算总费用；接着改总费用 → 以单价+总费用为准算加油量
  */
+
+type CalcField = 'fuel_amount' | 'unit_price' | 'total_cost';
 
 export default function RecordFormPage() {
   const { t, i18n: i18nInstance } = useTranslation();
@@ -49,6 +51,13 @@ export default function RecordFormPage() {
   const [stationSuggestions, setStationSuggestions] = useState<string[]>([]);
   const [stationSearch, setStationSearch] = useState('');
   const user = useAuthStore((s) => s.user);
+
+  /**
+   * 编辑栈：记录用户最近手动编辑的字段顺序（最多保留2个）
+   * 栈顶（末尾）为最新编辑的字段
+   * 例：[unit_price, fuel_amount] 表示最近编辑了单价再编辑了加油量 → 自动计算总费用
+   */
+  const editStackRef = useRef<CalcField[]>([]);
 
   const isEdit = !!recordId;
 
@@ -110,43 +119,44 @@ export default function RecordFormPage() {
     }
   }, [vehicleId, recordId]);
 
-  // 自动计算：根据已填写的任意两个值，算出第三个
+  // 自动计算：追踪最后编辑的两个字段，以它们为准计算第三个
   const autoCalc = useCallback(
-    (changedField: 'fuel_amount' | 'unit_price' | 'total_cost') => {
+    (changedField: CalcField) => {
+      // 1. 更新编辑栈：把当前字段推入栈顶，去重后保留最近2个
+      const stack = editStackRef.current.filter((f) => f !== changedField);
+      stack.push(changedField);
+      if (stack.length > 2) stack.shift();
+      editStackRef.current = stack;
+
+      // 2. 读取三个字段当前值
       const amount = form.getFieldValue('fuel_amount') as number | undefined;
       const price = form.getFieldValue('unit_price') as number | undefined;
       const total = form.getFieldValue('total_cost') as number | undefined;
 
-      if (changedField === 'fuel_amount' || changedField === 'unit_price') {
-        // 修改了加油量或单价 → 算总费用
+      // 3. 需要两个有值的字段才能计算
+      if (stack.length < 2) return;
+
+      // 4. 确定要自动计算的第三个字段（不在编辑栈中的那个）
+      const allFields: CalcField[] = ['fuel_amount', 'unit_price', 'total_cost'];
+      const computedField = allFields.find((f) => !stack.includes(f))!;
+
+      // 5. 根据两个已知字段计算第三个
+      const round2 = (n: number) => Math.round(n * 100) / 100;
+
+      if (computedField === 'total_cost') {
+        // 总费用 = 加油量 × 单价
         if (amount && price) {
-          form.setFieldValue('total_cost', Math.round(amount * price * 100) / 100);
+          form.setFieldValue('total_cost', round2(amount * price));
         }
-      }
-
-      if (changedField === 'total_cost') {
-        // 修改了总费用
-        if (amount && total && !price) {
-          // 有加油量无单价 → 算单价
-          form.setFieldValue('unit_price', Math.round((total / amount) * 100) / 100);
-        } else if (price && total && !amount) {
-          // 有单价无加油量 → 算加油量
-          form.setFieldValue('fuel_amount', Math.round((total / price) * 100) / 100);
-        } else if (amount && total) {
-          // 加油量和总费用都有，反推单价
-          form.setFieldValue('unit_price', Math.round((total / amount) * 100) / 100);
+      } else if (computedField === 'unit_price') {
+        // 单价 = 总费用 ÷ 加油量
+        if (total && amount) {
+          form.setFieldValue('unit_price', round2(total / amount));
         }
-      }
-
-      if (changedField === 'fuel_amount') {
-        if (amount && total && !price) {
-          form.setFieldValue('unit_price', Math.round((total / amount) * 100) / 100);
-        }
-      }
-
-      if (changedField === 'unit_price') {
-        if (price && total && !amount) {
-          form.setFieldValue('fuel_amount', Math.round((total / price) * 100) / 100);
+      } else if (computedField === 'fuel_amount') {
+        // 加油量 = 总费用 ÷ 单价
+        if (total && price) {
+          form.setFieldValue('fuel_amount', round2(total / price));
         }
       }
     },

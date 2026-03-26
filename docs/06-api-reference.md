@@ -691,7 +691,72 @@ GET /api/v1/vehicles/{id}/efficiency-trend
 
 ---
 
-### 6.4 健康检查
+### 6.4 按时段聚合统计（月/年 + 同比）
+
+```
+GET /api/v1/vehicles/{id}/period-stats
+```
+
+**🔒 需要认证**
+
+**查询参数**
+| 参数 | 类型 | 默认值 | 可选值 | 说明 |
+|------|------|--------|--------|------|
+| period | string | `month` | `month` / `year` | 聚合维度 |
+| year | int | 当前年 | 如 `2026` | 查询年份（按月模式时指定） |
+
+**说明**
+
+- `period=month&year=2026`：返回 2026 年各月聚合数据 + 2025 年同期数据（用于同比对比）
+- `period=year`：返回所有年份的年度聚合数据
+
+**成功响应** `200 OK`
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "vehicle_id": "660e8400-e29b-41d4-a716-446655440001",
+    "vehicle_name": "家用车",
+    "period": "month",
+    "year": 2026,
+    "currency_code": "CNY",
+    "fuel_efficiency_unit": "L/100km",
+    "items": [
+      {
+        "period": "2026-01",
+        "total_records": 4,
+        "total_fuel": 180.5,
+        "total_cost": 1423.95,
+        "total_distance": 2100.0,
+        "avg_efficiency": 8.6
+      },
+      {
+        "period": "2026-02",
+        "total_records": 3,
+        "total_fuel": 135.2,
+        "total_cost": 1067.08,
+        "total_distance": 1560.0,
+        "avg_efficiency": 8.67
+      }
+    ],
+    "prev_items": [
+      {
+        "period": "2025-01",
+        "total_records": 3,
+        "total_fuel": 150.0,
+        "total_cost": 1185.00,
+        "total_distance": 1800.0,
+        "avg_efficiency": 8.33
+      }
+    ]
+  }
+}
+```
+
+---
+
+### 6.5 健康检查
 
 ```
 GET /api/v1/health
@@ -738,4 +803,5 @@ GET /api/v1/health
 | GET | `/api/v1/vehicles/{id}/stations` | ✅ | 加油站/充电站名称建议 |
 | GET | `/api/v1/vehicles/{id}/stats` | ✅ | 车辆统计 |
 | GET | `/api/v1/vehicles/{id}/efficiency-trend` | ✅ | 油耗/电耗趋势 |
+| GET | `/api/v1/vehicles/{id}/period-stats` | ✅ | 按时段聚合统计（月/年 + 同比） |
 | GET | `/api/v1/stats/overview` | ✅ | 全局统计总览 |

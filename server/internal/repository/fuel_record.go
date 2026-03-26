@@ -177,3 +177,56 @@ func (r *FuelRecordRepository) GetEfficiencyTrend(ctx context.Context, vehicleID
 		Find(&records).Error
 	return records, err
 }
+
+// PeriodStatsResult 按时段聚合统计结果
+type PeriodStatsResult struct {
+	Period        string  `json:"period"`
+	TotalRecords  int     `json:"total_records"`
+	TotalFuel     float64 `json:"total_fuel"`
+	TotalCost     float64 `json:"total_cost"`
+	TotalDistance float64 `json:"total_distance"`
+	AvgEfficiency float64 `json:"avg_efficiency"`
+}
+
+// GetStatsByMonth 按月聚合某年的统计数据
+func (r *FuelRecordRepository) GetStatsByMonth(ctx context.Context, vehicleID uuid.UUID, year int) ([]PeriodStatsResult, error) {
+	var results []PeriodStatsResult
+
+	start := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(year+1, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
+		Select(`
+			TO_CHAR(refuel_date, 'YYYY-MM') as period,
+			COUNT(*) as total_records,
+			COALESCE(SUM(fuel_amount), 0) as total_fuel,
+			COALESCE(SUM(total_cost), 0) as total_cost,
+			COALESCE(SUM(trip_distance), 0) as total_distance,
+			COALESCE(AVG(NULLIF(fuel_efficiency, 0)), 0) as avg_efficiency
+		`).
+		Where("vehicle_id = ? AND refuel_date >= ? AND refuel_date < ?", vehicleID, start, end).
+		Group("period").
+		Order("period ASC").
+		Scan(&results).Error
+	return results, err
+}
+
+// GetStatsByYear 按年聚合全部年份的统计数据
+func (r *FuelRecordRepository) GetStatsByYear(ctx context.Context, vehicleID uuid.UUID) ([]PeriodStatsResult, error) {
+	var results []PeriodStatsResult
+
+	err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
+		Select(`
+			TO_CHAR(refuel_date, 'YYYY') as period,
+			COUNT(*) as total_records,
+			COALESCE(SUM(fuel_amount), 0) as total_fuel,
+			COALESCE(SUM(total_cost), 0) as total_cost,
+			COALESCE(SUM(trip_distance), 0) as total_distance,
+			COALESCE(AVG(NULLIF(fuel_efficiency, 0)), 0) as avg_efficiency
+		`).
+		Where("vehicle_id = ?", vehicleID).
+		Group("period").
+		Order("period ASC").
+		Scan(&results).Error
+	return results, err
+}

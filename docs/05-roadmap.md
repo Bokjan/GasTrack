@@ -134,6 +134,7 @@ GET    /api/v1/vehicles/{id}/stations      # ✅ 加油站/充电站名称建议
 # 统计
 GET    /api/v1/vehicles/{id}/stats              # ✅ 车辆统计
 GET    /api/v1/vehicles/{id}/efficiency-trend   # ✅ 油耗/电耗趋势
+GET    /api/v1/vehicles/{id}/period-stats      # ✅ 按时段聚合统计（月/年 + 同比）
 GET    /api/v1/stats/overview                   # ✅ 全局统计总览
 GET    /api/v1/stats/expenses                   # 🔲 费用统计
 

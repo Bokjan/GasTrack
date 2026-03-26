@@ -221,3 +221,80 @@ func (s *StatsService) GetEfficiencyTrend(ctx context.Context, vehicleID, userID
 		Items:          items,
 	}, nil
 }
+
+// GetPeriodStats 获取按时段（月/年）聚合的统计数据 + 往年同比
+func (s *StatsService) GetPeriodStats(ctx context.Context, vehicleID, userID uuid.UUID, period string, year int) (*dto.PeriodStatsResponse, error) {
+	vehicle, err := s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
+		}
+		return nil, apperror.ErrInternal("fetching vehicle", err)
+	}
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, apperror.ErrInternal("fetching user", err)
+	}
+
+	targetUnit := convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
+	isImperial := user.UnitSystem == "imperial"
+
+	convertItems := func(raw []repository.PeriodStatsResult) []dto.PeriodStatsItem {
+		items := make([]dto.PeriodStatsItem, len(raw))
+		for i, r := range raw {
+			totalFuel := r.TotalFuel
+			totalDist := r.TotalDistance
+			if isImperial {
+				totalFuel = convert.ConvertVolume(totalFuel, convert.UnitLiter, convert.UnitGallon)
+				totalDist = convert.ConvertDistance(totalDist, convert.UnitKm, convert.UnitMile)
+			}
+			items[i] = dto.PeriodStatsItem{
+				Period:        r.Period,
+				TotalRecords:  r.TotalRecords,
+				TotalFuel:     totalFuel,
+				TotalCost:     r.TotalCost,
+				TotalDistance:  totalDist,
+				AvgEfficiency: convert.ConvertFuelEfficiency(r.AvgEfficiency, convert.UnitL100km, targetUnit),
+			}
+		}
+		return items
+	}
+
+	var items, prevItems []dto.PeriodStatsItem
+
+	if period == "month" {
+		// 按月聚合：当年 + 上一年同比
+		raw, err := s.recordRepo.GetStatsByMonth(ctx, vehicleID, year)
+		if err != nil {
+			return nil, apperror.ErrInternal("fetching monthly stats", err)
+		}
+		items = convertItems(raw)
+
+		rawPrev, err := s.recordRepo.GetStatsByMonth(ctx, vehicleID, year-1)
+		if err != nil {
+			return nil, apperror.ErrInternal("fetching prev year monthly stats", err)
+		}
+		prevItems = convertItems(rawPrev)
+	} else {
+		// 按年聚合：全部年份
+		raw, err := s.recordRepo.GetStatsByYear(ctx, vehicleID)
+		if err != nil {
+			return nil, apperror.ErrInternal("fetching yearly stats", err)
+		}
+		items = convertItems(raw)
+		// 按年模式没有 "上一周期"，prevItems 为空
+		prevItems = []dto.PeriodStatsItem{}
+	}
+
+	return &dto.PeriodStatsResponse{
+		VehicleID:    vehicleID.String(),
+		VehicleName:  vehicle.Name,
+		Period:       period,
+		Year:         year,
+		CurrencyCode: user.CurrencyCode,
+		FuelUnit:     user.FuelEfficiencyUnit,
+		Items:        items,
+		PrevItems:    prevItems,
+	}, nil
+}

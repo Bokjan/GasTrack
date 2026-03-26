@@ -17,6 +17,7 @@ import type {
   VehicleStats,
   OverviewStats,
   FuelEfficiencyTrendResponse,
+  PeriodStatsResponse,
   PaginatedResponse,
 } from '../types';
 
@@ -124,6 +125,13 @@ export const statsApi = {
   efficiencyTrend: (vehicleId: string, params?: { limit?: number }) =>
     apiClient.get<ApiResponse<FuelEfficiencyTrendResponse>>(
       `/vehicles/${vehicleId}/efficiency-trend`,
+      { params },
+    ),
+
+  /** 后端路由: GET /vehicles/:id/period-stats?period=month&year=2026 */
+  periodStats: (vehicleId: string, params: { period: 'month' | 'year'; year?: number }) =>
+    apiClient.get<ApiResponse<PeriodStatsResponse>>(
+      `/vehicles/${vehicleId}/period-stats`,
       { params },
     ),
 };

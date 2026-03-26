@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
-import { Row, Col, Card, Statistic, Select, Empty, Spin } from 'antd';
+import { useEffect, useState, useMemo } from 'react';
+import { Row, Col, Card, Statistic, Select, Empty, Spin, Segmented, Space } from 'antd';
 import {
   DashboardOutlined,
   DollarOutlined,
   FileTextOutlined,
   ThunderboltOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import ReactECharts from 'echarts-for-react';
@@ -15,7 +17,7 @@ import {
   formatCurrency,
   useAuthStore,
 } from '@gastrack/shared';
-import type { VehicleStats, ConsumptionTrend } from '@gastrack/shared';
+import type { VehicleStats, PeriodStatsItem, PeriodStatsResponse } from '@gastrack/shared';
 
 export default function StatsPage() {
   const { t } = useTranslation();
@@ -24,8 +26,9 @@ export default function StatsPage() {
 
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [stats, setStats] = useState<VehicleStats | null>(null);
-  const [trend, setTrend] = useState<ConsumptionTrend[]>([]);
-  const [efficiencyUnit, setEfficiencyUnit] = useState<string>('L/100km');
+  const [periodData, setPeriodData] = useState<PeriodStatsResponse | null>(null);
+  const [period, setPeriod] = useState<'month' | 'year'>('month');
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(false);
 
   const currency = user?.currency_code || 'CNY';
@@ -48,19 +51,17 @@ export default function StatsPage() {
     if (selectedVehicleId) {
       loadStats();
     }
-  }, [selectedVehicleId]);
+  }, [selectedVehicleId, period, selectedYear]);
 
   const loadStats = async () => {
     setLoading(true);
     try {
-      const [statsRes, trendRes] = await Promise.all([
+      const [statsRes, periodRes] = await Promise.all([
         statsApi.vehicleStats(selectedVehicleId),
-        statsApi.efficiencyTrend(selectedVehicleId, { limit: 30 }),
+        statsApi.periodStats(selectedVehicleId, { period, year: selectedYear }),
       ]);
       setStats(statsRes.data.data);
-      const trendData = trendRes.data.data;
-      setTrend(trendData.items || []);
-      setEfficiencyUnit(trendData.efficiency_unit || 'L/100km');
+      setPeriodData(periodRes.data.data);
     } catch {
       // 可能没有数据
     } finally {
@@ -68,45 +69,132 @@ export default function StatsPage() {
     }
   };
 
-  // 油耗趋势图配置
-  const consumptionChartOption = {
-    tooltip: { trigger: 'axis' as const },
-    xAxis: {
-      type: 'category' as const,
-      data: trend.map((item) => item.date),
-    },
-    yAxis: { type: 'value' as const, name: efficiencyUnit },
-    series: [
-      {
-        name: t('stats.avgConsumption'),
-        type: 'line',
-        data: trend.map((item) => item.fuel_efficiency),
-        smooth: true,
-        areaStyle: { opacity: 0.15 },
-        itemStyle: { color: '#1677ff' },
-      },
-    ],
-    grid: { left: 50, right: 20, top: 40, bottom: 30 },
+  const efficiencyUnit = stats?.fuel_efficiency_unit || periodData?.fuel_efficiency_unit || 'L/100km';
+
+  // 月份标签
+  const monthLabels = useMemo(() =>
+    Array.from({ length: 12 }, (_, i) => t(`stats.month${i + 1}`)),
+    [t],
+  );
+
+  /** 按月模式：把 items 填充为 12 个月的数组，缺失月份补0 */
+  const fillMonthly = (items: PeriodStatsItem[]): PeriodStatsItem[] => {
+    const map = new Map(items.map((item) => [item.period, item]));
+    return Array.from({ length: 12 }, (_, i) => {
+      const month = String(i + 1).padStart(2, '0');
+      const key = `${selectedYear}-${month}`;
+      return map.get(key) || {
+        period: key,
+        total_records: 0,
+        total_fuel: 0,
+        total_cost: 0,
+        total_distance: 0,
+        avg_efficiency: 0,
+      };
+    });
   };
 
-  // 里程趋势图配置
-  const distanceChartOption = {
-    tooltip: { trigger: 'axis' as const },
-    xAxis: {
-      type: 'category' as const,
-      data: trend.map((item) => item.date),
-    },
-    yAxis: { type: 'value' as const, name: distanceUnit },
-    series: [
-      {
-        name: t('stats.totalDistance'),
-        type: 'bar',
-        data: trend.map((item) => item.trip_distance),
-        itemStyle: { color: '#52c41a', borderRadius: [4, 4, 0, 0] },
-      },
-    ],
-    grid: { left: 60, right: 20, top: 40, bottom: 30 },
+  /** 按月模式的上一年同比也填充为 12 个月 */
+  const fillMonthlyPrev = (items: PeriodStatsItem[]): PeriodStatsItem[] => {
+    const map = new Map(items.map((item) => [item.period, item]));
+    return Array.from({ length: 12 }, (_, i) => {
+      const month = String(i + 1).padStart(2, '0');
+      const key = `${selectedYear - 1}-${month}`;
+      return map.get(key) || {
+        period: key,
+        total_records: 0,
+        total_fuel: 0,
+        total_cost: 0,
+        total_distance: 0,
+        avg_efficiency: 0,
+      };
+    });
   };
+
+  // 准备图表数据
+  const currentItems = useMemo(() => {
+    if (!periodData) return [];
+    return period === 'month' ? fillMonthly(periodData.items) : periodData.items;
+  }, [periodData, period, selectedYear]);
+
+  const prevItems = useMemo(() => {
+    if (!periodData) return [];
+    return period === 'month' ? fillMonthlyPrev(periodData.prev_items) : [];
+  }, [periodData, period, selectedYear]);
+
+  const xLabels = useMemo(() => {
+    if (period === 'month') return monthLabels;
+    return currentItems.map((item) => item.period);
+  }, [period, currentItems, monthLabels]);
+
+  const hasPrevData = prevItems.length > 0 && prevItems.some((item) => item.total_records > 0);
+
+  /** 构建含同比的图表 option */
+  const buildChartOption = (
+    field: keyof Pick<PeriodStatsItem, 'total_cost' | 'total_distance' | 'avg_efficiency' | 'total_records'>,
+    yAxisName: string,
+    type: 'bar' | 'line' = 'bar',
+    color: string = '#1677ff',
+  ) => {
+    const currentSeries = currentItems.map((item) => item[field] || 0);
+    const prevSeries = prevItems.map((item) => item[field] || 0);
+
+    const series: object[] = [
+      {
+        name: period === 'month'
+          ? `${selectedYear} ${t('stats.currentPeriod')}`
+          : t('stats.currentPeriod'),
+        type,
+        data: currentSeries,
+        smooth: type === 'line',
+        areaStyle: type === 'line' ? { opacity: 0.1 } : undefined,
+        itemStyle: {
+          color,
+          borderRadius: type === 'bar' ? [4, 4, 0, 0] : undefined,
+        },
+        barMaxWidth: 30,
+      },
+    ];
+
+    if (hasPrevData && period === 'month') {
+      series.push({
+        name: `${selectedYear - 1} ${t('stats.previousPeriod')}`,
+        type,
+        data: prevSeries,
+        smooth: type === 'line',
+        areaStyle: type === 'line' ? { opacity: 0.05 } : undefined,
+        itemStyle: {
+          color: '#d9d9d9',
+          borderRadius: type === 'bar' ? [4, 4, 0, 0] : undefined,
+        },
+        lineStyle: type === 'line' ? { type: 'dashed' as const } : undefined,
+        barMaxWidth: 30,
+      });
+    }
+
+    return {
+      tooltip: { trigger: 'axis' as const },
+      legend: hasPrevData && period === 'month' ? { top: 0 } : undefined,
+      xAxis: {
+        type: 'category' as const,
+        data: xLabels,
+        axisLabel: { fontSize: 11 },
+      },
+      yAxis: { type: 'value' as const, name: yAxisName },
+      series,
+      grid: { left: 55, right: 20, top: hasPrevData && period === 'month' ? 40 : 30, bottom: 30 },
+    };
+  };
+
+  // 年份选择器可用年份范围
+  const yearOptions = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const years: number[] = [];
+    for (let y = currentYear; y >= currentYear - 10; y--) {
+      years.push(y);
+    }
+    return years.map((y) => ({ value: y, label: `${y}` }));
+  }, []);
 
   if (vehicles.length === 0) {
     return (
@@ -123,21 +211,57 @@ export default function StatsPage() {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <h2>{t('stats.title')}</h2>
-        <Select
-          value={selectedVehicleId}
-          onChange={setSelectedVehicleId}
-          style={{ width: 200 }}
-          options={vehicles.map((v) => ({
-            value: v.id,
-            label: v.name,
-          }))}
-        />
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <h2 style={{ margin: 0 }}>{t('stats.title')}</h2>
+        <Space wrap>
+          <Select
+            value={selectedVehicleId}
+            onChange={setSelectedVehicleId}
+            style={{ width: 160 }}
+            options={vehicles.map((v) => ({
+              value: v.id,
+              label: v.name,
+            }))}
+          />
+          <Segmented
+            value={period}
+            onChange={(val) => setPeriod(val as 'month' | 'year')}
+            options={[
+              { label: t('stats.byMonth'), value: 'month' },
+              { label: t('stats.byYear'), value: 'year' },
+            ]}
+          />
+          {period === 'month' && (
+            <Space size={4}>
+              <LeftOutlined
+                style={{ cursor: 'pointer', fontSize: 14, color: '#666' }}
+                onClick={() => setSelectedYear((y) => y - 1)}
+              />
+              <Select
+                value={selectedYear}
+                onChange={setSelectedYear}
+                style={{ width: 90 }}
+                options={yearOptions}
+              />
+              <RightOutlined
+                style={{
+                  cursor: selectedYear >= new Date().getFullYear() ? 'not-allowed' : 'pointer',
+                  fontSize: 14,
+                  color: selectedYear >= new Date().getFullYear() ? '#ccc' : '#666',
+                }}
+                onClick={() => {
+                  if (selectedYear < new Date().getFullYear()) {
+                    setSelectedYear((y) => y + 1);
+                  }
+                }}
+              />
+            </Space>
+          )}
+        </Space>
       </div>
 
       <Spin spinning={loading}>
-        {/* 统计卡片 */}
+        {/* 总览统计卡片 */}
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
           <Col xs={12} sm={6}>
             <Card>
@@ -166,7 +290,7 @@ export default function StatsPage() {
               <Statistic
                 title={t('stats.avgConsumption')}
                 value={
-                  stats ? `${formatNumber(stats.avg_efficiency)} ${stats.fuel_efficiency_unit || 'L/100km'}` : '-'
+                  stats ? `${formatNumber(stats.avg_efficiency)} ${efficiencyUnit}` : '-'
                 }
                 prefix={<DashboardOutlined />}
               />
@@ -183,27 +307,67 @@ export default function StatsPage() {
           </Col>
         </Row>
 
-        {/* 油耗趋势 */}
-        <Row gutter={[16, 16]}>
-          <Col xs={24} lg={12}>
-            <Card title={t('stats.consumptionTrend')}>
-              {trend.length > 0 ? (
-                <ReactECharts option={consumptionChartOption} style={{ height: 300 }} />
-              ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
-              )}
-            </Card>
-          </Col>
-          <Col xs={24} lg={12}>
-            <Card title={t('stats.distanceTrend')}>
-              {trend.length > 0 ? (
-                <ReactECharts option={distanceChartOption} style={{ height: 300 }} />
-              ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
-              )}
-            </Card>
-          </Col>
-        </Row>
+        {/* 时段统计图表 */}
+        {currentItems.length > 0 ? (
+          <Row gutter={[16, 16]}>
+            <Col xs={24} lg={12}>
+              <Card title={period === 'month' ? t('stats.monthlyCost') : t('stats.yearlyCost')}>
+                <ReactECharts
+                  option={buildChartOption(
+                    'total_cost',
+                    currency,
+                    'bar',
+                    '#1677ff',
+                  )}
+                  style={{ height: 300 }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Card title={period === 'month' ? t('stats.monthlyEfficiency') : t('stats.yearlyEfficiency')}>
+                <ReactECharts
+                  option={buildChartOption(
+                    'avg_efficiency',
+                    efficiencyUnit,
+                    'line',
+                    '#faad14',
+                  )}
+                  style={{ height: 300 }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Card title={period === 'month' ? t('stats.monthlyDistance') : t('stats.yearlyDistance')}>
+                <ReactECharts
+                  option={buildChartOption(
+                    'total_distance',
+                    distanceUnit,
+                    'bar',
+                    '#52c41a',
+                  )}
+                  style={{ height: 300 }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} lg={12}>
+              <Card title={period === 'month' ? t('stats.monthlyRecords') : t('stats.yearlyRecords')}>
+                <ReactECharts
+                  option={buildChartOption(
+                    'total_records',
+                    '',
+                    'bar',
+                    '#722ed1',
+                  )}
+                  style={{ height: 300 }}
+                />
+              </Card>
+            </Col>
+          </Row>
+        ) : (
+          <Card>
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          </Card>
+        )}
       </Spin>
     </div>
   );

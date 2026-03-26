@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"time"
 
 	"go.uber.org/zap"
 
@@ -88,6 +89,38 @@ func (h *StatsHandler) GetEfficiencyTrend(w http.ResponseWriter, r *http.Request
 	}
 
 	result, err := h.statsService.GetEfficiencyTrend(r.Context(), vehicleID, userID, limit)
+	if err != nil {
+		handleAppError(w, h.logger, err)
+		return
+	}
+
+	respond.OK(w, result)
+}
+
+// GetPeriodStats 获取按时段聚合统计（月/年）
+// GET /api/v1/vehicles/{id}/period-stats?period=month&year=2026
+func (h *StatsHandler) GetPeriodStats(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		respond.Unauthorized(w, "missing user identity")
+		return
+	}
+
+	vehicleID, err := decode.PathParamUUID(r, "id")
+	if err != nil {
+		respond.BadRequest(w, err.Error())
+		return
+	}
+
+	period := decode.QueryString(r, "period", "month")
+	if period != "month" && period != "year" {
+		respond.BadRequest(w, "period must be 'month' or 'year'")
+		return
+	}
+
+	year := decode.QueryInt(r, "year", time.Now().Year())
+
+	result, err := h.statsService.GetPeriodStats(r.Context(), vehicleID, userID, period, year)
 	if err != nil {
 		handleAppError(w, h.logger, err)
 		return
