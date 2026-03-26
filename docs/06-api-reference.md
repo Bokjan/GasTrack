@@ -540,6 +540,38 @@ DELETE /api/v1/vehicles/{id}/records/{rid}
 
 ---
 
+### 5.6 获取加油站/充电站名称建议
+
+```
+GET /api/v1/vehicles/{id}/stations
+```
+
+**🔒 需要认证**
+
+**路径参数**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| id | UUID | 车辆 ID |
+
+**说明**
+
+返回当前用户在该车辆上使用过的去重加油站/充电站名称列表（按使用频次降序排列，最多 20 条）。前端用于 AutoComplete 下拉建议。
+
+**成功响应** `200 OK`
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": [
+    "中石化望京站",
+    "中石油朝阳站",
+    "壳牌北辰西路站"
+  ]
+}
+```
+
+---
+
 ## 6. 统计接口 (Stats)
 
 ### 6.1 车辆统计
@@ -703,6 +735,7 @@ GET /api/v1/health
 | GET | `/api/v1/vehicles/{id}/records/{rid}` | ✅ | 记录详情 |
 | PATCH | `/api/v1/vehicles/{id}/records/{rid}` | ✅ | 编辑记录 |
 | DELETE | `/api/v1/vehicles/{id}/records/{rid}` | ✅ | 删除记录 |
+| GET | `/api/v1/vehicles/{id}/stations` | ✅ | 加油站/充电站名称建议 |
 | GET | `/api/v1/vehicles/{id}/stats` | ✅ | 车辆统计 |
 | GET | `/api/v1/vehicles/{id}/efficiency-trend` | ✅ | 油耗/电耗趋势 |
 | GET | `/api/v1/stats/overview` | ✅ | 全局统计总览 |

@@ -129,6 +129,7 @@ POST   /api/v1/vehicles/{id}/records       # ✅ 添加记录
 GET    /api/v1/vehicles/{id}/records/{rid} # ✅ 记录详情
 PATCH  /api/v1/vehicles/{id}/records/{rid} # ✅ 编辑记录
 DELETE /api/v1/vehicles/{id}/records/{rid} # ✅ 删除记录
+GET    /api/v1/vehicles/{id}/stations      # ✅ 加油站/充电站名称建议
 
 # 统计
 GET    /api/v1/vehicles/{id}/stats              # ✅ 车辆统计
