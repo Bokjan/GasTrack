@@ -35,6 +35,7 @@ func (s *VehicleService) Create(ctx context.Context, userID uuid.UUID, req *dto.
 		Model:           req.Model,
 		Year:            req.Year,
 		FuelType:        model.FuelType(req.FuelType),
+		FuelGrade:       req.FuelGrade,
 		TankCapacity:    req.TankCapacity,
 		BatteryCapacity: req.BatteryCapacity,
 		EngineCC:        req.EngineCC,
@@ -114,6 +115,9 @@ func (s *VehicleService) Update(ctx context.Context, vehicleID, userID uuid.UUID
 	if req.FuelType != nil {
 		vehicle.FuelType = model.FuelType(*req.FuelType)
 	}
+	if req.FuelGrade != nil {
+		vehicle.FuelGrade = *req.FuelGrade
+	}
 	if req.TankCapacity != nil {
 		vehicle.TankCapacity = *req.TankCapacity
 	}
@@ -175,6 +179,7 @@ func vehicleToResponse(v *model.Vehicle) dto.VehicleResponse {
 		Model:           v.Model,
 		Year:            v.Year,
 		FuelType:        string(v.FuelType),
+		FuelGrade:       v.FuelGrade,
 		TankCapacity:    v.TankCapacity,
 		BatteryCapacity: v.BatteryCapacity,
 		EngineCC:        v.EngineCC,

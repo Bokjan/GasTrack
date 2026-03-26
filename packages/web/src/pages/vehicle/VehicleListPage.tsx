@@ -9,7 +9,7 @@ import {
   StarFilled,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { useVehicleStore, vehicleApi } from '@gastrack/shared';
+import { useVehicleStore, vehicleApi, FUEL_GRADES } from '@gastrack/shared';
 
 export default function VehicleListPage() {
   const { t } = useTranslation();
@@ -127,6 +127,10 @@ export default function VehicleListPage() {
                       <div>{vehicle.brand} {vehicle.model} · {vehicle.year}</div>
                       <div style={{ marginTop: 4 }}>
                         <Tag>{t(`fuelType.${vehicle.fuel_type}`)}</Tag>
+                        {vehicle.fuel_grade && (() => {
+                          const grade = FUEL_GRADES.find((g) => g.value === vehicle.fuel_grade);
+                          return <Tag color="green">{grade ? t(grade.label) : vehicle.fuel_grade}</Tag>;
+                        })()}
                         <Tag>{t(`vehicleType.${vehicle.vehicle_type}`)}</Tag>
                         {vehicle.engine_cc && <Tag>{vehicle.engine_cc}cc</Tag>}
                       </div>

@@ -34,6 +34,7 @@ type Vehicle struct {
 	Model        string      `gorm:"size:100" json:"model,omitempty"`                      // 型号
 	Year         int         `gorm:"" json:"year,omitempty"`                               // 年份
 	FuelType     FuelType    `gorm:"size:20;not null" json:"fuel_type"`                    // 燃油类型
+	FuelGrade    string      `gorm:"size:20" json:"fuel_grade,omitempty"`                  // 燃油标号（如 92/95/jp_regular 等）
 	TankCapacity    float64     `gorm:"type:decimal(6,2)" json:"tank_capacity,omitempty"`     // 油箱容量（升）
 	BatteryCapacity float64     `gorm:"type:decimal(6,2)" json:"battery_capacity,omitempty"` // 电池容量（kWh），电动车使用
 	EngineCC        int         `gorm:"" json:"engine_cc,omitempty"`                         // 排量(cc)，燃油/混动车辆通用

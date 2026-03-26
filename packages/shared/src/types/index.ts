@@ -108,6 +108,7 @@ export interface Vehicle {
   model: string;
   year: number;
   fuel_type: FuelType;
+  fuel_grade?: string;
   tank_capacity: number;
   battery_capacity?: number;
   engine_cc?: number;
@@ -127,6 +128,7 @@ export interface CreateVehicleRequest {
   model: string;
   year: number;
   fuel_type: FuelType;
+  fuel_grade?: string;
   tank_capacity: number;
   battery_capacity?: number;
   engine_cc?: number;

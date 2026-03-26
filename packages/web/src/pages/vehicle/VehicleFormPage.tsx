@@ -16,17 +16,20 @@ import { useTranslation } from 'react-i18next';
 import {
   vehicleApi,
   useVehicleStore,
+  useAuthStore,
   FUEL_TYPES,
   VEHICLE_TYPES,
   FUEL_UNITS,
   ENERGY_UNITS,
+  FUEL_GRADES,
+  getFuelGradesByLocale,
   isElectricVehicle,
   hasEngineCC,
 } from '@gastrack/shared';
 import type { CreateVehicleRequest, FuelType } from '@gastrack/shared';
 
 export default function VehicleFormPage() {
-  const { t } = useTranslation();
+  const { t, i18n: i18nInstance } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const [form] = Form.useForm();
@@ -34,6 +37,10 @@ export default function VehicleFormPage() {
   const [fetching, setFetching] = useState(false);
   const [fuelType, setFuelType] = useState<FuelType>('gasoline');
   const { addVehicle, updateVehicle } = useVehicleStore();
+  const user = useAuthStore((s) => s.user);
+
+  const isImperial = user?.unit_system === 'imperial';
+  const defaultCapacityUnit = isImperial ? 'gal' : 'L';
 
   const isEdit = !!id;
 
@@ -51,15 +58,17 @@ export default function VehicleFormPage() {
     }
   }, [id]);
 
-  const onFinish = async (values: CreateVehicleRequest) => {
+  const onFinish = async (values: CreateVehicleRequest & { tank_capacity_unit?: string }) => {
     setLoading(true);
     try {
+      // tank_capacity_unit 仅用于前端 UI 展示，后端不接受该字段
+      const { tank_capacity_unit: _unused, ...payload } = values;
       if (isEdit) {
-        const { data } = await vehicleApi.update(id, values);
+        const { data } = await vehicleApi.update(id, payload);
         updateVehicle(data.data);
         message.success(t('common.success'));
       } else {
-        const { data } = await vehicleApi.create(values);
+        const { data } = await vehicleApi.create(payload);
         addVehicle(data.data);
         message.success(t('common.success'));
       }
@@ -94,7 +103,7 @@ export default function VehicleFormPage() {
           initialValues={{
             vehicle_type: 'car',
             fuel_type: 'gasoline',
-            tank_capacity_unit: 'L',
+            tank_capacity_unit: defaultCapacityUnit,
             is_default: false,
           }}
         >
@@ -167,7 +176,7 @@ export default function VehicleFormPage() {
                   if (isElectricVehicle(v)) {
                     form.setFieldValue('tank_capacity_unit', 'kWh');
                   } else if (form.getFieldValue('tank_capacity_unit') === 'kWh') {
-                    form.setFieldValue('tank_capacity_unit', 'L');
+                    form.setFieldValue('tank_capacity_unit', defaultCapacityUnit);
                   }
                 }}
                 options={FUEL_TYPES.map((item) => ({
@@ -177,6 +186,39 @@ export default function VehicleFormPage() {
               />
             </Form.Item>
           </Space>
+
+          {/* 燃油标号（仅燃油车/柴油车/混动车显示） */}
+          {!isElectricVehicle(fuelType) && (() => {
+            const localGrades = getFuelGradesByLocale(i18nInstance.language);
+            const allGrades = FUEL_GRADES;
+            const localValues = new Set(localGrades.map((g) => g.value));
+            const otherGrades = allGrades.filter((g) => !localValues.has(g.value));
+
+            return (
+              <Form.Item name="fuel_grade" label={t('fuelRecord.fuelGrade')}>
+                <Select
+                  allowClear
+                  placeholder={t('fuelRecord.fuelGradePlaceholder')}
+                  options={[
+                    {
+                      label: t('fuelGrade.localGroup'),
+                      options: localGrades.map((g) => ({
+                        value: g.value,
+                        label: t(g.label),
+                      })),
+                    },
+                    {
+                      label: t('fuelGrade.otherGroup'),
+                      options: otherGrades.map((g) => ({
+                        value: g.value,
+                        label: t(g.label),
+                      })),
+                    },
+                  ]}
+                />
+              </Form.Item>
+            );
+          })()}
 
           <Space style={{ width: '100%' }} size="middle">
             <Form.Item
