@@ -237,6 +237,7 @@
 | 15 | ~~电动车选了"电动"燃油类型后，表单仍然使用油车逻辑（油箱容量/L/加油站/油耗）~~ | 🚀 高 | ✅ 已修复 (2026-03-26) |
 | 16 | ~~右上角切换语言后不会同步保存到用户后端设置（仅存 localStorage，换设备/清缓存后丢失）~~ | 🐛 中 | ✅ 已修复 (2026-03-26) |
 | 17 | ~~仪表盘顶部统计卡片把所有车数据混合汇总（总里程/平均油耗），多车场景无意义，油车+电车混算油耗更不合理~~ | 🐛 中 | ✅ 已修复 (2026-03-26) |
+| 18 | ~~加油记录列表分页组件"共 N 条"硬编码中文，切换语言后不翻译~~ | 🐛 低 | ✅ 已修复 (2026-03-26) |
 
 > **当前无未修复的已知问题** 🎉
 
@@ -275,6 +276,13 @@
     - `packages/web/src/pages/settings/SettingsPage.tsx`
     - `packages/web/src/pages/stats/StatsPage.tsx`
     - `packages/web/src/pages/dashboard/DashboardPage.tsx`
+
+### 2026-03-26 — i18n 遗漏修复
+
+- ✅ **修复**：加油记录列表分页"共 N 条"硬编码中文未本地化
+  - `RecordListPage.tsx` 的 `showTotal` 从 `` `共 ${total} 条` `` → `t('common.totalItems', { total })`
+  - 三语 locale JSON 新增 `common.totalItems`（共 {{total}} 条 / {{total}} items / 全 {{total}} 件）
+  - 涉及文件：`RecordListPage.tsx`、`zh-CN.json`、`en-US.json`、`ja-JP.json`
 
 ### 2026-03-26 — 深色模式样式微调
 
