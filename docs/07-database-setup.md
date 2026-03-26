@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
     year           INT DEFAULT 0,
     fuel_type      VARCHAR(20) NOT NULL DEFAULT 'gasoline',
     tank_capacity  DECIMAL(6,2) DEFAULT 0,
+    battery_capacity DECIMAL(6,2) DEFAULT 0,
     engine_cc      INT DEFAULT 0,
     license_plate  VARCHAR(20) DEFAULT '',
     photo_url      VARCHAR(500) DEFAULT '',
@@ -138,9 +139,10 @@ CREATE INDEX IF NOT EXISTS idx_vehicles_deleted_at ON vehicles(deleted_at);
 
 COMMENT ON TABLE  vehicles IS '车辆表';
 COMMENT ON COLUMN vehicles.vehicle_type IS '车辆类型: car / motorcycle / other';
-COMMENT ON COLUMN vehicles.fuel_type IS '燃油类型: gasoline / diesel / hybrid / electric';
-COMMENT ON COLUMN vehicles.tank_capacity IS '油箱容量（升）';
-COMMENT ON COLUMN vehicles.engine_cc IS '排量（cc），摩托车常用';
+COMMENT ON COLUMN vehicles.fuel_type IS '燃油/能源类型: gasoline / diesel / hybrid / electric';
+COMMENT ON COLUMN vehicles.tank_capacity IS '油箱容量（升），燃油车使用';
+COMMENT ON COLUMN vehicles.battery_capacity IS '电池容量（kWh），电动车使用';
+COMMENT ON COLUMN vehicles.engine_cc IS '排量（cc），燃油/混动车辆通用';
 
 -- ============================================================
 -- 3. fuel_records 加油记录表
@@ -150,7 +152,7 @@ CREATE TABLE IF NOT EXISTS fuel_records (
     vehicle_id      UUID NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
     user_id         UUID NOT NULL REFERENCES users(id),
 
-    -- 加油数据
+    -- 加油/充电数据
     fuel_amount     DECIMAL(8,3) NOT NULL,
     fuel_unit       VARCHAR(5) DEFAULT 'L',
     unit_price      DECIMAL(10,4) DEFAULT 0,
@@ -184,10 +186,10 @@ CREATE INDEX IF NOT EXISTS idx_fuel_records_vehicle ON fuel_records(vehicle_id, 
 CREATE INDEX IF NOT EXISTS idx_fuel_records_user ON fuel_records(user_id, refuel_date DESC);
 CREATE INDEX IF NOT EXISTS idx_fuel_records_deleted_at ON fuel_records(deleted_at);
 
-COMMENT ON TABLE  fuel_records IS '加油记录表';
-COMMENT ON COLUMN fuel_records.fuel_unit IS '燃油单位: L / gal';
+COMMENT ON TABLE  fuel_records IS '加油/充电记录表';
+COMMENT ON COLUMN fuel_records.fuel_unit IS '燃油/能量单位: L / gal / kWh';
 COMMENT ON COLUMN fuel_records.distance_unit IS '距离单位: km / mi';
-COMMENT ON COLUMN fuel_records.fuel_efficiency IS '油耗值（以 L/100km 为存储基准）';
+COMMENT ON COLUMN fuel_records.fuel_efficiency IS '油耗/电耗值（L/100km 或 kWh/100km 存储基准）';
 COMMENT ON COLUMN fuel_records.trip_distance IS '本次行驶距离（根据里程表差值计算）';
 
 -- ============================================================
@@ -272,9 +274,10 @@ users ──1:N──► vehicles ──1:N──► fuel_records
 | brand | VARCHAR(100) | - | `''` | 品牌 |
 | model | VARCHAR(100) | - | `''` | 型号 |
 | year | INT | - | 0 | 年份 |
-| fuel_type | VARCHAR(20) | NOT NULL | `'gasoline'` | 燃油类型 |
-| tank_capacity | DECIMAL(6,2) | - | 0 | 油箱容量 |
-| engine_cc | INT | - | 0 | 排量 |
+| fuel_type | VARCHAR(20) | NOT NULL | `'gasoline'` | 燃油/能源类型 |
+| tank_capacity | DECIMAL(6,2) | - | 0 | 油箱容量（燃油车） |
+| battery_capacity | DECIMAL(6,2) | - | 0 | 电池容量 kWh（电动车） |
+| engine_cc | INT | - | 0 | 排量 cc（燃油/混动） |
 | license_plate | VARCHAR(20) | - | `''` | 车牌号 |
 | photo_url | VARCHAR(500) | - | `''` | 照片 |
 | is_default | BOOLEAN | - | `false` | 是否默认 |
@@ -289,8 +292,8 @@ users ──1:N──► vehicles ──1:N──► fuel_records
 | id | UUID | PK | `gen_random_uuid()` | 记录 ID |
 | vehicle_id | UUID | FK → vehicles(id), NOT NULL | - | 所属车辆 |
 | user_id | UUID | FK → users(id), NOT NULL | - | 所属用户 |
-| fuel_amount | DECIMAL(8,3) | NOT NULL | - | 加油量 |
-| fuel_unit | VARCHAR(5) | - | `'L'` | 燃油单位 |
+| fuel_amount | DECIMAL(8,3) | NOT NULL | - | 加油量/充电量 |
+| fuel_unit | VARCHAR(5) | - | `'L'` | 燃油/能量单位（L/gal/kWh） |
 | unit_price | DECIMAL(10,4) | - | 0 | 单价 |
 | total_cost | DECIMAL(10,2) | NOT NULL | - | 总费用 |
 | currency_code | VARCHAR(3) | NOT NULL | - | 货币代码 |
@@ -304,7 +307,7 @@ users ──1:N──► vehicles ──1:N──► fuel_records
 | note | TEXT | - | `''` | 备注 |
 | receipt_url | VARCHAR(500) | - | `''` | 小票照片 |
 | trip_distance | DECIMAL(10,1) | - | 0 | 本次行驶距离 |
-| fuel_efficiency | DECIMAL(6,2) | - | 0 | 油耗 |
+| fuel_efficiency | DECIMAL(6,2) | - | 0 | 油耗/电耗 |
 | refuel_date | TIMESTAMPTZ | NOT NULL | - | 加油日期 |
 
 **索引**: `idx_fuel_records_vehicle`(vehicle_id, refuel_date DESC), `idx_fuel_records_user`(user_id, refuel_date DESC)
@@ -350,7 +353,7 @@ database:
 
 ### 4.3 GORM AutoMigrate
 
-启动后端服务时，GORM 会自动执行 `AutoMigrate`，创建/更新以下 4 张表：
+启动后端服务时，GORM 会自动执行 `AutoMigrate`，创建/更新以下 4 张表（含电动车相关字段）：
 
 ```go
 db.AutoMigrate(

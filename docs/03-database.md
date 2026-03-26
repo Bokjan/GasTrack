@@ -57,8 +57,9 @@ CREATE TABLE vehicles (
     model           VARCHAR(100),
     year            INT,
     fuel_type       VARCHAR(20) NOT NULL,   -- gasoline/diesel/hybrid/electric
-    tank_capacity   DECIMAL(6,2),           -- 油箱容量（升）
-    engine_cc       INT,                    -- 排量(cc)，摩托车常用
+    tank_capacity   DECIMAL(6,2),           -- 油箱容量（升），燃油车使用
+    battery_capacity DECIMAL(6,2),          -- 电池容量（kWh），电动车使用
+    engine_cc       INT,                    -- 排量(cc)，燃油/混动车辆通用
     license_plate   VARCHAR(20),
     photo_url       VARCHAR(500),
     is_default      BOOLEAN DEFAULT false,
@@ -76,9 +77,9 @@ CREATE TABLE fuel_records (
     vehicle_id      UUID NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
     user_id         UUID NOT NULL REFERENCES users(id),
 
-    -- 加油数据（存原始值）
-    fuel_amount     DECIMAL(8,3) NOT NULL,  -- 加油量
-    fuel_unit       VARCHAR(5) DEFAULT 'L', -- L / gal
+    -- 加油/充电数据（存原始值）
+    fuel_amount     DECIMAL(8,3) NOT NULL,  -- 加油量/充电量
+    fuel_unit       VARCHAR(5) DEFAULT 'L', -- L / gal / kWh
     unit_price      DECIMAL(10,4),          -- 单价
     total_cost      DECIMAL(10,2) NOT NULL, -- 总费用
     currency_code   VARCHAR(3) NOT NULL,    -- 币种
@@ -98,7 +99,7 @@ CREATE TABLE fuel_records (
 
     -- 计算字段（冗余存储提高查询性能）
     trip_distance   DECIMAL(10,1),          -- 本次行驶距离
-    fuel_efficiency DECIMAL(6,2),           -- 油耗 L/100km 或 MPG
+    fuel_efficiency DECIMAL(6,2),           -- 油耗/电耗（L/100km 或 kWh/100km 存储基准）
 
     refuel_date     TIMESTAMPTZ NOT NULL,
     created_at      TIMESTAMPTZ DEFAULT NOW(),

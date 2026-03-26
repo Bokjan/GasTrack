@@ -212,8 +212,9 @@ packages/
 ### 7.1 开发环境
 ```bash
 # Docker Compose 一键启动依赖
-docker-compose up -d
-# 包含：PostgreSQL + MinIO + Mailpit(邮件测试)
+docker compose up -d
+# 包含：PostgreSQL
+# 可选（需 --profile full）：Mailpit（邮件测试）
 ```
 
 ### 7.2 生产环境（推荐方案）

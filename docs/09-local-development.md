@@ -36,15 +36,16 @@ GasTrack/
 │   ├── cmd/server/main.go  # 入口
 │   ├── internal/           # 业务代码
 │   ├── config.yaml         # 配置文件
-│   ├── go.mod / go.sum
-│   └── Dockerfile
+│   └── go.mod / go.sum
 ├── packages/               # 前端 Monorepo
-│   ├── shared/             # 共享类型/API/状态管理
+│   ├── shared/             # 共享类型/API/状态管理/i18n
 │   └── web/                # React Web 应用
 ├── docker-compose.yaml     # PostgreSQL 容器
 ├── package.json            # 根 package.json
 ├── pnpm-workspace.yaml
-└── .env.example
+├── .env.example            # 前端环境变量示例
+├── LICENSE                 # MIT
+└── README.md
 ```
 
 ---

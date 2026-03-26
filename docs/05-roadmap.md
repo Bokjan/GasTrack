@@ -19,51 +19,45 @@ GasTrack/
 │   │   │   ├── user.go
 │   │   │   ├── vehicle.go
 │   │   │   ├── fuel_record.go
-│   │   │   ├── stats.go
-│   │   │   └── upload.go
+│   │   │   └── stats.go
 │   │   ├── service/             # 业务逻辑层
 │   │   ├── repository/          # 数据访问层
 │   │   ├── model/               # 数据库模型（GORM）
 │   │   ├── dto/                 # 请求/响应结构体
-│   │   ├── i18n/                # 多语言资源
-│   │   │   ├── en-US.toml
-│   │   │   ├── zh-CN.toml
-│   │   │   └── ja-JP.toml
+│   │   ├── database/            # 数据库连接 & 迁移
 │   │   └── pkg/                 # 内部工具
 │   │       ├── respond/         # JSON 响应辅助 (respond.JSON/Error)
 │   │       ├── decode/          # 请求解析辅助 (decode.JSON/PathParam)
+│   │       ├── apperror/        # 统一错误类型
 │   │       └── convert/         # 单位换算引擎
-│   ├── migrations/              # 数据库迁移文件
+│   ├── config.yaml              # 服务端配置
 │   ├── go.mod
-│   ├── go.sum
-│   └── Dockerfile
+│   └── go.sum
 ├── packages/                    # 前端 Monorepo (pnpm workspace)
-│   ├── shared/                  # 共享代码
-│   │   ├── types/               # TypeScript 类型定义
-│   │   ├── utils/               # 工具函数（单位换算、格式化）
-│   │   ├── api/                 # API 调用层
-│   │   ├── stores/              # 状态管理
-│   │   ├── i18n/                # 国际化资源
-│   │   └── constants/           # 常量（国家/币种/燃油类型）
-│   ├── web/                     # Web 前端
-│   │   ├── src/
-│   │   │   ├── components/      # 通用组件
-│   │   │   ├── pages/           # 页面
-│   │   │   ├── layouts/         # 布局
-│   │   │   ├── hooks/           # 自定义 Hooks
-│   │   │   └── styles/          # 全局样式
-│   │   ├── public/
-│   │   └── vite.config.ts
-│   └── miniprogram/             # 小程序（第三阶段）
-├── docker/                      # Docker 配置
-│   ├── docker-compose.yml
-│   ├── docker-compose.prod.yml
-│   └── nginx/
-├── .github/                     # CI/CD
-│   └── workflows/
+│   ├── shared/                  # 共享代码 (@gastrack/shared)
+│   │   └── src/
+│   │       ├── types/           # TypeScript 类型定义
+│   │       ├── api/             # API 调用层 (Axios)
+│   │       ├── stores/          # 状态管理 (Zustand)
+│   │       ├── i18n/            # 国际化（i18next + 翻译资源）
+│   │       │   └── locales/     # zh-CN.json / en-US.json / ja-JP.json
+│   │       ├── constants/       # 常量（燃油类型/车辆类型/单位/货币等）
+│   │       └── utils/           # 工具函数（格式化等）
+│   └── web/                     # React Web 应用 (@gastrack/web)
+│       ├── src/
+│       │   ├── components/      # 通用组件
+│       │   ├── pages/           # 页面
+│       │   ├── layouts/         # 布局
+│       │   ├── hooks/           # 自定义 Hooks
+│       │   └── styles/          # 全局样式
+│       ├── public/
+│       └── vite.config.ts
+├── docker-compose.yaml          # PostgreSQL 容器（+ 可选 Mailpit）
 ├── pnpm-workspace.yaml
 ├── package.json
-└── .env.example
+├── .env.example                 # 前端环境变量示例
+├── LICENSE                      # MIT
+└── README.md
 ```
 
 ## 2. 开发里程碑
@@ -104,32 +98,47 @@ GasTrack/
 
 ## 3. API 路由规划（V1）
 
+> 以下为已实际注册的路由（✅）和计划中的路由（🔲）
+
 ```
-POST   /api/v1/auth/register        # 注册
-POST   /api/v1/auth/login            # 登录
-POST   /api/v1/auth/refresh          # 刷新 Token
-POST   /api/v1/auth/logout           # 登出
-POST   /api/v1/auth/forgot-password  # 忘记密码
+# 认证（公开）
+POST   /api/v1/auth/register        # ✅ 注册
+POST   /api/v1/auth/login            # ✅ 登录
+POST   /api/v1/auth/refresh          # ✅ 刷新 Token
 
-GET    /api/v1/users/me              # 获取当前用户
-PATCH  /api/v1/users/me              # 更新用户资料
-DELETE /api/v1/users/me              # 注销账号
+# 认证（需登录）
+POST   /api/v1/auth/logout           # ✅ 登出
+POST   /api/v1/auth/forgot-password  # 🔲 忘记密码
 
-GET    /api/v1/vehicles              # 车辆列表
-POST   /api/v1/vehicles              # 添加车辆
-GET    /api/v1/vehicles/:id          # 车辆详情
-PATCH  /api/v1/vehicles/:id          # 编辑车辆
-DELETE /api/v1/vehicles/:id          # 删除车辆
+# 用户
+GET    /api/v1/users/me              # ✅ 获取当前用户
+PATCH  /api/v1/users/me              # ✅ 更新用户资料
+PUT    /api/v1/users/me/password     # ✅ 修改密码
+DELETE /api/v1/users/me              # ✅ 注销账号
 
-GET    /api/v1/vehicles/:id/records       # 加油记录列表
-POST   /api/v1/vehicles/:id/records       # 添加记录
-GET    /api/v1/vehicles/:id/records/:rid  # 记录详情
-PATCH  /api/v1/vehicles/:id/records/:rid  # 编辑记录
-DELETE /api/v1/vehicles/:id/records/:rid  # 删除记录
+# 车辆
+GET    /api/v1/vehicles              # ✅ 车辆列表
+POST   /api/v1/vehicles              # ✅ 添加车辆
+GET    /api/v1/vehicles/{id}         # ✅ 车辆详情
+PATCH  /api/v1/vehicles/{id}         # ✅ 编辑车辆
+DELETE /api/v1/vehicles/{id}         # ✅ 删除车辆
 
-GET    /api/v1/vehicles/:id/stats         # 车辆统计
-GET    /api/v1/stats/overview             # 全局统计总览
-GET    /api/v1/stats/expenses             # 费用统计
+# 加油/充电记录
+GET    /api/v1/vehicles/{id}/records       # ✅ 记录列表（分页）
+POST   /api/v1/vehicles/{id}/records       # ✅ 添加记录
+GET    /api/v1/vehicles/{id}/records/{rid} # ✅ 记录详情
+PATCH  /api/v1/vehicles/{id}/records/{rid} # ✅ 编辑记录
+DELETE /api/v1/vehicles/{id}/records/{rid} # ✅ 删除记录
 
-POST   /api/v1/upload/image              # 上传图片
+# 统计
+GET    /api/v1/vehicles/{id}/stats              # ✅ 车辆统计
+GET    /api/v1/vehicles/{id}/efficiency-trend   # ✅ 油耗/电耗趋势
+GET    /api/v1/stats/overview                   # ✅ 全局统计总览
+GET    /api/v1/stats/expenses                   # 🔲 费用统计
+
+# 健康检查
+GET    /api/v1/health                # ✅ 健康检查
+
+# 文件上传（P1）
+POST   /api/v1/upload/image          # 🔲 上传图片
 ```

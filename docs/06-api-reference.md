@@ -310,6 +310,7 @@ GET /api/v1/vehicles
       "year": 2023,
       "fuel_type": "gasoline",
       "tank_capacity": 60.0,
+      "battery_capacity": 0,
       "engine_cc": 2000,
       "license_plate": "京A12345",
       "photo_url": "",
@@ -340,9 +341,10 @@ POST /api/v1/vehicles
 | brand | string | - | 最长 100 字符 | 品牌 |
 | model | string | - | 最长 100 字符 | 型号 |
 | year | int | - | 1900-2100 | 年份 |
-| fuel_type | string | ✅ | `gasoline` / `diesel` / `hybrid` / `electric` | 燃油类型 |
-| tank_capacity | float | - | > 0 | 油箱容量（升） |
-| engine_cc | int | - | > 0 | 排量（cc） |
+| fuel_type | string | ✅ | `gasoline` / `diesel` / `hybrid` / `electric` | 燃油/能源类型 |
+| tank_capacity | float | - | > 0 | 油箱容量（升），燃油车使用 |
+| battery_capacity | float | - | > 0 | 电池容量（kWh），电动车使用 |
+| engine_cc | int | - | > 0 | 排量（cc），燃油/混动车辆通用 |
 | license_plate | string | - | 最长 20 字符 | 车牌号 |
 | is_default | bool | - | - | 是否设为默认车辆 |
 
@@ -402,9 +404,9 @@ DELETE /api/v1/vehicles/{id}
 
 ---
 
-## 5. 加油记录接口 (Fuel Record)
+## 5. 加油/充电记录接口 (Fuel Record)
 
-### 5.1 获取加油记录列表（分页）
+### 5.1 获取记录列表（分页）
 
 ```
 GET /api/v1/vehicles/{id}/records
@@ -475,8 +477,8 @@ POST /api/v1/vehicles/{id}/records
 **请求体**
 | 字段 | 类型 | 必填 | 校验 | 说明 |
 |------|------|------|------|------|
-| fuel_amount | float | ✅ | > 0 | 加油量 |
-| fuel_unit | string | - | `L` / `gal` | 燃油单位（默认 `L`） |
+| fuel_amount | float | ✅ | > 0 | 加油量/充电量 |
+| fuel_unit | string | - | `L` / `gal` / `kWh` | 燃油/能量单位（默认 `L`，电动车用 `kWh`） |
 | unit_price | float | - | ≥ 0 | 单价 |
 | total_cost | float | ✅ | > 0 | 总费用 |
 | currency_code | string | ✅ | 3 字符 | 货币代码（如 `CNY`） |
@@ -696,11 +698,11 @@ GET /api/v1/health
 | GET | `/api/v1/vehicles/{id}` | ✅ | 车辆详情 |
 | PATCH | `/api/v1/vehicles/{id}` | ✅ | 编辑车辆 |
 | DELETE | `/api/v1/vehicles/{id}` | ✅ | 删除车辆 |
-| GET | `/api/v1/vehicles/{id}/records` | ✅ | 加油记录列表 |
-| POST | `/api/v1/vehicles/{id}/records` | ✅ | 添加加油记录 |
-| GET | `/api/v1/vehicles/{id}/records/{rid}` | ✅ | 加油记录详情 |
-| PATCH | `/api/v1/vehicles/{id}/records/{rid}` | ✅ | 编辑加油记录 |
-| DELETE | `/api/v1/vehicles/{id}/records/{rid}` | ✅ | 删除加油记录 |
+| GET | `/api/v1/vehicles/{id}/records` | ✅ | 加油/充电记录列表 |
+| POST | `/api/v1/vehicles/{id}/records` | ✅ | 添加加油/充电记录 |
+| GET | `/api/v1/vehicles/{id}/records/{rid}` | ✅ | 记录详情 |
+| PATCH | `/api/v1/vehicles/{id}/records/{rid}` | ✅ | 编辑记录 |
+| DELETE | `/api/v1/vehicles/{id}/records/{rid}` | ✅ | 删除记录 |
 | GET | `/api/v1/vehicles/{id}/stats` | ✅ | 车辆统计 |
-| GET | `/api/v1/vehicles/{id}/efficiency-trend` | ✅ | 油耗趋势 |
+| GET | `/api/v1/vehicles/{id}/efficiency-trend` | ✅ | 油耗/电耗趋势 |
 | GET | `/api/v1/stats/overview` | ✅ | 全局统计总览 |
