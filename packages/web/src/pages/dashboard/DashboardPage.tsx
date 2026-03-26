@@ -45,6 +45,9 @@ export default function DashboardPage() {
   };
 
   const currency = user?.currency_code || 'CNY';
+  const isImperial = user?.unit_system === 'imperial';
+  const distanceUnit = isImperial ? 'mi' : 'km';
+  const efficiencyUnit = user?.fuel_efficiency_unit || 'L/100km';
 
   return (
     <div className="page-container">
@@ -76,7 +79,7 @@ export default function DashboardPage() {
           <Card loading={statsLoading}>
             <Statistic
               title={t('stats.totalDistance')}
-              value={overview ? `${formatNumber(overview.total_distance, 0)} km` : '-'}
+              value={overview ? `${formatNumber(overview.total_distance, 0)} ${distanceUnit}` : '-'}
               prefix={<DashboardOutlined />}
             />
           </Card>
@@ -85,7 +88,7 @@ export default function DashboardPage() {
           <Card loading={statsLoading}>
             <Statistic
               title={t('stats.avgConsumption')}
-              value={overview ? `${formatNumber(overview.avg_consumption)} L/100km` : '-'}
+              value={overview ? `${formatNumber(overview.avg_consumption)} ${efficiencyUnit}` : '-'}
               prefix={<DashboardOutlined />}
             />
           </Card>

@@ -29,6 +29,9 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(false);
 
   const currency = user?.currency_code || 'CNY';
+  const isImperial = user?.unit_system === 'imperial';
+  const fuelUnit = isImperial ? 'gal' : 'L';
+  const distanceUnit = isImperial ? 'mi' : 'km';
 
   useEffect(() => {
     fetchVehicles();
@@ -93,7 +96,7 @@ export default function StatsPage() {
       type: 'category' as const,
       data: trend.map((item) => item.date),
     },
-    yAxis: { type: 'value' as const, name: 'km' },
+    yAxis: { type: 'value' as const, name: distanceUnit },
     series: [
       {
         name: t('stats.totalDistance'),
@@ -173,7 +176,7 @@ export default function StatsPage() {
             <Card>
               <Statistic
                 title={t('stats.totalFuel')}
-                value={stats ? `${formatNumber(stats.total_fuel)} L` : '-'}
+                value={stats ? `${formatNumber(stats.total_fuel)} ${fuelUnit}` : '-'}
                 prefix={<ThunderboltOutlined />}
               />
             </Card>

@@ -60,7 +60,7 @@ func main() {
 	authService := service.NewAuthService(userRepo, refreshTokenRepo, &cfg.JWT, logger)
 	userService := service.NewUserService(userRepo, logger)
 	vehicleService := service.NewVehicleService(vehicleRepo, logger)
-	fuelRecordService := service.NewFuelRecordService(fuelRecordRepo, vehicleRepo, logger)
+	fuelRecordService := service.NewFuelRecordService(fuelRecordRepo, vehicleRepo, userRepo, logger)
 	statsService := service.NewStatsService(fuelRecordRepo, vehicleRepo, userRepo, logger)
 
 	// 6. 创建 Handler 层

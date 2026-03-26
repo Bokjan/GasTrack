@@ -20,6 +20,7 @@ import (
 type FuelRecordService struct {
 	recordRepo  *repository.FuelRecordRepository
 	vehicleRepo *repository.VehicleRepository
+	userRepo    *repository.UserRepository
 	logger      *zap.Logger
 }
 
@@ -27,11 +28,13 @@ type FuelRecordService struct {
 func NewFuelRecordService(
 	recordRepo *repository.FuelRecordRepository,
 	vehicleRepo *repository.VehicleRepository,
+	userRepo *repository.UserRepository,
 	logger *zap.Logger,
 ) *FuelRecordService {
 	return &FuelRecordService{
 		recordRepo:  recordRepo,
 		vehicleRepo: vehicleRepo,
+		userRepo:    userRepo,
 		logger:      logger,
 	}
 }
@@ -89,7 +92,8 @@ func (s *FuelRecordService) Create(ctx context.Context, userID, vehicleID uuid.U
 		return nil, apperror.ErrInternal("creating fuel record", err)
 	}
 
-	resp := fuelRecordToResponse(record)
+	prefs := s.getUserUnits(ctx, userID)
+	resp := fuelRecordToResponse(record, prefs)
 	return &resp, nil
 }
 
@@ -109,15 +113,16 @@ func (s *FuelRecordService) List(ctx context.Context, userID, vehicleID uuid.UUI
 		return nil, 0, apperror.ErrInternal("listing fuel records", err)
 	}
 
+	prefs := s.getUserUnits(ctx, userID)
 	result := make([]dto.FuelRecordResponse, len(records))
 	for i, r := range records {
-		result[i] = fuelRecordToResponse(&r)
+		result[i] = fuelRecordToResponse(&r, prefs)
 	}
 	return result, total, nil
 }
 
 // GetByID 获取加油记录详情
-func (s *FuelRecordService) GetByID(ctx context.Context, recordID, vehicleID uuid.UUID) (*dto.FuelRecordResponse, error) {
+func (s *FuelRecordService) GetByID(ctx context.Context, recordID, vehicleID, userID uuid.UUID) (*dto.FuelRecordResponse, error) {
 	record, err := s.recordRepo.GetByIDAndVehicle(ctx, recordID, vehicleID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -126,12 +131,13 @@ func (s *FuelRecordService) GetByID(ctx context.Context, recordID, vehicleID uui
 		return nil, apperror.ErrInternal("fetching fuel record", err)
 	}
 
-	resp := fuelRecordToResponse(record)
+	prefs := s.getUserUnits(ctx, userID)
+	resp := fuelRecordToResponse(record, prefs)
 	return &resp, nil
 }
 
 // Update 更新加油记录
-func (s *FuelRecordService) Update(ctx context.Context, recordID, vehicleID uuid.UUID, req *dto.UpdateFuelRecordRequest) (*dto.FuelRecordResponse, error) {
+func (s *FuelRecordService) Update(ctx context.Context, recordID, vehicleID, userID uuid.UUID, req *dto.UpdateFuelRecordRequest) (*dto.FuelRecordResponse, error) {
 	record, err := s.recordRepo.GetByIDAndVehicle(ctx, recordID, vehicleID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -195,7 +201,8 @@ func (s *FuelRecordService) Update(ctx context.Context, recordID, vehicleID uuid
 		return nil, apperror.ErrInternal("updating fuel record", err)
 	}
 
-	resp := fuelRecordToResponse(record)
+	prefs := s.getUserUnits(ctx, userID)
+	resp := fuelRecordToResponse(record, prefs)
 	return &resp, nil
 }
 
@@ -205,6 +212,56 @@ func (s *FuelRecordService) Delete(ctx context.Context, recordID, vehicleID uuid
 		return apperror.ErrInternal("deleting fuel record", err)
 	}
 	return nil
+}
+
+// GetStationSuggestions 获取加油站/充电站名称建议列表
+func (s *FuelRecordService) GetStationSuggestions(ctx context.Context, userID, vehicleID uuid.UUID) ([]string, error) {
+	// 验证车辆归属
+	_, err := s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
+		}
+		return nil, apperror.ErrInternal("verifying vehicle ownership", err)
+	}
+
+	names, err := s.recordRepo.GetDistinctStationNames(ctx, userID, &vehicleID, 20)
+	if err != nil {
+		return nil, apperror.ErrInternal("fetching station suggestions", err)
+	}
+
+	return names, nil
+}
+
+// userUnitPrefs 用户的单位偏好
+type userUnitPrefs struct {
+	efficiencyUnit convert.FuelEfficiencyUnit
+	volumeUnit     convert.VolumeUnit
+	distanceUnit   convert.DistanceUnit
+}
+
+// getUserUnits 获取用户的完整单位偏好
+func (s *FuelRecordService) getUserUnits(ctx context.Context, userID uuid.UUID) userUnitPrefs {
+	prefs := userUnitPrefs{
+		efficiencyUnit: convert.UnitL100km,
+		volumeUnit:     convert.UnitLiter,
+		distanceUnit:   convert.UnitKm,
+	}
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return prefs
+	}
+
+	if user.FuelEfficiencyUnit != "" {
+		prefs.efficiencyUnit = convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
+	}
+	if user.UnitSystem == "imperial" {
+		prefs.volumeUnit = convert.UnitGallon
+		prefs.distanceUnit = convert.UnitMile
+	}
+
+	return prefs
 }
 
 // calculateEfficiency 计算行驶距离和油耗
@@ -234,18 +291,48 @@ func (s *FuelRecordService) calculateEfficiency(ctx context.Context, record *mod
 	}
 }
 
-// fuelRecordToResponse 将 model 转为 DTO
-func fuelRecordToResponse(r *model.FuelRecord) dto.FuelRecordResponse {
+// fuelRecordToResponse 将 model 转为 DTO，按用户偏好转换所有单位
+func fuelRecordToResponse(r *model.FuelRecord, prefs userUnitPrefs) dto.FuelRecordResponse {
+	// 油耗转换
+	efficiency := r.FuelEfficiency
+	if efficiency > 0 && prefs.efficiencyUnit != "" {
+		efficiency = convert.ConvertFuelEfficiency(efficiency, convert.UnitL100km, prefs.efficiencyUnit)
+	}
+
+	// 加油量转换（从记录原始单位 → 用户偏好单位）
+	fuelAmount := r.FuelAmount
+	srcFuelUnit := convert.VolumeUnit(r.FuelUnit)
+	// kWh 不参与容量换算
+	if srcFuelUnit == convert.UnitLiter || srcFuelUnit == convert.UnitGallon {
+		fuelAmount = convert.ConvertVolume(r.FuelAmount, srcFuelUnit, prefs.volumeUnit)
+	}
+
+	// 里程 / 行驶距离转换（从记录原始单位 → 用户偏好单位）
+	srcDistUnit := convert.DistanceUnit(r.DistanceUnit)
+	odometer := convert.ConvertDistance(r.Odometer, srcDistUnit, prefs.distanceUnit)
+	tripDistance := r.TripDistance
+	if tripDistance > 0 {
+		// TripDistance 在 calculateEfficiency 中已统一转为 km 存储
+		tripDistance = convert.ConvertDistance(tripDistance, convert.UnitKm, prefs.distanceUnit)
+	}
+
+	// 返回时使用用户偏好的单位标识
+	respFuelUnit := r.FuelUnit
+	if srcFuelUnit == convert.UnitLiter || srcFuelUnit == convert.UnitGallon {
+		respFuelUnit = string(prefs.volumeUnit)
+	}
+	respDistUnit := string(prefs.distanceUnit)
+
 	return dto.FuelRecordResponse{
 		ID:             r.ID.String(),
 		VehicleID:      r.VehicleID.String(),
-		FuelAmount:     r.FuelAmount,
-		FuelUnit:       r.FuelUnit,
+		FuelAmount:     fuelAmount,
+		FuelUnit:       respFuelUnit,
 		UnitPrice:      r.UnitPrice,
 		TotalCost:      r.TotalCost,
 		CurrencyCode:   r.CurrencyCode,
-		Odometer:       r.Odometer,
-		DistanceUnit:   r.DistanceUnit,
+		Odometer:       odometer,
+		DistanceUnit:   respDistUnit,
 		IsFullTank:     r.IsFullTank,
 		FuelGrade:      r.FuelGrade,
 		StationName:    r.StationName,
@@ -253,8 +340,8 @@ func fuelRecordToResponse(r *model.FuelRecord) dto.FuelRecordResponse {
 		StationLng:     r.StationLng,
 		Note:           r.Note,
 		ReceiptURL:     r.ReceiptURL,
-		TripDistance:    r.TripDistance,
-		FuelEfficiency: r.FuelEfficiency,
+		TripDistance:    tripDistance,
+		FuelEfficiency: efficiency,
 		RefuelDate:     r.RefuelDate,
 		CreatedAt:      r.CreatedAt,
 		UpdatedAt:      r.UpdatedAt,

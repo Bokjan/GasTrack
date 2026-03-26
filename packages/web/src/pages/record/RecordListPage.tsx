@@ -41,6 +41,10 @@ export default function RecordListPage() {
   const [loading, setLoading] = useState(false);
 
   const currency = user?.currency_code || 'CNY';
+  const isImperial = user?.unit_system === 'imperial';
+  const fuelUnit = isImperial ? 'gal' : 'L';
+  const distanceUnit = isImperial ? 'mi' : 'km';
+  const efficiencyUnit = user?.fuel_efficiency_unit || 'L/100km';
 
   useEffect(() => {
     if (vehicleId) {
@@ -103,7 +107,7 @@ export default function RecordListPage() {
       title: t('fuelRecord.fuelAmount'),
       dataIndex: 'fuel_amount',
       width: 100,
-      render: (v: number) => `${formatNumber(v)} L`,
+      render: (v: number) => `${formatNumber(v)} ${fuelUnit}`,
     },
     {
       title: t('fuelRecord.pricePerUnit'),
@@ -121,7 +125,7 @@ export default function RecordListPage() {
       title: t('fuelRecord.odometer'),
       dataIndex: 'odometer',
       width: 110,
-      render: (v: number) => `${formatNumber(v, 0)} km`,
+      render: (v: number) => `${formatNumber(v, 0)} ${distanceUnit}`,
     },
     {
       title: t('fuelRecord.consumption'),
@@ -129,7 +133,7 @@ export default function RecordListPage() {
       width: 110,
       render: (v?: number) =>
         v ? (
-          <Tag color="blue">{formatNumber(v)} L/100km</Tag>
+          <Tag color="blue">{formatNumber(v)} {efficiencyUnit}</Tag>
         ) : (
           <Tag>-</Tag>
         ),
@@ -199,7 +203,7 @@ export default function RecordListPage() {
             </span>
             <span>{vehicle.year}</span>
             <Tag>{t(`fuelType.${vehicle.fuel_type}`)}</Tag>
-            <span>{vehicle.tank_capacity}L</span>
+            <span>{isImperial ? (vehicle.tank_capacity / 3.78541).toFixed(1) : vehicle.tank_capacity} {fuelUnit}</span>
           </Space>
         </Card>
       )}

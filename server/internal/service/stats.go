@@ -65,10 +65,19 @@ func (s *StatsService) GetVehicleStats(ctx context.Context, vehicleID, userID uu
 	bestEff := convert.ConvertFuelEfficiency(stats.BestEfficiency, convert.UnitL100km, targetUnit)
 	worstEff := convert.ConvertFuelEfficiency(stats.WorstEfficiency, convert.UnitL100km, targetUnit)
 
-	// 计算每公里费用
+	// 根据用户偏好换算容量和距离单位
+	isImperial := user.UnitSystem == "imperial"
+	totalFuel := stats.TotalFuel
+	totalDist := stats.TotalDistance
+	if isImperial {
+		totalFuel = convert.ConvertVolume(totalFuel, convert.UnitLiter, convert.UnitGallon)
+		totalDist = convert.ConvertDistance(totalDist, convert.UnitKm, convert.UnitMile)
+	}
+
+	// 计算每公里/英里费用
 	var avgCostPerKm, avgCostPerFill float64
-	if stats.TotalDistance > 0 {
-		avgCostPerKm = stats.TotalCost / stats.TotalDistance
+	if totalDist > 0 {
+		avgCostPerKm = stats.TotalCost / totalDist
 	}
 	if stats.TotalRecords > 0 {
 		avgCostPerFill = stats.TotalCost / float64(stats.TotalRecords)
@@ -78,9 +87,9 @@ func (s *StatsService) GetVehicleStats(ctx context.Context, vehicleID, userID uu
 		VehicleID:       vehicleID.String(),
 		VehicleName:     vehicle.Name,
 		TotalRecords:    stats.TotalRecords,
-		TotalFuel:       stats.TotalFuel,
+		TotalFuel:       totalFuel,
 		TotalCost:       stats.TotalCost,
-		TotalDistance:   stats.TotalDistance,
+		TotalDistance:   totalDist,
 		AvgEfficiency:   avgEff,
 		BestEfficiency:  bestEff,
 		WorstEfficiency: worstEff,
@@ -109,6 +118,8 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 	var totalDistance float64
 	vehicleStats := make([]dto.VehicleStatsResponse, 0, len(vehicles))
 
+	isImperial := user.UnitSystem == "imperial"
+
 	for _, v := range vehicles {
 		stats, err := s.recordRepo.GetVehicleStats(ctx, v.ID)
 		if err != nil {
@@ -121,31 +132,47 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 		totalDistance += stats.TotalDistance
 
 		targetUnit := convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
+		vFuel := stats.TotalFuel
+		vDist := stats.TotalDistance
+		if isImperial {
+			vFuel = convert.ConvertVolume(vFuel, convert.UnitLiter, convert.UnitGallon)
+			vDist = convert.ConvertDistance(vDist, convert.UnitKm, convert.UnitMile)
+		}
 		vehicleStats = append(vehicleStats, dto.VehicleStatsResponse{
 			VehicleID:     v.ID.String(),
 			VehicleName:   v.Name,
 			TotalRecords:  stats.TotalRecords,
-			TotalFuel:     stats.TotalFuel,
+			TotalFuel:     vFuel,
 			TotalCost:     stats.TotalCost,
-			TotalDistance:  stats.TotalDistance,
+			TotalDistance:  vDist,
 			AvgEfficiency:  convert.ConvertFuelEfficiency(stats.AvgEfficiency, convert.UnitL100km, targetUnit),
 			CurrencyCode:  user.CurrencyCode,
 			FuelUnit:      user.FuelEfficiencyUnit,
 		})
 	}
 
-	// 计算平均油耗 (L/100km)
+	// 计算平均油耗 (L/100km 基准，再转为用户偏好单位)
 	var avgConsumption float64
 	if totalDistance > 0 {
 		avgConsumption = totalFuel / totalDistance * 100
+		targetUnit := convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
+		avgConsumption = convert.ConvertFuelEfficiency(avgConsumption, convert.UnitL100km, targetUnit)
+	}
+
+	// 转换总计的容量和距离
+	overviewFuel := totalFuel
+	overviewDist := totalDistance
+	if isImperial {
+		overviewFuel = convert.ConvertVolume(overviewFuel, convert.UnitLiter, convert.UnitGallon)
+		overviewDist = convert.ConvertDistance(overviewDist, convert.UnitKm, convert.UnitMile)
 	}
 
 	return &dto.OverviewStatsResponse{
 		TotalVehicles:  int64(len(vehicles)),
 		TotalRecords:   totalRecords,
-		TotalFuel:      totalFuel,
+		TotalFuel:      overviewFuel,
 		TotalCost:      totalCost,
-		TotalDistance:  totalDistance,
+		TotalDistance:  overviewDist,
 		AvgConsumption: avgConsumption,
 		CurrencyCode:   user.CurrencyCode,
 		Vehicles:       vehicleStats,
@@ -173,12 +200,17 @@ func (s *StatsService) GetEfficiencyTrend(ctx context.Context, vehicleID, userID
 	}
 
 	targetUnit := convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
+	isImperial := user.UnitSystem == "imperial"
 	items := make([]dto.FuelEfficiencyTrendItem, len(records))
 	for i, r := range records {
+		tripDist := r.TripDistance
+		if isImperial {
+			tripDist = convert.ConvertDistance(tripDist, convert.UnitKm, convert.UnitMile)
+		}
 		items[i] = dto.FuelEfficiencyTrendItem{
 			Date:           r.RefuelDate.Format("2006-01-02"),
 			FuelEfficiency: convert.ConvertFuelEfficiency(r.FuelEfficiency, convert.UnitL100km, targetUnit),
-			TripDistance:   r.TripDistance,
+			TripDistance:   tripDist,
 		}
 	}
 

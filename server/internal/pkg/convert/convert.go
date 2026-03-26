@@ -175,6 +175,36 @@ func NormalizeToMetric(fuelAmount float64, fuelUnit VolumeUnit, distance float64
 	return liters, km
 }
 
+// ConvertVolume 将容量从一个单位转为另一个单位
+func ConvertVolume(value float64, from, to VolumeUnit) float64 {
+	if from == to {
+		return value
+	}
+	switch {
+	case from == UnitLiter && to == UnitGallon:
+		return LitersToGallons(value)
+	case from == UnitGallon && to == UnitLiter:
+		return GallonsToLiters(value)
+	default:
+		return value
+	}
+}
+
+// ConvertDistance 将距离从一个单位转为另一个单位
+func ConvertDistance(value float64, from, to DistanceUnit) float64 {
+	if from == to {
+		return value
+	}
+	switch {
+	case from == UnitKm && to == UnitMile:
+		return KmToMiles(value)
+	case from == UnitMile && to == UnitKm:
+		return MilesToKm(value)
+	default:
+		return value
+	}
+}
+
 // round 四舍五入到指定小数位
 func round(val float64, precision int) float64 {
 	p := math.Pow(10, float64(precision))
