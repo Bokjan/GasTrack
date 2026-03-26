@@ -5,6 +5,7 @@ import {
   DashboardOutlined,
   CarOutlined,
   BarChartOutlined,
+  SettingOutlined,
   LogoutOutlined,
   UserOutlined,
   GlobalOutlined,
@@ -22,7 +23,7 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation();
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateProfile } = useAuthStore();
 
   // 同步浏览器标题和 html lang 属性
   useEffect(() => {
@@ -46,6 +47,11 @@ export default function MainLayout() {
       icon: <BarChartOutlined />,
       label: t('nav.stats'),
     },
+    {
+      key: '/settings',
+      icon: <SettingOutlined />,
+      label: t('nav.settings'),
+    },
   ];
 
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
@@ -66,6 +72,14 @@ export default function MainLayout() {
   const handleLanguageChange: MenuProps['onClick'] = async ({ key }) => {
     await i18n.changeLanguage(key);
     localStorage.setItem('locale', key);
+    // 同步保存到用户后端设置
+    if (user) {
+      try {
+        await updateProfile({ locale: key });
+      } catch {
+        // 静默失败，前端语言已切换
+      }
+    }
   };
 
   const userMenuItems: MenuProps['items'] = [
@@ -77,6 +91,11 @@ export default function MainLayout() {
     },
     { type: 'divider' },
     {
+      key: 'settings',
+      icon: <SettingOutlined />,
+      label: t('nav.settings'),
+    },
+    {
       key: 'logout',
       icon: <LogoutOutlined />,
       label: t('auth.logout'),
@@ -86,6 +105,7 @@ export default function MainLayout() {
 
   const handleUserMenu: MenuProps['onClick'] = ({ key }) => {
     if (key === 'logout') handleLogout();
+    if (key === 'settings') navigate('/settings');
   };
 
   // 获取当前选中的菜单 key

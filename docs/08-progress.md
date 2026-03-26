@@ -89,6 +89,7 @@
 | 记录详情 | GET | `/vehicles/{id}/records/{rid}` | ✅ |
 | 编辑记录 | PATCH | `/vehicles/{id}/records/{rid}` | ✅ |
 | 删除记录 | DELETE | `/vehicles/{id}/records/{rid}` | ✅ |
+| 站点建议 | GET | `/vehicles/{id}/stations` | ✅ 去重站名，按频次降序 |
 
 ### 2.7 统计模块 (Stats) ✅
 
@@ -134,8 +135,8 @@
 | 状态管理 (`stores/authStore.ts`) | ✅ | Zustand，登录/登出/Token 刷新 |
 | 状态管理 (`stores/vehicleStore.ts`) | ✅ | 车辆列表/选中车辆 |
 | 工具函数 (`utils/`) | ✅ | formatNumber/formatCurrency（含 null 防护） |
-| 常量 (`constants/`) | ✅ | FUEL_TYPES（含 electric）/ VEHICLE_TYPES 等 |
-| i18n 框架 | 🔨 | i18next 已安装，翻译资源待补充 |
+| 常量 (`constants/`) | ✅ | FUEL_TYPES（含 electric）/ VEHICLE_TYPES / ENERGY_UNITS / EV_MEASUREMENT_SYSTEMS / FUEL_GRADES 等 |
+| i18n 框架 | ✅ | i18next + 中/英/日三语翻译资源（含电动车、燃油标号、站点建议相关翻译） |
 
 ### 3.3 页面组件 (@gastrack/web)
 
@@ -147,7 +148,7 @@
 | 车辆列表 | `/vehicles` | ✅ | 车辆卡片列表 |
 | 添加/编辑车辆 | `/vehicles/new`, `/vehicles/:id/edit` | ✅ | 车辆表单（含 electric 类型） |
 | 加油记录列表 | `/vehicles/:id/records` | ✅ | 分页表格 |
-| 添加/编辑记录 | `/vehicles/:id/records/new`, `.../edit` | ✅ | 加油表单（字段与后端完全对齐） |
+| 添加/编辑记录 | `/vehicles/:id/records/new`, `.../edit` | ✅ | 加油表单（站点自动补全 + 燃油标号 + 自动计算 + EV 适配） |
 | 统计页 | `/stats` | ✅ | 油耗趋势图 + 距离图 + 统计卡片 |
 | 个人设置 | `/settings` | 🔨 | 基础框架，待完善 |
 
@@ -232,6 +233,7 @@
 | 13 | ~~右上角地球图标与用户头像垂直不对齐~~ | 🐛 中 | ✅ 已修复 (2026-03-26) |
 | 14 | ~~排量(cc)字段仅摩托车可见，汽车无法填写排量~~ | 🐛 中 | ✅ 已修复 (2026-03-26) |
 | 15 | ~~电动车选了"电动"燃油类型后，表单仍然使用油车逻辑（油箱容量/L/加油站/油耗）~~ | 🚀 高 | ✅ 已修复 (2026-03-26) |
+| 16 | ~~右上角切换语言后不会同步保存到用户后端设置（仅存 localStorage，换设备/清缓存后丢失）~~ | 🐛 中 | ✅ 已修复 (2026-03-26) |
 
 > **当前无未修复的已知问题** 🎉
 
@@ -247,6 +249,17 @@
 - ✅ 修复 `formatNumber` TypeError（null 防护 + 后端补全缺失字段）
 - ✅ 全面前后端 API 一致性审查并修复（10 项问题）
 - ✅ 编写 API 详细文档、数据库文档、进度文档、开发调试文档
+- ✅ **新增功能**：加油站/充电站名称自动补全
+  - 后端新增 `GET /api/v1/vehicles/{id}/stations` API，返回用户去重站名（按使用频次降序，最多 20 条）
+  - 涉及：`repository/fuel_record.go`（`GetDistinctStationNames`）、`service/fuel_record.go`、`handler/fuel_record.go`、`router/router.go`
+  - 前端 `RecordFormPage.tsx` 的加油站输入框从 `Input` 改为 `AutoComplete`，页面加载时获取历史站名，支持输入模糊匹配
+  - `shared/src/api/index.ts` 新增 `fuelRecordApi.getStationSuggestions()`
+  - 三语翻译新增 `stationPlaceholder` / `chargingStationPlaceholder`
+- ✅ **新增功能**：燃油标号（fuel_grade）在前端表单中显示
+  - 数据库和后端 DTO 已有 `fuel_grade` 字段，前端表单此前未体现
+  - `RecordFormPage.tsx` 新增 `fuel_grade` `Select` 下拉（仅非电动车辆显示）
+  - `constants/index.ts` 新增 `FUEL_GRADES` 常量（92/95/98/柴油/Regular/Mid-Grade/Premium/Super Premium）
+  - 三语翻译新增 `fuelGrade.*` 和 `fuelRecord.fuelGrade` / `fuelRecord.fuelGradePlaceholder`
 - ✅ **修复已知问题 #1**：前后端分页响应结构不一致
   - 废弃 `PaginatedData<T>`（嵌套在 `data` 内的 `{list, total, page, page_size}`）
   - 新增 `PageMeta` 接口 + 重写 `PaginatedResponse<T>` = `{ code, message, data: T[], meta: PageMeta }`
@@ -316,3 +329,8 @@
     - 新增 `vehicle.batteryCapacity`、`fuelRecord.titleEv/chargingDate/chargingStation/chargingAmount/energyUnit/isFullCharge/energyConsumption`
     - 新增 `unit.kwh`、`measurement.kwh100km/kmKwh/miKwh`
     - 新增 `stats.totalEnergy/avgEnergyConsumption/energyConsumptionTrend`
+- ✅ **修复 Bug #16**：右上角切换语言后不会同步保存到用户后端设置
+  - `MainLayout.tsx` 的 `handleLanguageChange` 原本只调用 `i18n.changeLanguage()` + `localStorage.setItem()`，未调用后端 API
+  - 新增 `updateProfile({ locale: key })` 调用，将语言偏好同步保存至后端用户设置
+  - 从 `useAuthStore` 额外解构 `updateProfile`，用 `try/catch` 包裹确保网络失败不影响前端体验
+  - 涉及文件：`packages/web/src/layouts/MainLayout.tsx`
