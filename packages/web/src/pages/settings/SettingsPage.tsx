@@ -11,6 +11,7 @@ import {
   MEASUREMENT_SYSTEMS,
   EV_MEASUREMENT_SYSTEMS,
   SUPPORTED_LOCALES,
+  TIMEZONES,
 } from '@gastrack/shared';
 import type { ChangePasswordRequest } from '@gastrack/shared';
 import type { ThemeMode } from '@gastrack/shared';
@@ -35,6 +36,7 @@ export default function SettingsPage() {
   const handleSavePreferences = async (values: {
     nickname: string;
     locale: string;
+    timezone: string;
     unit_system: string;
     currency_code: string;
     fuel_efficiency_unit: string;
@@ -44,6 +46,7 @@ export default function SettingsPage() {
       await updateProfile({
         nickname: values.nickname,
         locale: values.locale,
+        timezone: values.timezone,
         unit_system: values.unit_system,
         currency_code: values.currency_code,
         fuel_efficiency_unit: values.fuel_efficiency_unit,
@@ -130,6 +133,7 @@ export default function SettingsPage() {
             initialValues={{
               nickname: user.nickname,
               locale: user.locale || i18n.language,
+              timezone: user.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
               unit_system: user.unit_system || 'metric',
               currency_code: user.currency_code || 'CNY',
               fuel_efficiency_unit: user.fuel_efficiency_unit || 'L/100km',
@@ -148,6 +152,18 @@ export default function SettingsPage() {
                 options={SUPPORTED_LOCALES.map((l) => ({
                   value: l.value,
                   label: l.label,
+                }))}
+              />
+            </Form.Item>
+
+            <Form.Item name="timezone" label={t('settings.timezone')}>
+              <Select
+                showSearch
+                placeholder={t('settings.timezonePlaceholder')}
+                optionFilterProp="label"
+                options={TIMEZONES.map((tz) => ({
+                  value: tz.value,
+                  label: t(tz.label),
                 }))}
               />
             </Form.Item>

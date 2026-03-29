@@ -112,4 +112,145 @@ export const SUPPORTED_LOCALES = [
   { value: 'ja-JP', label: '日本語' },
 ] as const;
 
+/** 全球时区列表（IANA 格式），按 UTC 偏移从西（−12）到东（+14）排列 */
+export const TIMEZONES = [
+  // UTC−12 ~ UTC−9
+  { value: 'Pacific/Midway', label: 'timezone.pacificMidway' },
+  { value: 'Pacific/Honolulu', label: 'timezone.pacificHonolulu' },
+  { value: 'America/Anchorage', label: 'timezone.americaAnchorage' },
+  // UTC−8
+  { value: 'America/Los_Angeles', label: 'timezone.americaLosAngeles' },
+  { value: 'America/Vancouver', label: 'timezone.americaVancouver' },
+  { value: 'America/Tijuana', label: 'timezone.americaTijuana' },
+  // UTC−7
+  { value: 'America/Denver', label: 'timezone.americaDenver' },
+  { value: 'America/Phoenix', label: 'timezone.americaPhoenix' },
+  { value: 'America/Edmonton', label: 'timezone.americaEdmonton' },
+  // UTC−6
+  { value: 'America/Chicago', label: 'timezone.americaChicago' },
+  { value: 'America/Mexico_City', label: 'timezone.americaMexicoCity' },
+  { value: 'America/Winnipeg', label: 'timezone.americaWinnipeg' },
+  { value: 'America/Costa_Rica', label: 'timezone.americaCostaRica' },
+  // UTC−5
+  { value: 'America/New_York', label: 'timezone.americaNewYork' },
+  { value: 'America/Toronto', label: 'timezone.americaToronto' },
+  { value: 'America/Bogota', label: 'timezone.americaBogota' },
+  { value: 'America/Lima', label: 'timezone.americaLima' },
+  { value: 'America/Panama', label: 'timezone.americaPanama' },
+  // UTC−4
+  { value: 'America/Halifax', label: 'timezone.americaHalifax' },
+  { value: 'America/Caracas', label: 'timezone.americaCaracas' },
+  { value: 'America/Santiago', label: 'timezone.americaSantiago' },
+  { value: 'America/La_Paz', label: 'timezone.americaLaPaz' },
+  // UTC−3
+  { value: 'America/Sao_Paulo', label: 'timezone.americaSaoPaulo' },
+  { value: 'America/Argentina/Buenos_Aires', label: 'timezone.americaBuenosAires' },
+  { value: 'America/Montevideo', label: 'timezone.americaMontevideo' },
+  // UTC−2 ~ UTC−1
+  { value: 'Atlantic/South_Georgia', label: 'timezone.atlanticSouthGeorgia' },
+  { value: 'Atlantic/Azores', label: 'timezone.atlanticAzores' },
+  { value: 'Atlantic/Cape_Verde', label: 'timezone.atlanticCapeVerde' },
+  // UTC+0
+  { value: 'UTC', label: 'timezone.utc' },
+  { value: 'Europe/London', label: 'timezone.europeLondon' },
+  { value: 'Europe/Dublin', label: 'timezone.europeDublin' },
+  { value: 'Europe/Lisbon', label: 'timezone.europeLisbon' },
+  { value: 'Africa/Casablanca', label: 'timezone.africaCasablanca' },
+  { value: 'Africa/Accra', label: 'timezone.africaAccra' },
+  // UTC+1
+  { value: 'Europe/Paris', label: 'timezone.europeParis' },
+  { value: 'Europe/Berlin', label: 'timezone.europeBerlin' },
+  { value: 'Europe/Madrid', label: 'timezone.europeMadrid' },
+  { value: 'Europe/Rome', label: 'timezone.europeRome' },
+  { value: 'Europe/Amsterdam', label: 'timezone.europeAmsterdam' },
+  { value: 'Europe/Brussels', label: 'timezone.europeBrussels' },
+  { value: 'Europe/Zurich', label: 'timezone.europeZurich' },
+  { value: 'Europe/Vienna', label: 'timezone.europeVienna' },
+  { value: 'Europe/Stockholm', label: 'timezone.europeStockholm' },
+  { value: 'Europe/Oslo', label: 'timezone.europeOslo' },
+  { value: 'Europe/Copenhagen', label: 'timezone.europeCopenhagen' },
+  { value: 'Europe/Warsaw', label: 'timezone.europeWarsaw' },
+  { value: 'Europe/Prague', label: 'timezone.europePrague' },
+  { value: 'Africa/Lagos', label: 'timezone.africaLagos' },
+  // UTC+2
+  { value: 'Europe/Helsinki', label: 'timezone.europeHelsinki' },
+  { value: 'Europe/Athens', label: 'timezone.europeAthens' },
+  { value: 'Europe/Bucharest', label: 'timezone.europeBucharest' },
+  { value: 'Europe/Istanbul', label: 'timezone.europeIstanbul' },
+  { value: 'Europe/Kiev', label: 'timezone.europeKiev' },
+  { value: 'Africa/Cairo', label: 'timezone.africaCairo' },
+  { value: 'Africa/Johannesburg', label: 'timezone.africaJohannesburg' },
+  { value: 'Asia/Jerusalem', label: 'timezone.asiaJerusalem' },
+  { value: 'Asia/Beirut', label: 'timezone.asiaBeirut' },
+  // UTC+3
+  { value: 'Europe/Moscow', label: 'timezone.europeMoscow' },
+  { value: 'Asia/Riyadh', label: 'timezone.asiaRiyadh' },
+  { value: 'Africa/Nairobi', label: 'timezone.africaNairobi' },
+  { value: 'Asia/Baghdad', label: 'timezone.asiaBaghdad' },
+  { value: 'Asia/Kuwait', label: 'timezone.asiaKuwait' },
+  // UTC+3:30
+  { value: 'Asia/Tehran', label: 'timezone.asiaTehran' },
+  // UTC+4
+  { value: 'Asia/Dubai', label: 'timezone.asiaDubai' },
+  { value: 'Asia/Baku', label: 'timezone.asiaBaku' },
+  { value: 'Asia/Tbilisi', label: 'timezone.asiaTbilisi' },
+  { value: 'Indian/Mauritius', label: 'timezone.indianMauritius' },
+  // UTC+4:30
+  { value: 'Asia/Kabul', label: 'timezone.asiaKabul' },
+  // UTC+5
+  { value: 'Asia/Karachi', label: 'timezone.asiaKarachi' },
+  { value: 'Asia/Tashkent', label: 'timezone.asiaTashkent' },
+  { value: 'Asia/Yekaterinburg', label: 'timezone.asiaYekaterinburg' },
+  // UTC+5:30
+  { value: 'Asia/Kolkata', label: 'timezone.asiaKolkata' },
+  { value: 'Asia/Colombo', label: 'timezone.asiaColombo' },
+  // UTC+5:45
+  { value: 'Asia/Kathmandu', label: 'timezone.asiaKathmandu' },
+  // UTC+6
+  { value: 'Asia/Dhaka', label: 'timezone.asiaDhaka' },
+  { value: 'Asia/Almaty', label: 'timezone.asiaAlmaty' },
+  // UTC+6:30
+  { value: 'Asia/Yangon', label: 'timezone.asiaYangon' },
+  // UTC+7
+  { value: 'Asia/Bangkok', label: 'timezone.asiaBangkok' },
+  { value: 'Asia/Ho_Chi_Minh', label: 'timezone.asiaHoChiMinh' },
+  { value: 'Asia/Jakarta', label: 'timezone.asiaJakarta' },
+  { value: 'Asia/Novosibirsk', label: 'timezone.asiaNovosibirsk' },
+  // UTC+8
+  { value: 'Asia/Shanghai', label: 'timezone.asiaShanghai' },
+  { value: 'Asia/Hong_Kong', label: 'timezone.asiaHongKong' },
+  { value: 'Asia/Taipei', label: 'timezone.asiaTaipei' },
+  { value: 'Asia/Singapore', label: 'timezone.asiaSingapore' },
+  { value: 'Asia/Kuala_Lumpur', label: 'timezone.asiaKualaLumpur' },
+  { value: 'Asia/Manila', label: 'timezone.asiaManila' },
+  { value: 'Asia/Makassar', label: 'timezone.asiaMakassar' },
+  { value: 'Australia/Perth', label: 'timezone.australiaPerth' },
+  // UTC+9
+  { value: 'Asia/Tokyo', label: 'timezone.asiaTokyo' },
+  { value: 'Asia/Seoul', label: 'timezone.asiaSeoul' },
+  { value: 'Asia/Jayapura', label: 'timezone.asiaJayapura' },
+  { value: 'Asia/Yakutsk', label: 'timezone.asiaYakutsk' },
+  // UTC+9:30
+  { value: 'Australia/Adelaide', label: 'timezone.australiaAdelaide' },
+  { value: 'Australia/Darwin', label: 'timezone.australiaDarwin' },
+  // UTC+10
+  { value: 'Australia/Sydney', label: 'timezone.australiaSydney' },
+  { value: 'Australia/Brisbane', label: 'timezone.australiaBrisbane' },
+  { value: 'Australia/Melbourne', label: 'timezone.australiaMelbourne' },
+  { value: 'Australia/Hobart', label: 'timezone.australiaHobart' },
+  { value: 'Pacific/Guam', label: 'timezone.pacificGuam' },
+  { value: 'Pacific/Port_Moresby', label: 'timezone.pacificPortMoresby' },
+  { value: 'Asia/Vladivostok', label: 'timezone.asiaVladivostok' },
+  // UTC+11
+  { value: 'Pacific/Noumea', label: 'timezone.pacificNoumea' },
+  { value: 'Pacific/Guadalcanal', label: 'timezone.pacificGuadalcanal' },
+  // UTC+12
+  { value: 'Pacific/Auckland', label: 'timezone.pacificAuckland' },
+  { value: 'Pacific/Fiji', label: 'timezone.pacificFiji' },
+  { value: 'Asia/Kamchatka', label: 'timezone.asiaKamchatka' },
+  // UTC+13
+  { value: 'Pacific/Tongatapu', label: 'timezone.pacificTongatapu' },
+  { value: 'Pacific/Apia', label: 'timezone.pacificApia' },
+] as const;
+
 export const DEFAULT_PAGE_SIZE = 20;

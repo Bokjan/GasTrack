@@ -137,7 +137,7 @@
 | 状态管理 (`stores/authStore.ts`) | ✅ | Zustand，登录/登出/Token 刷新 |
 | 状态管理 (`stores/vehicleStore.ts`) | ✅ | 车辆列表/选中车辆 |
 | 工具函数 (`utils/`) | ✅ | formatNumber/formatCurrency（含 null 防护）、formatDateTime（时区感知日期格式化，dayjs utc + timezone 插件） |
-| 常量 (`constants/`) | ✅ | FUEL_TYPES（含 electric）/ VEHICLE_TYPES / ENERGY_UNITS / EV_MEASUREMENT_SYSTEMS / FUEL_GRADES 等 |
+| 常量 (`constants/`) | ✅ | FUEL_TYPES（含 electric）/ VEHICLE_TYPES / ENERGY_UNITS / EV_MEASUREMENT_SYSTEMS / FUEL_GRADES / TIMEZONES（90 个 IANA 时区）等 |
 | i18n 框架 | ✅ | i18next + 中/英/日三语翻译资源（含电动车、燃油标号、站点建议相关翻译） |
 
 ### 3.3 页面组件 (@gastrack/web)
@@ -152,7 +152,7 @@
 | 加油记录列表 | `/vehicles/:id/records` | ✅ | 分页表格 |
 | 添加/编辑记录 | `/vehicles/:id/records/new`, `.../edit` | ✅ | 加油表单（站点自动补全 + 燃油标号 + 自动计算 + EV 适配） |
 | 统计页 | `/stats` | ✅ | 按月/按年维度切换 + 往年同比图表 + 统计卡片（费用/油耗/里程/加油次数） |
-| 个人设置 | `/settings` | 🔨 | 基础框架，待完善 |
+| 个人设置 | `/settings` | 🔨 | 基础框架 + 时区选择器（90 个 IANA 时区，可搜索），待完善 |
 
 ### 3.4 通用组件
 
@@ -253,6 +253,19 @@
 ---
 
 ## 6. 变更日志
+
+### 2026-03-30 — 设置页时区选择器
+
+- ✅ **新增功能**：设置页时区选择器 UI
+  - 后端已完整支持时区（DB `timezone VARCHAR(50)` → Model → DTO → Service → API），本次补全前端缺失的选择器
+  - **常量**：`packages/shared/src/constants/index.ts` 新增 `TIMEZONES` 数组（90 个 IANA 标准时区），按 UTC 偏移从西（UTC−11）到东（UTC+14）排列，覆盖全球六大洲
+  - **设置页**（`SettingsPage.tsx`）：语言选择器下方新增时区 `<Select>` 组件，支持 `showSearch` 搜索过滤
+  - 初始值优先读取用户 profile 中的 `timezone`，回退到 `Intl.DateTimeFormat().resolvedOptions().timeZone`（浏览器本地时区）
+  - 保存时通过 `PATCH /api/v1/users/me` 同步更新至后端
+  - **i18n 三语翻译**新增：
+    - `settings.timezone` / `settings.timezonePlaceholder`
+    - `timezone.*` 下 90 个时区的本地化名称（含 UTC 偏移标注）
+  - 涉及文件：`constants/index.ts`、`SettingsPage.tsx`、`zh-CN.json`、`en-US.json`、`ja-JP.json`
 
 ### 2026-03-30 — 时区感知日期显示 + 车牌号补全
 
