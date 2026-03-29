@@ -1,3 +1,29 @@
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// ============================================================
+// 日期时间格式化（时区感知）
+// ============================================================
+
+/**
+ * 将 UTC 时间字符串按用户时区格式化。
+ * @param dateStr  后端返回的 ISO 8601 时间字符串（通常为 UTC）
+ * @param tz       用户时区，如 'Asia/Shanghai'、'America/New_York'
+ * @param fmt      dayjs 格式化模式，默认 'YYYY-MM-DD'
+ */
+export function formatDateTime(
+  dateStr: string,
+  tz?: string,
+  fmt = 'YYYY-MM-DD',
+): string {
+  const d = dayjs.utc(dateStr);
+  return tz ? d.tz(tz).format(fmt) : d.local().format(fmt);
+}
+
 // ============================================================
 // 单位换算工具函数
 // ============================================================
@@ -43,6 +69,56 @@ export function kmToMiles(km: number): number {
 export function milesToKm(miles: number): number {
   return Math.round(miles * 1.60934 * 1000) / 1000;
 }
+
+// ============================================================
+// 油耗单位通用转换（以 L/100km 为基准）
+// ============================================================
+
+const MPG_FACTOR = 235.215;
+
+/** 将油耗值从 from 单位转为 to 单位 */
+export function convertFuelEfficiency(
+  value: number,
+  from: string,
+  to: string,
+): number {
+  if (from === to || value <= 0) return value;
+
+  // 先转为 L/100km
+  let l100km: number;
+  switch (from) {
+    case 'L/100km':
+      l100km = value;
+      break;
+    case 'km/L':
+      l100km = value > 0 ? 100 / value : 0;
+      break;
+    case 'MPG':
+      l100km = value > 0 ? MPG_FACTOR / value : 0;
+      break;
+    // 电动车单位保持原样
+    default:
+      return value;
+  }
+
+  // 再从 L/100km 转为目标
+  switch (to) {
+    case 'L/100km':
+      return Math.round(l100km * 100) / 100;
+    case 'km/L':
+      return l100km > 0 ? Math.round((100 / l100km) * 100) / 100 : 0;
+    case 'MPG':
+      return l100km > 0 ? Math.round((MPG_FACTOR / l100km) * 100) / 100 : 0;
+    default:
+      return value;
+  }
+}
+
+/** 燃油车三种油耗单位 */
+export const FUEL_EFFICIENCY_UNITS = ['L/100km', 'km/L', 'MPG'] as const;
+
+/** 电动车三种能耗单位 */
+export const EV_EFFICIENCY_UNITS = ['kWh/100km', 'km/kWh', 'mi/kWh'] as const;
 
 /** 格式化数字：添加千分位 */
 export function formatNumber(num: number | undefined | null, decimals = 2): string {

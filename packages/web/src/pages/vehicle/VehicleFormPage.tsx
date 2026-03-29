@@ -253,6 +253,17 @@ export default function VehicleFormPage() {
             </Form.Item>
           )}
 
+          <Form.Item
+            name="license_plate"
+            label={t('vehicle.licensePlate')}
+          >
+            <Input
+              placeholder={t('vehicle.licensePlatePlaceholder')}
+              maxLength={20}
+              style={{ maxWidth: 300 }}
+            />
+          </Form.Item>
+
           <Form.Item name="is_default" label={t('vehicle.setDefault')} valuePropName="checked">
             <Switch />
           </Form.Item>

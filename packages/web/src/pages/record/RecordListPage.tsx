@@ -9,6 +9,7 @@ import {
   message,
   Tag,
   Typography,
+  Tooltip,
 } from 'antd';
 import {
   PlusOutlined,
@@ -22,11 +23,13 @@ import {
   vehicleApi,
   formatCurrency,
   formatNumber,
+  formatDateTime,
+  convertFuelEfficiency,
+  FUEL_EFFICIENCY_UNITS,
   useAuthStore,
 } from '@gastrack/shared';
 import type { FuelRecord, Vehicle } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
-import dayjs from 'dayjs';
 
 export default function RecordListPage() {
   const { t } = useTranslation();
@@ -90,12 +93,20 @@ export default function RecordListPage() {
     }
   };
 
+  const userTimezone = user?.timezone;
+
   const columns: ColumnsType<FuelRecord> = [
     {
       title: t('fuelRecord.fuelDate'),
       dataIndex: 'refuel_date',
       width: 120,
-      render: (v: string) => dayjs(v).format('YYYY-MM-DD'),
+      render: (v: string) => (
+        <Tooltip title={formatDateTime(v, userTimezone, 'YYYY-MM-DD HH:mm')}>
+          <span style={{ cursor: 'pointer' }}>
+            {formatDateTime(v, userTimezone, 'YYYY-MM-DD')}
+          </span>
+        </Tooltip>
+      ),
     },
     {
       title: t('fuelRecord.station'),
@@ -128,15 +139,45 @@ export default function RecordListPage() {
       render: (v: number) => `${formatNumber(v, 0)} ${distanceUnit}`,
     },
     {
+      title: t('fuelRecord.tripDistance'),
+      dataIndex: 'trip_distance',
+      width: 100,
+      render: (v?: number) =>
+        v ? `${formatNumber(v, 1)} ${distanceUnit}` : '-',
+    },
+    {
       title: t('fuelRecord.consumption'),
       dataIndex: 'fuel_efficiency',
-      width: 110,
-      render: (v?: number) =>
-        v ? (
-          <Tag color="blue">{formatNumber(v)} {efficiencyUnit}</Tag>
-        ) : (
-          <Tag>-</Tag>
-        ),
+      width: 130,
+      render: (v?: number) => {
+        if (!v) return <Tag>-</Tag>;
+
+        // 判断是否为电动车单位（不参与油耗互转）
+        const isEvUnit = ['kWh/100km', 'km/kWh', 'mi/kWh'].includes(efficiencyUnit);
+
+        if (isEvUnit) {
+          return <Tag color="blue">{formatNumber(v)} {efficiencyUnit}</Tag>;
+        }
+
+        // 构建其他两种单位的换算值
+        const otherUnits = FUEL_EFFICIENCY_UNITS
+          .filter((u) => u !== efficiencyUnit)
+          .map((u) => {
+            const converted = convertFuelEfficiency(v, efficiencyUnit, u);
+            return `${formatNumber(converted)} ${u}`;
+          });
+
+        return (
+          <Tooltip
+            title={otherUnits.join('\n')}
+            overlayInnerStyle={{ whiteSpace: 'pre-line' }}
+          >
+            <Tag color="blue" style={{ cursor: 'pointer' }}>
+              {formatNumber(v)} {efficiencyUnit}
+            </Tag>
+          </Tooltip>
+        );
+      },
     },
     {
       title: t('fuelRecord.isFullTank'),
@@ -204,6 +245,7 @@ export default function RecordListPage() {
             <span>{vehicle.year}</span>
             <Tag>{t(`fuelType.${vehicle.fuel_type}`)}</Tag>
             <span>{isImperial ? (vehicle.tank_capacity / 3.78541).toFixed(1) : vehicle.tank_capacity} {fuelUnit}</span>
+            {vehicle.license_plate && <span>{vehicle.license_plate}</span>}
           </Space>
         </Card>
       )}
@@ -221,7 +263,7 @@ export default function RecordListPage() {
             onChange: loadRecords,
             showTotal: (total) => t('common.totalItems', { total }),
           }}
-          scroll={{ x: 900 }}
+          scroll={{ x: 1050 }}
           size="middle"
         />
       </Card>

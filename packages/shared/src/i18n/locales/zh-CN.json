@@ -53,6 +53,8 @@
     "tankCapacity": "油箱容量",
     "batteryCapacity": "电池容量",
     "engineCc": "排量 (cc)",
+    "licensePlate": "车牌号",
+    "licensePlatePlaceholder": "如：京A12345",
     "default": "默认",
     "setDefault": "设为默认",
     "deleteConfirm": "确定要删除这辆车吗？相关的加油/充电记录也会被删除。",
@@ -86,6 +88,7 @@
     "notes": "备注",
     "consumption": "油耗",
     "energyConsumption": "电耗",
+    "tripDistance": "行程里程",
     "deleteConfirm": "确定要删除这条记录吗？"
   },
   "stats": {

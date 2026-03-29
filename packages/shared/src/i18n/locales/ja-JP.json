@@ -53,6 +53,8 @@
     "tankCapacity": "タンク容量",
     "batteryCapacity": "バッテリー容量",
     "engineCc": "排気量 (cc)",
+    "licensePlate": "ナンバープレート",
+    "licensePlatePlaceholder": "例：品川 300 あ 12-34",
     "default": "デフォルト",
     "setDefault": "デフォルトに設定",
     "deleteConfirm": "この車両を削除しますか？関連する給油/充電記録も削除されます。",
@@ -86,6 +88,7 @@
     "notes": "メモ",
     "consumption": "燃費",
     "energyConsumption": "電費",
+    "tripDistance": "走行距離（区間）",
     "deleteConfirm": "この記録を削除しますか？"
   },
   "stats": {

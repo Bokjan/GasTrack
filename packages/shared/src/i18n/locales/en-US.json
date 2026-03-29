@@ -53,6 +53,8 @@
     "tankCapacity": "Tank Capacity",
     "batteryCapacity": "Battery Capacity",
     "engineCc": "Engine (cc)",
+    "licensePlate": "License Plate",
+    "licensePlatePlaceholder": "e.g. ABC-1234",
     "default": "Default",
     "setDefault": "Set as Default",
     "deleteConfirm": "Are you sure to delete this vehicle? Related fuel/charging records will also be deleted.",
@@ -86,6 +88,7 @@
     "notes": "Notes",
     "consumption": "Consumption",
     "energyConsumption": "Energy Consumption",
+    "tripDistance": "Trip Distance",
     "deleteConfirm": "Are you sure to delete this record?"
   },
   "stats": {

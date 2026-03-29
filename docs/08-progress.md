@@ -1,6 +1,6 @@
 # GasTrack 需求完成进度
 
-> **更新日期**: 2026-03-27
+> **更新日期**: 2026-03-30
 >
 > **当前阶段**: 第一期 MVP 开发中
 
@@ -136,7 +136,7 @@
 | HTTP 客户端 (`api/client.ts`) | ✅ | baseURL、Token 注入、401 自动刷新队列 |
 | 状态管理 (`stores/authStore.ts`) | ✅ | Zustand，登录/登出/Token 刷新 |
 | 状态管理 (`stores/vehicleStore.ts`) | ✅ | 车辆列表/选中车辆 |
-| 工具函数 (`utils/`) | ✅ | formatNumber/formatCurrency（含 null 防护） |
+| 工具函数 (`utils/`) | ✅ | formatNumber/formatCurrency（含 null 防护）、formatDateTime（时区感知日期格式化，dayjs utc + timezone 插件） |
 | 常量 (`constants/`) | ✅ | FUEL_TYPES（含 electric）/ VEHICLE_TYPES / ENERGY_UNITS / EV_MEASUREMENT_SYSTEMS / FUEL_GRADES 等 |
 | i18n 框架 | ✅ | i18next + 中/英/日三语翻译资源（含电动车、燃油标号、站点建议相关翻译） |
 
@@ -253,6 +253,28 @@
 ---
 
 ## 6. 变更日志
+
+### 2026-03-30 — 时区感知日期显示 + 车牌号补全
+
+- ✅ **新增功能**：时区感知的日期格式化工具函数 `formatDateTime()`
+  - 基于 dayjs 的 `utc` + `timezone` 插件，根据用户 profile 中的 `timezone` 设置格式化时间
+  - 有时区设置（如 `Asia/Shanghai`）→ 按用户设置的时区格式化
+  - 无时区设置 → 回退到浏览器本地时区（`dayjs.local()`）
+  - 放置于 `packages/shared/src/utils/index.ts`，全项目统一调用
+- ✅ **改进**：加油记录列表日期列 hover 显示精确时间
+  - 默认显示：`YYYY-MM-DD`（简洁）
+  - Hover 显示：`YYYY-MM-DD HH:mm`（精确到分钟，匹配实际录入精度）
+  - 使用 `formatDateTime()` + 用户时区设置，确保跨时区正确显示
+  - 涉及文件：`packages/web/src/pages/record/RecordListPage.tsx`
+- ✅ **补全**：车牌号（`license_plate`）前端支持
+  - 后端链路已完整（DB `VARCHAR(20)` → Model → DTO → Service → API），本次补全前端缺失部分
+  - **车辆表单页**（`VehicleFormPage.tsx`）：排量字段下方新增车牌输入框（`Input`，`maxLength=20`，非必填）
+  - **车辆列表页**（`VehicleListPage.tsx`）：卡片中品牌型号行下方显示车牌号（有值时才显示）
+  - **记录列表页**（`RecordListPage.tsx`）：头部车辆信息卡片末尾显示车牌号（有值时才显示）
+  - **i18n 三语翻译**新增 2 个 key：
+    - `vehicle.licensePlate`（车牌号 / License Plate / ナンバープレート）
+    - `vehicle.licensePlatePlaceholder`（如：京A12345 / e.g. ABC-1234 / 例：品川 300 あ 12-34）
+  - 涉及文件：`VehicleFormPage.tsx`、`VehicleListPage.tsx`、`RecordListPage.tsx`、`zh-CN.json`、`en-US.json`、`ja-JP.json`、`shared/src/utils/index.ts`
 
 ### 2026-03-27 — 需求文档回顾与更新
 

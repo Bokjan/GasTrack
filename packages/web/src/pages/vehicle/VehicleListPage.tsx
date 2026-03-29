@@ -125,6 +125,11 @@ export default function VehicleListPage() {
                   description={
                     <>
                       <div>{vehicle.brand} {vehicle.model} · {vehicle.year}</div>
+                      {vehicle.license_plate && (
+                        <div style={{ marginTop: 2, color: 'var(--gt-text-secondary, #666)' }}>
+                          {vehicle.license_plate}
+                        </div>
+                      )}
                       <div style={{ marginTop: 4 }}>
                         <Tag>{t(`fuelType.${vehicle.fuel_type}`)}</Tag>
                         {vehicle.fuel_grade && (() => {
