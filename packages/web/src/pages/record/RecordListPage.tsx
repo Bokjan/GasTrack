@@ -16,6 +16,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   ArrowLeftOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import {
@@ -192,21 +193,39 @@ export default function RecordListPage() {
       width: 100,
       render: (_: unknown, record: FuelRecord) => (
         <Space>
+          <Tooltip title={t('recordDetail.title')}>
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/vehicles/${vehicleId}/records/${record.id}`);
+              }}
+            />
+          </Tooltip>
           <Button
             type="text"
             size="small"
             icon={<EditOutlined />}
-            onClick={() =>
+            onClick={(e) => {
+              e.stopPropagation();
               navigate(
                 `/vehicles/${vehicleId}/records/${record.id}/edit`,
-              )
-            }
+              );
+            }}
           />
           <Popconfirm
             title={t('fuelRecord.deleteConfirm')}
             onConfirm={() => handleDelete(record.id)}
           >
-            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+            <Button
+              type="text"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={(e) => e.stopPropagation()}
+            />
           </Popconfirm>
         </Space>
       ),
@@ -265,6 +284,10 @@ export default function RecordListPage() {
           }}
           scroll={{ x: 1050 }}
           size="middle"
+          onRow={(record) => ({
+            onClick: () => navigate(`/vehicles/${vehicleId}/records/${record.id}`),
+            style: { cursor: 'pointer' },
+          })}
         />
       </Card>
     </div>

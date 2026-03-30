@@ -149,7 +149,8 @@
 | 仪表盘 | `/dashboard` | ✅ | 按车辆分组统计卡片 + 车辆列表（多车独立/单车直显） |
 | 车辆列表 | `/vehicles` | ✅ | 车辆卡片列表 |
 | 添加/编辑车辆 | `/vehicles/new`, `/vehicles/:id/edit` | ✅ | 车辆表单（含 electric 类型） |
-| 加油记录列表 | `/vehicles/:id/records` | ✅ | 分页表格 |
+| 加油记录列表 | `/vehicles/:id/records` | ✅ | 分页表格，支持行点击跳转详情 |
+| 加油记录详情 | `/vehicles/:id/records/:rid` | ✅ | 基本信息 + 智能分析（油耗评级/对比/利用率），完整 EV 适配 |
 | 添加/编辑记录 | `/vehicles/:id/records/new`, `.../edit` | ✅ | 加油表单（站点自动补全 + 燃油标号 + 自动计算 + EV 适配） |
 | 统计页 | `/stats` | ✅ | 按月/按年维度切换 + 往年同比图表 + 统计卡片（费用/油耗/里程/加油次数） |
 | 个人设置 | `/settings` | 🔨 | 基础框架 + 时区选择器（90 个 IANA 时区，可搜索），待完善 |
@@ -253,6 +254,34 @@
 ---
 
 ## 6. 变更日志
+
+### 2026-03-30 — 加油记录详情页 + UI 优化
+
+- ✅ **新增页面**：加油记录详情页（`RecordDetailPage.tsx`）
+  - 新增路由 `/vehicles/:vehicleId/records/:recordId`
+  - **基本信息区**：加油日期、加油站、加油量、单价、总费用、当前里程、燃油标号、是否加满、备注
+  - **智能分析区**：油耗/电耗评级（优秀/良好/正常/偏高/较差五级）、单价对比、单次花费对比、每 km/mi 成本、行驶里程对比、油箱/电池利用率
+  - 完整 EV（电动车）适配：充电日期/充电站/充电量/电耗评级/电池利用率
+  - 支持编辑跳转和删除操作
+  - 涉及文件：`RecordDetailPage.tsx`（新增）、`App.tsx`（路由注册）
+- ✅ **改进**：记录列表页支持点击行跳转详情
+  - 表格行添加 `onRow` 点击事件 + `cursor: pointer` 样式
+  - 操作列新增"查看"按钮（`EyeOutlined`），编辑/删除按钮增加 `stopPropagation` 防止与行点击冲突
+  - 涉及文件：`RecordListPage.tsx`
+- ✅ **修复**：详情页 UI 优化（4 项）
+  - 移除加油日期/加油站/总费用/当前里程标签前的图标（`CalendarOutlined`、`EnvironmentOutlined`、`DollarOutlined`、`DashboardOutlined`）
+  - `Descriptions` 组件添加 `colon={false}`，移除标签后的冒号
+  - "是否加满"显示从 `t('common.confirm')` 优化为 `t('common.yes')` / `t('common.no')`（是/Yes/はい）
+  - 燃油标号 i18n 修复：通过 `FUEL_GRADES` 常量查找正确的翻译 key，替代直接拼接 snake_case 值
+- ✅ **修复**：详情页 label 宽度从 120px 加宽到 140px，适配日语长标签（如"ガソリンスタンド"）
+- ✅ **修复**：详情页智能分析卡片图标风格统一
+  - 单次花费对比：`RiseOutlined`/`FallOutlined` → `WalletOutlined`
+  - 行驶里程对比：`ClockCircleOutlined` → `CarOutlined`
+- ✅ **修复**：Dashboard 统计卡片"总里程"图标从 `DashboardOutlined` 改为 `CarOutlined`，与详情页风格一致，避免与"平均油耗"图标重复
+- ✅ **i18n 三语翻译**新增：
+  - `common.yes` / `common.no`（是/否、Yes/No、はい/いいえ）
+  - `recordDetail.*` 下 22 个 key（详情页标题、基本信息、智能分析各维度、评级等级）
+  - 涉及文件：`zh-CN.json`、`en-US.json`、`ja-JP.json`
 
 ### 2026-03-30 — 设置页时区选择器
 

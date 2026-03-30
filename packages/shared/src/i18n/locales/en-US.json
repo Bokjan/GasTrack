@@ -5,6 +5,8 @@
   "common": {
     "confirm": "Confirm",
     "cancel": "Cancel",
+    "yes": "Yes",
+    "no": "No",
     "save": "Save",
     "delete": "Delete",
     "edit": "Edit",
@@ -90,6 +92,34 @@
     "energyConsumption": "Energy Consumption",
     "tripDistance": "Trip Distance",
     "deleteConfirm": "Are you sure to delete this record?"
+  },
+  "recordDetail": {
+    "title": "Details",
+    "basicInfo": "Basic Info",
+    "insights": "Smart Insights",
+    "efficiencyRating": "Efficiency Rating",
+    "energyRating": "Energy Efficiency Rating",
+    "priceComparison": "Price Comparison",
+    "costComparison": "Cost per Fill Comparison",
+    "costPerDistance": "Cost per {{unit}}",
+    "distanceComparison": "Trip Distance Comparison",
+    "tankUsage": "Tank Utilization",
+    "batteryUsage": "Battery Utilization",
+    "currentValue": "This time",
+    "avgValue": "Average",
+    "thisTime": "This time",
+    "historical": "Historical avg",
+    "avgPerFill": "Avg per fill",
+    "thisTrip": "This trip",
+    "avgTrip": "Avg trip",
+    "noInsights": "Need at least 2 records to generate insights",
+    "rating": {
+      "excellent": "Excellent",
+      "good": "Good",
+      "normal": "Normal",
+      "belowAvg": "Below Avg",
+      "poor": "Poor"
+    }
   },
   "stats": {
     "title": "Statistics",

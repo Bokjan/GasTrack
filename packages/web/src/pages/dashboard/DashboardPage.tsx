@@ -4,8 +4,8 @@ import { Row, Col, Card, Statistic, Button, Empty, Space, List, Tag, Divider } f
 import {
   CarOutlined,
   FileTextOutlined,
-  DashboardOutlined,
   DollarOutlined,
+  DashboardOutlined,
   ThunderboltOutlined,
   PlusOutlined,
   RightOutlined,
@@ -83,7 +83,7 @@ export default function DashboardPage() {
             <Statistic
               title={t('stats.totalDistance')}
               value={`${formatNumber(vs.total_distance, 0)} ${distanceUnit}`}
-              prefix={<DashboardOutlined />}
+              prefix={<CarOutlined />}
             />
           </Card>
         </Col>

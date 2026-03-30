@@ -8,6 +8,7 @@ import VehicleListPage from './pages/vehicle/VehicleListPage';
 import VehicleFormPage from './pages/vehicle/VehicleFormPage';
 import RecordListPage from './pages/record/RecordListPage';
 import RecordFormPage from './pages/record/RecordFormPage';
+import RecordDetailPage from './pages/record/RecordDetailPage';
 import StatsPage from './pages/stats/StatsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import { useEffect } from 'react';
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="vehicles/:id/edit" element={<VehicleFormPage />} />
         <Route path="vehicles/:vehicleId/records" element={<RecordListPage />} />
         <Route path="vehicles/:vehicleId/records/new" element={<RecordFormPage />} />
+        <Route path="vehicles/:vehicleId/records/:recordId" element={<RecordDetailPage />} />
         <Route path="vehicles/:vehicleId/records/:recordId/edit" element={<RecordFormPage />} />
         <Route path="stats" element={<StatsPage />} />
         <Route path="settings" element={<SettingsPage />} />

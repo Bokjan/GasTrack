@@ -5,6 +5,8 @@
   "common": {
     "confirm": "確認",
     "cancel": "キャンセル",
+    "yes": "はい",
+    "no": "いいえ",
     "save": "保存",
     "delete": "削除",
     "edit": "編集",
@@ -90,6 +92,34 @@
     "energyConsumption": "電費",
     "tripDistance": "走行距離（区間）",
     "deleteConfirm": "この記録を削除しますか？"
+  },
+  "recordDetail": {
+    "title": "詳細",
+    "basicInfo": "基本情報",
+    "insights": "スマート分析",
+    "efficiencyRating": "燃費評価",
+    "energyRating": "電費評価",
+    "priceComparison": "単価比較",
+    "costComparison": "1回あたりのコスト比較",
+    "costPerDistance": "{{unit}}あたりのコスト",
+    "distanceComparison": "走行距離の比較",
+    "tankUsage": "タンク使用率",
+    "batteryUsage": "バッテリー使用率",
+    "currentValue": "今回",
+    "avgValue": "平均",
+    "thisTime": "今回",
+    "historical": "過去の平均",
+    "avgPerFill": "平均（1回あたり）",
+    "thisTrip": "今回の走行",
+    "avgTrip": "平均走行",
+    "noInsights": "分析を生成するには2件以上の記録が必要です",
+    "rating": {
+      "excellent": "優秀",
+      "good": "良好",
+      "normal": "普通",
+      "belowAvg": "やや悪い",
+      "poor": "悪い"
+    }
   },
   "stats": {
     "title": "統計",

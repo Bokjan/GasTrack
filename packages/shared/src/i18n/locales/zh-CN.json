@@ -5,6 +5,8 @@
   "common": {
     "confirm": "确认",
     "cancel": "取消",
+    "yes": "是",
+    "no": "否",
     "save": "保存",
     "delete": "删除",
     "edit": "编辑",
@@ -90,6 +92,34 @@
     "energyConsumption": "电耗",
     "tripDistance": "行程里程",
     "deleteConfirm": "确定要删除这条记录吗？"
+  },
+  "recordDetail": {
+    "title": "详情",
+    "basicInfo": "基本信息",
+    "insights": "智能分析",
+    "efficiencyRating": "油耗评级",
+    "energyRating": "电耗评级",
+    "priceComparison": "单价对比",
+    "costComparison": "单次花费对比",
+    "costPerDistance": "每{{unit}}成本",
+    "distanceComparison": "行驶里程对比",
+    "tankUsage": "油箱利用率",
+    "batteryUsage": "电池利用率",
+    "currentValue": "本次",
+    "avgValue": "平均",
+    "thisTime": "本次",
+    "historical": "历史均值",
+    "avgPerFill": "平均每次",
+    "thisTrip": "本次行程",
+    "avgTrip": "平均行程",
+    "noInsights": "需要至少 2 条记录才能生成分析",
+    "rating": {
+      "excellent": "优秀",
+      "good": "良好",
+      "normal": "正常",
+      "belowAvg": "偏高",
+      "poor": "较差"
+    }
   },
   "stats": {
     "title": "统计分析",
