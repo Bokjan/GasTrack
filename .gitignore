@@ -20,8 +20,10 @@ build/
 # Logs
 # ========================
 *.log
+*.log.gz
 npm-debug.log*
 pnpm-debug.log*
+logs/
 
 # ========================
 # OS files
