@@ -26,6 +26,7 @@ func New(
 	exportHandler *handler.ExportHandler,
 	reminderHandler *handler.ReminderHandler,
 	notificationHandler *handler.NotificationHandler,
+	groupHandler *handler.GroupHandler,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -108,6 +109,19 @@ func New(
 	mux.Handle("PATCH /api/v1/notifications/{id}/read", auth(http.HandlerFunc(notificationHandler.MarkAsRead)))
 	mux.Handle("POST /api/v1/notifications/read-all", auth(http.HandlerFunc(notificationHandler.MarkAllAsRead)))
 	mux.Handle("DELETE /api/v1/notifications/{id}", auth(http.HandlerFunc(notificationHandler.Delete)))
+
+	// 群组管理
+	mux.Handle("GET /api/v1/groups", auth(http.HandlerFunc(groupHandler.List)))
+	mux.Handle("POST /api/v1/groups", auth(http.HandlerFunc(groupHandler.Create)))
+	mux.Handle("POST /api/v1/groups/join", auth(http.HandlerFunc(groupHandler.Join)))
+	mux.Handle("GET /api/v1/groups/{id}", auth(http.HandlerFunc(groupHandler.GetByID)))
+	mux.Handle("PATCH /api/v1/groups/{id}", auth(http.HandlerFunc(groupHandler.Update)))
+	mux.Handle("DELETE /api/v1/groups/{id}", auth(http.HandlerFunc(groupHandler.Delete)))
+	mux.Handle("POST /api/v1/groups/{id}/regenerate-invite", auth(http.HandlerFunc(groupHandler.RegenerateInviteCode)))
+	mux.Handle("POST /api/v1/groups/{id}/leave", auth(http.HandlerFunc(groupHandler.LeaveGroup)))
+	mux.Handle("GET /api/v1/groups/{id}/overview", auth(http.HandlerFunc(groupHandler.GetOverview)))
+	mux.Handle("PATCH /api/v1/groups/{id}/members/{uid}", auth(http.HandlerFunc(groupHandler.UpdateMemberRole)))
+	mux.Handle("DELETE /api/v1/groups/{id}/members/{uid}", auth(http.HandlerFunc(groupHandler.RemoveMember)))
 
 	// --- 应用全局中间件 ---
 	corsConfig := middleware.CORSConfig{

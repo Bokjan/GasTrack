@@ -59,6 +59,7 @@ func main() {
 	inviteCodeRepo := repository.NewInviteCodeRepository(db)
 	reminderRepo := repository.NewReminderRepository(db)
 	notificationRepo := repository.NewNotificationRepository(db)
+	groupRepo := repository.NewGroupRepository(db)
 
 	// 5. 创建 Service 层
 	inviteService := service.NewInviteService(inviteCodeRepo, userRepo, logger)
@@ -70,6 +71,7 @@ func main() {
 	fuelRecordService := service.NewFuelRecordService(fuelRecordRepo, vehicleRepo, userRepo, logger, notificationService)
 	statsService := service.NewStatsService(fuelRecordRepo, vehicleRepo, userRepo, logger)
 	exportService := service.NewExportService(userRepo, vehicleRepo, fuelRecordRepo, logger)
+	groupService := service.NewGroupService(groupRepo, userRepo, logger)
 
 	// 6. 创建 Handler 层
 	authHandler := handler.NewAuthHandler(authService, logger)
@@ -81,6 +83,7 @@ func main() {
 	exportHandler := handler.NewExportHandler(exportService, logger)
 	reminderHandler := handler.NewReminderHandler(reminderService, logger)
 	notificationHandler := handler.NewNotificationHandler(notificationService, logger)
+	groupHandler := handler.NewGroupHandler(groupService, logger)
 
 	// 7. 注册路由
 	mux := router.New(
@@ -95,6 +98,7 @@ func main() {
 		exportHandler,
 		reminderHandler,
 		notificationHandler,
+		groupHandler,
 	)
 
 	// 8. 创建 HTTP 服务器

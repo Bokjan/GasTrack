@@ -377,3 +377,85 @@ export interface Notification {
   is_read: boolean;
   created_at: string;
 }
+
+// ---------- Group ----------
+
+/** 群组成员角色 */
+export type GroupRole = 'owner' | 'admin' | 'member';
+
+/** 群组成员详情 */
+export interface GroupMemberDetail {
+  user_id: string;
+  nickname: string;
+  email: string;
+  role: GroupRole;
+  joined_at: string;
+}
+
+/** 后端 GroupResponse 字段对齐 */
+export interface Group {
+  id: string;
+  name: string;
+  owner_id: string;
+  owner_name?: string;
+  invite_code: string;
+  max_members: number;
+  description?: string;
+  member_count: number;
+  my_role?: GroupRole;
+  members?: GroupMemberDetail[];
+  created_at: string;
+}
+
+/** 创建群组请求 */
+export interface CreateGroupRequest {
+  name: string;
+  max_members?: number;
+  description?: string;
+}
+
+/** 更新群组请求 */
+export interface UpdateGroupRequest {
+  name?: string;
+  max_members?: number;
+  description?: string;
+}
+
+/** 更新成员角色请求 */
+export interface UpdateMemberRoleRequest {
+  role: 'admin' | 'member';
+}
+
+/** 加入群组请求 */
+export interface JoinGroupRequest {
+  invite_code: string;
+}
+
+/** 加入群组响应 */
+export interface JoinGroupResponse {
+  group_id: string;
+  group_name: string;
+  role: string;
+}
+
+/** 群组车辆汇总 */
+export interface GroupVehicleSummary {
+  vehicle_id: string;
+  vehicle_name: string;
+  owner_name: string;
+  vehicle_type: string;
+  fuel_type: string;
+  total_records: number;
+  total_cost: number;
+  total_fuel: number;
+  avg_efficiency: number;
+}
+
+/** 群组数据汇总响应 */
+export interface GroupOverviewResponse {
+  group_id: string;
+  group_name: string;
+  member_count: number;
+  vehicle_count: number;
+  vehicles: GroupVehicleSummary[];
+}

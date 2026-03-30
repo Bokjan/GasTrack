@@ -28,6 +28,12 @@ import type {
   CreateReminderRequest,
   UpdateReminderRequest,
   Notification,
+  Group,
+  CreateGroupRequest,
+  UpdateGroupRequest,
+  UpdateMemberRoleRequest,
+  JoinGroupResponse,
+  GroupOverviewResponse,
 } from '../types';
 
 // 注意: PaginatedResponse<T> 的 Axios 响应为 AxiosResponse<PaginatedResponse<T>>
@@ -225,4 +231,52 @@ export const notificationApi = {
   /** 删除通知 */
   delete: (id: string) =>
     apiClient.delete<ApiResponse<null>>(`/notifications/${id}`),
+};
+
+// ==================== Group ====================
+
+export const groupApi = {
+  /** 获取我所在的群组列表 */
+  list: () =>
+    apiClient.get<ApiResponse<Group[]>>('/groups'),
+
+  /** 创建群组 */
+  create: (data: CreateGroupRequest) =>
+    apiClient.post<ApiResponse<Group>>('/groups', data),
+
+  /** 获取群组详情 */
+  getById: (id: string) =>
+    apiClient.get<ApiResponse<Group>>(`/groups/${id}`),
+
+  /** 更新群组信息 */
+  update: (id: string, data: UpdateGroupRequest) =>
+    apiClient.patch<ApiResponse<Group>>(`/groups/${id}`, data),
+
+  /** 删除群组 */
+  delete: (id: string) =>
+    apiClient.delete<ApiResponse<null>>(`/groups/${id}`),
+
+  /** 通过邀请码加入群组 */
+  join: (inviteCode: string) =>
+    apiClient.post<ApiResponse<JoinGroupResponse>>('/groups/join', { invite_code: inviteCode }),
+
+  /** 重新生成邀请码 */
+  regenerateInviteCode: (id: string) =>
+    apiClient.post<ApiResponse<Group>>(`/groups/${id}/regenerate-invite`),
+
+  /** 退出群组 */
+  leave: (id: string) =>
+    apiClient.post<ApiResponse<null>>(`/groups/${id}/leave`),
+
+  /** 获取群组数据汇总 */
+  getOverview: (id: string) =>
+    apiClient.get<ApiResponse<GroupOverviewResponse>>(`/groups/${id}/overview`),
+
+  /** 更新成员角色 */
+  updateMemberRole: (groupId: string, userId: string, data: UpdateMemberRoleRequest) =>
+    apiClient.patch<ApiResponse<null>>(`/groups/${groupId}/members/${userId}`, data),
+
+  /** 移除成员 */
+  removeMember: (groupId: string, userId: string) =>
+    apiClient.delete<ApiResponse<null>>(`/groups/${groupId}/members/${userId}`),
 };

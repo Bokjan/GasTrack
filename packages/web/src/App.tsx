@@ -13,6 +13,7 @@ import StatsPage from './pages/stats/StatsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import InviteManagePage from './pages/invite/InviteManagePage';
 import ReminderPage from './pages/reminder/ReminderPage';
+import GroupPage from './pages/group/GroupPage';
 import PrivacyPolicyPage from './pages/legal/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/legal/TermsOfServicePage';
 import { useEffect } from 'react';
@@ -68,6 +69,7 @@ export default function App() {
         <Route path="stats" element={<StatsPage />} />
         <Route path="invites" element={<InviteManagePage />} />
         <Route path="reminders" element={<ReminderPage />} />
+        <Route path="groups" element={<GroupPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
 

@@ -13,6 +13,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   ToolOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore, useThemeStore } from '@gastrack/shared';
@@ -73,6 +74,11 @@ export default function MainLayout() {
       key: '/reminders',
       icon: <ToolOutlined />,
       label: t('nav.reminders'),
+    },
+    {
+      key: '/groups',
+      icon: <TeamOutlined />,
+      label: t('nav.groups'),
     },
     {
       key: '/settings',
