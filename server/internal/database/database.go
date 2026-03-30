@@ -66,5 +66,6 @@ func autoMigrate(db *gorm.DB) error {
 		&model.Notification{},
 		&model.Group{},
 		&model.GroupMember{},
+		&model.SharedVehicle{},
 	)
 }

@@ -6,7 +6,7 @@
 >
 > **迁移方式**: GORM AutoMigrate（开发阶段）
 >
-> **更新日期**: 2026-03-26
+> **更新日期**: 2026-03-31
 
 ---
 
@@ -214,10 +214,9 @@ COMMENT ON COLUMN refresh_tokens.token_hash IS 'Refresh Token 的哈希值';
 COMMENT ON COLUMN refresh_tokens.device_info IS '设备信息';
 
 -- ============================================================
--- 5. 预留：群组表（P1 阶段实现）
+-- 5. groups / group_members / shared_vehicles（已实现）
 -- ============================================================
--- CREATE TABLE IF NOT EXISTS groups ( ... );
--- CREATE TABLE IF NOT EXISTS group_members ( ... );
+-- 由 GORM AutoMigrate 自动管理，详见 03-database.md 3.4 & 3.9 节
 ```
 
 ---
@@ -232,7 +231,10 @@ users ──1:N──► vehicles ──1:N──► fuel_records
   │──1:N──► refresh_tokens
   │──1:N──► invite_codes
   │──1:N──► reminders (via vehicles)
-  └──1:N──► notifications
+  │──1:N──► notifications
+  │
+  └──N:M──► groups (via group_members)
+                └──► shared_vehicles (group ↔ vehicle)
 ```
 
 ### 3.2 公共字段
@@ -356,7 +358,7 @@ database:
 
 ### 4.3 GORM AutoMigrate
 
-启动后端服务时，GORM 会自动执行 `AutoMigrate`，创建/更新以下 7 张表：
+启动后端服务时，GORM 会自动执行 `AutoMigrate`，创建/更新以下 10 张表：
 
 ```go
 db.AutoMigrate(
@@ -367,6 +369,9 @@ db.AutoMigrate(
     &model.InviteCode{},
     &model.Reminder{},
     &model.Notification{},
+    &model.Group{},
+    &model.GroupMember{},
+    &model.SharedVehicle{},
 )
 ```
 

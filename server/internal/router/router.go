@@ -123,6 +123,14 @@ func New(
 	mux.Handle("PATCH /api/v1/groups/{id}/members/{uid}", auth(http.HandlerFunc(groupHandler.UpdateMemberRole)))
 	mux.Handle("DELETE /api/v1/groups/{id}/members/{uid}", auth(http.HandlerFunc(groupHandler.RemoveMember)))
 
+	// 群组扩展功能
+	mux.Handle("POST /api/v1/groups/{id}/shared-vehicles", auth(http.HandlerFunc(groupHandler.ShareVehicle)))
+	mux.Handle("DELETE /api/v1/groups/{id}/shared-vehicles/{vid}", auth(http.HandlerFunc(groupHandler.UnshareVehicle)))
+	mux.Handle("GET /api/v1/groups/{id}/shared-vehicles", auth(http.HandlerFunc(groupHandler.ListSharedVehicles)))
+	mux.Handle("GET /api/v1/groups/{id}/leaderboard", auth(http.HandlerFunc(groupHandler.GetLeaderboard)))
+	mux.Handle("GET /api/v1/groups/{id}/expense-stats", auth(http.HandlerFunc(groupHandler.GetExpenseStats)))
+	mux.Handle("GET /api/v1/groups/{id}/stations", auth(http.HandlerFunc(groupHandler.GetStationStats)))
+
 	// --- 应用全局中间件 ---
 	corsConfig := middleware.CORSConfig{
 		AllowedOrigins: cfg.Server.CORSOrigins,

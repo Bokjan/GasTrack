@@ -56,4 +56,7 @@ type VehicleResponse struct {
 	IsArchived   bool      `json:"is_archived"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+	// 共享车辆来源信息（仅当 include_shared=true 且该车辆来自群组共享时有值）
+	SharedFromGroupID   string `json:"shared_from_group_id,omitempty"`
+	SharedFromGroupName string `json:"shared_from_group_name,omitempty"`
 }

@@ -17,12 +17,13 @@ import (
 // VehicleService 车辆业务逻辑
 type VehicleService struct {
 	vehicleRepo *repository.VehicleRepository
+	groupRepo   *repository.GroupRepository
 	logger      *zap.Logger
 }
 
 // NewVehicleService 创建 VehicleService 实例
-func NewVehicleService(vehicleRepo *repository.VehicleRepository, logger *zap.Logger) *VehicleService {
-	return &VehicleService{vehicleRepo: vehicleRepo, logger: logger}
+func NewVehicleService(vehicleRepo *repository.VehicleRepository, groupRepo *repository.GroupRepository, logger *zap.Logger) *VehicleService {
+	return &VehicleService{vehicleRepo: vehicleRepo, groupRepo: groupRepo, logger: logger}
 }
 
 // Create 创建车辆
@@ -65,7 +66,7 @@ func (s *VehicleService) Create(ctx context.Context, userID uuid.UUID, req *dto.
 }
 
 // List 获取用户的车辆列表
-func (s *VehicleService) List(ctx context.Context, userID uuid.UUID, includeArchived bool) ([]dto.VehicleResponse, error) {
+func (s *VehicleService) List(ctx context.Context, userID uuid.UUID, includeArchived, includeShared bool) ([]dto.VehicleResponse, error) {
 	vehicles, err := s.vehicleRepo.ListByUser(ctx, userID, includeArchived)
 	if err != nil {
 		return nil, apperror.ErrInternal("listing vehicles", err)
@@ -75,6 +76,38 @@ func (s *VehicleService) List(ctx context.Context, userID uuid.UUID, includeArch
 	for i, v := range vehicles {
 		result[i] = vehicleToResponse(&v)
 	}
+
+	// 合并群组共享车辆
+	if includeShared && s.groupRepo != nil {
+		sharedInfos, err := s.groupRepo.ListSharedVehiclesForUser(ctx, userID)
+		if err != nil {
+			s.logger.Warn("failed to list shared vehicles for user", zap.Error(err))
+			// 不影响主列表返回
+			return result, nil
+		}
+
+		// 查询每辆共享车辆的详情
+		seen := make(map[string]bool) // 避免同一车辆在多个群组中重复出现
+		for _, info := range sharedInfos {
+			vid := info.VehicleID.String()
+			if seen[vid] {
+				continue
+			}
+			seen[vid] = true
+
+			vehicle, err := s.vehicleRepo.GetByID(ctx, info.VehicleID)
+			if err != nil {
+				s.logger.Warn("failed to get shared vehicle", zap.String("vehicle_id", vid), zap.Error(err))
+				continue
+			}
+
+			resp := vehicleToResponse(vehicle)
+			resp.SharedFromGroupID = info.GroupID.String()
+			resp.SharedFromGroupName = info.GroupName
+			result = append(result, resp)
+		}
+	}
+
 	return result, nil
 }
 
@@ -83,6 +116,22 @@ func (s *VehicleService) GetByID(ctx context.Context, vehicleID, userID uuid.UUI
 	vehicle, err := s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 不是自己的车辆，检查是否为共享车辆
+			if s.groupRepo != nil {
+				shared, sharedErr := s.groupRepo.IsVehicleSharedToUser(ctx, vehicleID, userID)
+				if sharedErr != nil {
+					return nil, apperror.ErrInternal("checking shared vehicle access", sharedErr)
+				}
+				if shared {
+					// 共享车辆，直接通过 ID 获取
+					vehicle, err = s.vehicleRepo.GetByID(ctx, vehicleID)
+					if err != nil {
+						return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
+					}
+					resp := vehicleToResponse(vehicle)
+					return &resp, nil
+				}
+			}
 			return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
 		}
 		return nil, apperror.ErrInternal("fetching vehicle", err)

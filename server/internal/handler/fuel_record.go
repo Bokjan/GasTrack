@@ -157,6 +157,12 @@ func (h *FuelRecordHandler) Update(w http.ResponseWriter, r *http.Request) {
 // Delete 删除加油记录
 // DELETE /api/v1/vehicles/{id}/records/{rid}
 func (h *FuelRecordHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		respond.Unauthorized(w, "missing user identity")
+		return
+	}
+
 	vehicleID, err := decode.PathParamUUID(r, "id")
 	if err != nil {
 		respond.BadRequest(w, err.Error())
@@ -169,7 +175,7 @@ func (h *FuelRecordHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.recordService.Delete(r.Context(), recordID, vehicleID); err != nil {
+	if err := h.recordService.Delete(r.Context(), recordID, vehicleID, userID); err != nil {
 		handleAppError(w, h.logger, err)
 		return
 	}

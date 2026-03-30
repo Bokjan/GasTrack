@@ -63,15 +63,15 @@ func main() {
 
 	// 5. 创建 Service 层
 	inviteService := service.NewInviteService(inviteCodeRepo, userRepo, logger)
-	reminderService := service.NewReminderService(reminderRepo, vehicleRepo, logger)
+	reminderService := service.NewReminderService(reminderRepo, vehicleRepo, groupRepo, logger)
 	notificationService := service.NewNotificationService(notificationRepo, fuelRecordRepo, reminderRepo, logger)
 	authService := service.NewAuthService(userRepo, refreshTokenRepo, inviteService, notificationService, &cfg.JWT, cfg.Registration.Mode, logger)
 	userService := service.NewUserService(userRepo, logger)
-	vehicleService := service.NewVehicleService(vehicleRepo, logger)
-	fuelRecordService := service.NewFuelRecordService(fuelRecordRepo, vehicleRepo, userRepo, logger, notificationService)
-	statsService := service.NewStatsService(fuelRecordRepo, vehicleRepo, userRepo, logger)
+	vehicleService := service.NewVehicleService(vehicleRepo, groupRepo, logger)
+	fuelRecordService := service.NewFuelRecordService(fuelRecordRepo, vehicleRepo, userRepo, groupRepo, logger, notificationService)
+	statsService := service.NewStatsService(fuelRecordRepo, vehicleRepo, userRepo, groupRepo, logger)
 	exportService := service.NewExportService(userRepo, vehicleRepo, fuelRecordRepo, logger)
-	groupService := service.NewGroupService(groupRepo, userRepo, logger)
+	groupService := service.NewGroupService(groupRepo, userRepo, vehicleRepo, logger)
 
 	// 6. 创建 Handler 层
 	authHandler := handler.NewAuthHandler(authService, logger)

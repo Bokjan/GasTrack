@@ -19,6 +19,7 @@ import (
 type ReminderService struct {
 	reminderRepo *repository.ReminderRepository
 	vehicleRepo  *repository.VehicleRepository
+	groupRepo    *repository.GroupRepository
 	logger       *zap.Logger
 }
 
@@ -26,29 +27,55 @@ type ReminderService struct {
 func NewReminderService(
 	reminderRepo *repository.ReminderRepository,
 	vehicleRepo *repository.VehicleRepository,
+	groupRepo *repository.GroupRepository,
 	logger *zap.Logger,
 ) *ReminderService {
 	return &ReminderService{
 		reminderRepo: reminderRepo,
 		vehicleRepo:  vehicleRepo,
+		groupRepo:    groupRepo,
 		logger:       logger,
 	}
 }
 
+// verifyVehicleAccess 验证用户对车辆的访问权限（所有权或共享访问）
+func (s *ReminderService) verifyVehicleAccess(ctx context.Context, vehicleID, userID uuid.UUID) (*model.Vehicle, error) {
+	vehicle, err := s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
+	if err == nil {
+		return vehicle, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, apperror.ErrInternal("verifying vehicle ownership", err)
+	}
+	// 不是自己的车辆，检查是否为共享车辆
+	if s.groupRepo != nil {
+		shared, sharedErr := s.groupRepo.IsVehicleSharedToUser(ctx, vehicleID, userID)
+		if sharedErr != nil {
+			return nil, apperror.ErrInternal("checking shared vehicle access", sharedErr)
+		}
+		if shared {
+			// 共享车辆，通过 GetByID 获取车辆信息
+			v, getErr := s.vehicleRepo.GetByID(ctx, vehicleID)
+			if getErr != nil {
+				return nil, apperror.ErrInternal("fetching shared vehicle", getErr)
+			}
+			return v, nil
+		}
+	}
+	return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
+}
+
 // Create 创建提醒
 func (s *ReminderService) Create(ctx context.Context, userID uuid.UUID, req *dto.CreateReminderRequest) (*dto.ReminderResponse, error) {
-	// 验证车辆归属
+	// 验证车辆归属（支持共享车辆）
 	vehicleID, err := uuid.Parse(req.VehicleID)
 	if err != nil {
 		return nil, apperror.ErrBadRequest("reminder.invalid_vehicle", "invalid vehicle ID")
 	}
 
-	vehicle, err := s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
+	vehicle, err := s.verifyVehicleAccess(ctx, vehicleID, userID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
-		}
-		return nil, apperror.ErrInternal("fetching vehicle", err)
+		return nil, err
 	}
 
 	// 验证触发条件参数

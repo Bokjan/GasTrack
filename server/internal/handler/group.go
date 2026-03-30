@@ -303,3 +303,168 @@ func (h *GroupHandler) GetOverview(w http.ResponseWriter, r *http.Request) {
 
 	respond.OK(w, result)
 }
+
+// ShareVehicle 共享车辆到群组
+// POST /api/v1/groups/{id}/shared-vehicles
+func (h *GroupHandler) ShareVehicle(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		respond.Unauthorized(w, "missing user identity")
+		return
+	}
+
+	groupID, err := decode.PathParamUUID(r, "id")
+	if err != nil {
+		respond.BadRequest(w, err.Error())
+		return
+	}
+
+	var req dto.ShareVehicleRequest
+	if err := decode.JSON(r, &req); err != nil {
+		respond.BadRequest(w, err.Error())
+		return
+	}
+
+	result, err := h.groupService.ShareVehicle(r.Context(), groupID, userID, &req)
+	if err != nil {
+		handleAppError(w, h.logger, err)
+		return
+	}
+
+	respond.Created(w, result)
+}
+
+// UnshareVehicle 取消车辆共享
+// DELETE /api/v1/groups/{id}/shared-vehicles/{vid}
+func (h *GroupHandler) UnshareVehicle(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		respond.Unauthorized(w, "missing user identity")
+		return
+	}
+
+	groupID, err := decode.PathParamUUID(r, "id")
+	if err != nil {
+		respond.BadRequest(w, err.Error())
+		return
+	}
+
+	vehicleID, err := decode.PathParamUUID(r, "vid")
+	if err != nil {
+		respond.BadRequest(w, err.Error())
+		return
+	}
+
+	if err := h.groupService.UnshareVehicle(r.Context(), groupID, vehicleID, userID); err != nil {
+		handleAppError(w, h.logger, err)
+		return
+	}
+
+	respond.NoContent(w)
+}
+
+// ListSharedVehicles 获取群组内共享车辆列表
+// GET /api/v1/groups/{id}/shared-vehicles
+func (h *GroupHandler) ListSharedVehicles(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		respond.Unauthorized(w, "missing user identity")
+		return
+	}
+
+	groupID, err := decode.PathParamUUID(r, "id")
+	if err != nil {
+		respond.BadRequest(w, err.Error())
+		return
+	}
+
+	result, err := h.groupService.ListSharedVehicles(r.Context(), groupID, userID)
+	if err != nil {
+		handleAppError(w, h.logger, err)
+		return
+	}
+
+	respond.OK(w, result)
+}
+
+// GetLeaderboard 获取群组排行榜
+// GET /api/v1/groups/{id}/leaderboard
+func (h *GroupHandler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		respond.Unauthorized(w, "missing user identity")
+		return
+	}
+
+	groupID, err := decode.PathParamUUID(r, "id")
+	if err != nil {
+		respond.BadRequest(w, err.Error())
+		return
+	}
+
+	metric := decode.QueryString(r, "metric", "efficiency")
+	period := decode.QueryString(r, "period", "current_month")
+
+	result, err := h.groupService.GetLeaderboard(r.Context(), groupID, userID, metric, period)
+	if err != nil {
+		handleAppError(w, h.logger, err)
+		return
+	}
+
+	respond.OK(w, result)
+}
+
+// GetExpenseStats 获取群组费用统计看板
+// GET /api/v1/groups/{id}/expense-stats
+func (h *GroupHandler) GetExpenseStats(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		respond.Unauthorized(w, "missing user identity")
+		return
+	}
+
+	groupID, err := decode.PathParamUUID(r, "id")
+	if err != nil {
+		respond.BadRequest(w, err.Error())
+		return
+	}
+
+	period := decode.QueryString(r, "period", "month")
+	year := decode.QueryInt(r, "year", 0)
+
+	result, err := h.groupService.GetExpenseStats(r.Context(), groupID, userID, period, year)
+	if err != nil {
+		handleAppError(w, h.logger, err)
+		return
+	}
+
+	respond.OK(w, result)
+}
+
+// GetStationStats 获取加油站推荐共享
+// GET /api/v1/groups/{id}/stations
+func (h *GroupHandler) GetStationStats(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		respond.Unauthorized(w, "missing user identity")
+		return
+	}
+
+	groupID, err := decode.PathParamUUID(r, "id")
+	if err != nil {
+		respond.BadRequest(w, err.Error())
+		return
+	}
+
+	fuelGrade := decode.QueryString(r, "fuel_grade", "")
+	months := decode.QueryInt(r, "months", 6)
+	sortBy := decode.QueryString(r, "sort_by", "frequency")
+
+	result, err := h.groupService.GetStationStats(r.Context(), groupID, userID, months, fuelGrade, sortBy)
+	if err != nil {
+		handleAppError(w, h.logger, err)
+		return
+	}
+
+	respond.OK(w, result)
+}

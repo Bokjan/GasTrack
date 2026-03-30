@@ -66,6 +66,7 @@ export default function App() {
         <Route path="vehicles/:vehicleId/records/new" element={<RecordFormPage />} />
         <Route path="vehicles/:vehicleId/records/:recordId" element={<RecordDetailPage />} />
         <Route path="vehicles/:vehicleId/records/:recordId/edit" element={<RecordFormPage />} />
+        <Route path="records/new" element={<RecordFormPage />} />
         <Route path="stats" element={<StatsPage />} />
         <Route path="invites" element={<InviteManagePage />} />
         <Route path="reminders" element={<ReminderPage />} />

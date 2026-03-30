@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"gastrack/internal/dto"
+	"gastrack/internal/model"
 	"gastrack/internal/pkg/apperror"
 	"gastrack/internal/pkg/convert"
 	"gastrack/internal/repository"
@@ -19,6 +20,7 @@ type StatsService struct {
 	recordRepo  *repository.FuelRecordRepository
 	vehicleRepo *repository.VehicleRepository
 	userRepo    *repository.UserRepository
+	groupRepo   *repository.GroupRepository
 	logger      *zap.Logger
 }
 
@@ -27,25 +29,50 @@ func NewStatsService(
 	recordRepo *repository.FuelRecordRepository,
 	vehicleRepo *repository.VehicleRepository,
 	userRepo *repository.UserRepository,
+	groupRepo *repository.GroupRepository,
 	logger *zap.Logger,
 ) *StatsService {
 	return &StatsService{
 		recordRepo:  recordRepo,
 		vehicleRepo: vehicleRepo,
 		userRepo:    userRepo,
+		groupRepo:   groupRepo,
 		logger:      logger,
 	}
 }
 
+// verifyVehicleAccess 验证用户对车辆的访问权限（所有权或共享访问），返回车辆信息
+func (s *StatsService) verifyVehicleAccess(ctx context.Context, vehicleID, userID uuid.UUID) (*model.Vehicle, error) {
+	vehicle, err := s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
+	if err == nil {
+		return vehicle, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, apperror.ErrInternal("fetching vehicle", err)
+	}
+	// 不是自己的车辆，检查是否为共享车辆
+	if s.groupRepo != nil {
+		shared, sharedErr := s.groupRepo.IsVehicleSharedToUser(ctx, vehicleID, userID)
+		if sharedErr != nil {
+			return nil, apperror.ErrInternal("checking shared vehicle access", sharedErr)
+		}
+		if shared {
+			vehicle, err = s.vehicleRepo.GetByID(ctx, vehicleID)
+			if err != nil {
+				return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
+			}
+			return vehicle, nil
+		}
+	}
+	return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
+}
+
 // GetVehicleStats 获取车辆统计
 func (s *StatsService) GetVehicleStats(ctx context.Context, vehicleID, userID uuid.UUID) (*dto.VehicleStatsResponse, error) {
-	// 验证车辆归属
-	vehicle, err := s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
+	// 验证车辆访问权限（所有权或共享）
+	vehicle, err := s.verifyVehicleAccess(ctx, vehicleID, userID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
-		}
-		return nil, apperror.ErrInternal("fetching vehicle", err)
+		return nil, err
 	}
 
 	// 获取用户偏好（用于单位换算）
@@ -181,12 +208,9 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 
 // GetEfficiencyTrend 获取油耗趋势
 func (s *StatsService) GetEfficiencyTrend(ctx context.Context, vehicleID, userID uuid.UUID, limit int) (*dto.FuelEfficiencyTrendResponse, error) {
-	vehicle, err := s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
+	vehicle, err := s.verifyVehicleAccess(ctx, vehicleID, userID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
-		}
-		return nil, apperror.ErrInternal("fetching vehicle", err)
+		return nil, err
 	}
 
 	user, err := s.userRepo.GetByID(ctx, userID)
@@ -224,12 +248,9 @@ func (s *StatsService) GetEfficiencyTrend(ctx context.Context, vehicleID, userID
 
 // GetPeriodStats 获取按时段（月/年）聚合的统计数据 + 往年同比
 func (s *StatsService) GetPeriodStats(ctx context.Context, vehicleID, userID uuid.UUID, period string, year int) (*dto.PeriodStatsResponse, error) {
-	vehicle, err := s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
+	vehicle, err := s.verifyVehicleAccess(ctx, vehicleID, userID)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
-		}
-		return nil, apperror.ErrInternal("fetching vehicle", err)
+		return nil, err
 	}
 
 	user, err := s.userRepo.GetByID(ctx, userID)

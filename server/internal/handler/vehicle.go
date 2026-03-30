@@ -33,8 +33,9 @@ func (h *VehicleHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	includeArchived := decode.QueryString(r, "include_archived", "false") == "true"
+	includeShared := decode.QueryString(r, "include_shared", "false") == "true"
 
-	result, err := h.vehicleService.List(r.Context(), userID, includeArchived)
+	result, err := h.vehicleService.List(r.Context(), userID, includeArchived, includeShared)
 	if err != nil {
 		handleAppError(w, h.logger, err)
 		return

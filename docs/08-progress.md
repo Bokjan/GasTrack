@@ -26,7 +26,7 @@
 | 保养提醒（里程/时间） | ✅ | ✅ | ✅ |
 | 异常油耗预警 + 通知系统 | ✅ | ✅ | ✅ |
 | 家庭群组管理（基础） | ✅ | ✅ | ✅ |
-| 群组扩展（共享/排行/看板/加油站） | 🔲 | 🔲 | 🔲 |
+| 群组扩展（共享/排行/看板/加油站） | 🔨 | 🔲 | 🔨 |
 
 **图例**: ✅ 完成 | 🔨 进行中 | 🔲 待实现
 
@@ -57,7 +57,7 @@
 | 后端 i18n 错误消息 | ⭐⭐ 中 | go-i18n TOML 翻译文件 |
 | 忘记密码 | ⭐⭐ 中 | 邮件发送 + Token (DTO 已定义) |
 | 文件上传 | P1 | 车辆照片 + 头像 (OSS/本地) |
-| 车辆共享标记 | P1 | shared_vehicles 表 + 3 条 API |
+| 车辆共享标记 API | P1 | ~~权限控制已完成~~ → 共享/取消共享/列表 3 条 API + 前端 UI |
 | 群组油耗排行榜 | P1 | 四维排行 + 时间范围, 1 条 API |
 | 群组费用统计看板 | P1 | 趋势图 + 饼图 + 环比, 1 条 API |
 | 加油站推荐共享 | P1 | 聚合加油站数据 + 筛选排序, 1 条 API |
@@ -142,7 +142,8 @@
 ### 2026-03-31
 
 - ✅ **家庭群组管理（基础）** — 全栈实现：Group/GroupMember 模型 + CRUD + 邀请码加入 (GF-XXXXXX) + 权限管理 (Owner/Admin/Member) + 数据汇总 Overview API + 前端群组详情页 (3 Tab) + 三语 i18n (~50 翻译键) + 11 条 API
-- 🔧 **Bug 修复** — GroupPage "暂无群组" 提示始终显示（改为条件渲染）；数据汇总表格"群主"翻译错误→"车主"（新增 vehicleOwner 翻译键）
+- ✅ **共享车辆权限全面修复** — FuelRecord/Stats/Reminder/Vehicle 四个 Service 统一 `verifyVehicleAccess` 鉴权模式（先查 owner → 回退 shared），非车主只能编辑/删除自己创建的记录；goroutine 异步任务改用 `context.WithoutCancel` 避免 HTTP 请求结束后 context 被取消
+- 🔧 **Bug 修复** — GroupPage "暂无群组" 提示始终显示（改为条件渲染）；数据汇总表格"群主"翻译错误→"车主"（新增 vehicleOwner 翻译键）；RecordFormPage 车辆名称显示 UUID（加载期间 Select value 置为 undefined）
 - 📄 **群组功能扩展设计** — 新增 `docs/11-group-features-design.md` 详细设计文档，涵盖 4 个扩展功能：车辆共享标记 / 群组油耗排行榜 / 群组费用统计看板 / 加油站推荐共享（含数据模型/API 设计/SQL 查询/前端 UI/i18n/实施计划）
 
 ### 2026-03-30

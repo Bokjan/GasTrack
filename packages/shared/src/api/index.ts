@@ -34,6 +34,11 @@ import type {
   UpdateMemberRoleRequest,
   JoinGroupResponse,
   GroupOverviewResponse,
+  SharedVehicleResponse,
+  ShareVehicleRequest,
+  LeaderboardResponse,
+  GroupExpenseStatsResponse,
+  GroupStationStatsResponse,
 } from '../types';
 
 // 注意: PaginatedResponse<T> 的 Axios 响应为 AxiosResponse<PaginatedResponse<T>>
@@ -107,8 +112,8 @@ export const userApi = {
 // ==================== Vehicle ====================
 
 export const vehicleApi = {
-  list: () =>
-    apiClient.get<ApiResponse<Vehicle[]>>('/vehicles'),
+  list: (params?: { include_shared?: boolean }) =>
+    apiClient.get<ApiResponse<Vehicle[]>>('/vehicles', { params }),
 
   create: (data: CreateVehicleRequest) =>
     apiClient.post<ApiResponse<Vehicle>>('/vehicles', data),
@@ -279,4 +284,36 @@ export const groupApi = {
   /** 移除成员 */
   removeMember: (groupId: string, userId: string) =>
     apiClient.delete<ApiResponse<null>>(`/groups/${groupId}/members/${userId}`),
+
+  // --- 车辆共享 ---
+
+  /** 共享车辆到群组 */
+  shareVehicle: (groupId: string, data: ShareVehicleRequest) =>
+    apiClient.post<ApiResponse<SharedVehicleResponse>>(`/groups/${groupId}/shared-vehicles`, data),
+
+  /** 取消车辆共享 */
+  unshareVehicle: (groupId: string, vehicleId: string) =>
+    apiClient.delete<ApiResponse<null>>(`/groups/${groupId}/shared-vehicles/${vehicleId}`),
+
+  /** 获取群组内共享车辆列表 */
+  listSharedVehicles: (groupId: string) =>
+    apiClient.get<ApiResponse<SharedVehicleResponse[]>>(`/groups/${groupId}/shared-vehicles`),
+
+  // --- 排行榜 ---
+
+  /** 获取群组排行榜 */
+  getLeaderboard: (groupId: string, params?: { metric?: string; period?: string }) =>
+    apiClient.get<ApiResponse<LeaderboardResponse>>(`/groups/${groupId}/leaderboard`, { params }),
+
+  // --- 费用统计看板 ---
+
+  /** 获取群组费用统计 */
+  getExpenseStats: (groupId: string, params?: { period?: string; year?: number }) =>
+    apiClient.get<ApiResponse<GroupExpenseStatsResponse>>(`/groups/${groupId}/expense-stats`, { params }),
+
+  // --- 加油站推荐共享 ---
+
+  /** 获取群组加油站推荐 */
+  getStationStats: (groupId: string, params?: { fuel_grade?: string; months?: number; sort_by?: string }) =>
+    apiClient.get<ApiResponse<GroupStationStatsResponse>>(`/groups/${groupId}/stations`, { params }),
 };

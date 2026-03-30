@@ -51,3 +51,22 @@ type GroupMember struct {
 func (GroupMember) TableName() string {
 	return "group_members"
 }
+
+// SharedVehicle 群组共享车辆关联（多对多：群组 ↔ 车辆）
+type SharedVehicle struct {
+	BaseModel
+
+	GroupID   uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_shared_vehicles_group_vehicle" json:"group_id"`
+	VehicleID uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_shared_vehicles_group_vehicle;index:idx_shared_vehicles_vehicle" json:"vehicle_id"`
+	SharedBy  uuid.UUID `gorm:"type:uuid;not null" json:"shared_by"` // 共享发起人（车主）
+
+	// 关联
+	Group   Group   `gorm:"foreignKey:GroupID" json:"-"`
+	Vehicle Vehicle `gorm:"foreignKey:VehicleID" json:"-"`
+	User    User    `gorm:"foreignKey:SharedBy" json:"-"`
+}
+
+// TableName 指定表名
+func (SharedVehicle) TableName() string {
+	return "shared_vehicles"
+}

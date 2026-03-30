@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Card,
   Form,
@@ -25,7 +25,7 @@ import {
   getFuelGradesByLocale,
   isElectricVehicle,
 } from '@gastrack/shared';
-import type { CreateFuelRecordRequest } from '@gastrack/shared';
+import type { CreateFuelRecordRequest, Vehicle } from '@gastrack/shared';
 import dayjs from 'dayjs';
 
 /**
@@ -40,10 +40,11 @@ type CalcField = 'fuel_amount' | 'unit_price' | 'total_cost';
 export default function RecordFormPage() {
   const { t, i18n: i18nInstance } = useTranslation();
   const navigate = useNavigate();
-  const { vehicleId, recordId } = useParams<{
+  const { vehicleId: urlVehicleId, recordId } = useParams<{
     vehicleId: string;
     recordId: string;
   }>();
+  const [searchParams] = useSearchParams();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -51,6 +52,19 @@ export default function RecordFormPage() {
   const [stationSuggestions, setStationSuggestions] = useState<string[]>([]);
   const [stationSearch, setStationSearch] = useState('');
   const user = useAuthStore((s) => s.user);
+
+  // 车辆选择器状态（当没有 URL vehicleId 时启用）
+  const [allVehicles, setAllVehicles] = useState<Vehicle[]>([]);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | undefined>(
+    urlVehicleId || searchParams.get('vehicleId') || undefined,
+  );
+  const [vehiclesLoading, setVehiclesLoading] = useState(false);
+
+  // 有效的 vehicleId（来自 URL 参数或手动选择）
+  const vehicleId = urlVehicleId || selectedVehicleId;
+
+  // 是否需要显示车辆选择器（无 URL vehicleId 参数时）
+  const showVehicleSelector = !urlVehicleId;
 
   /**
    * 编辑栈：记录用户最近手动编辑的字段顺序（最多保留2个）
@@ -77,6 +91,65 @@ export default function RecordFormPage() {
       .filter((name) => name.toLowerCase().includes(lower))
       .map((name) => ({ value: name, label: name }));
   }, [stationSuggestions, stationSearch]);
+
+  // 加载车辆列表（仅当需要车辆选择器时）
+  useEffect(() => {
+    if (showVehicleSelector) {
+      setVehiclesLoading(true);
+      vehicleApi
+        .list({ include_shared: true })
+        .then(({ data }) => {
+          const vehicles = data.data || [];
+          setAllVehicles(vehicles);
+          // 如果初始 vehicleId 不在列表中（如被取消共享），清空选择
+          if (selectedVehicleId && !vehicles.some((v: Vehicle) => v.id === selectedVehicleId)) {
+            setSelectedVehicleId(undefined);
+          }
+        })
+        .catch(() => { /* ignore */ })
+        .finally(() => setVehiclesLoading(false));
+    }
+  }, [showVehicleSelector]);
+
+  // 构建车辆选择器选项（分组："我的车辆" / "共享车辆（来自XX群组）"）
+  const vehicleOptions = useMemo(() => {
+    const myVehicles = allVehicles.filter((v) => !v.shared_from_group_id);
+    const sharedVehicles = allVehicles.filter((v) => !!v.shared_from_group_id);
+
+    // 按群组名分组
+    const sharedByGroup = new Map<string, { groupName: string; vehicles: Vehicle[] }>();
+    for (const v of sharedVehicles) {
+      const groupId = v.shared_from_group_id!;
+      if (!sharedByGroup.has(groupId)) {
+        sharedByGroup.set(groupId, { groupName: v.shared_from_group_name || groupId, vehicles: [] });
+      }
+      sharedByGroup.get(groupId)!.vehicles.push(v);
+    }
+
+    const options: { label: string; options: { value: string; label: string }[] }[] = [];
+
+    if (myVehicles.length > 0) {
+      options.push({
+        label: t('fuelRecord.myVehicles'),
+        options: myVehicles.map((v) => ({
+          value: v.id,
+          label: v.name,
+        })),
+      });
+    }
+
+    for (const [, group] of sharedByGroup) {
+      options.push({
+        label: t('fuelRecord.sharedVehicles', { groupName: group.groupName }),
+        options: group.vehicles.map((v) => ({
+          value: v.id,
+          label: v.name,
+        })),
+      });
+    }
+
+    return options;
+  }, [allVehicles, t]);
 
   // 获取车辆信息以判断是否为电动车
   useEffect(() => {
@@ -163,7 +236,31 @@ export default function RecordFormPage() {
     [form],
   );
 
+  // 车辆选择变化时的处理
+  const handleVehicleChange = useCallback((value: string) => {
+    setSelectedVehicleId(value);
+    // 重置电车状态和燃油标号
+    const vehicle = allVehicles.find((v) => v.id === value);
+    if (vehicle) {
+      const ev = isElectricVehicle(vehicle.fuel_type);
+      setIsEv(ev);
+      if (ev) {
+        form.setFieldValue('fuel_unit', 'kWh');
+      } else {
+        form.setFieldValue('fuel_unit', defaultFuelUnit);
+        if (vehicle.fuel_grade) {
+          form.setFieldValue('fuel_grade', vehicle.fuel_grade);
+        }
+      }
+    }
+  }, [allVehicles, form, defaultFuelUnit]);
+
   const onFinish = async (values: CreateFuelRecordRequest & { refuel_date: dayjs.Dayjs }) => {
+    if (!vehicleId) {
+      message.error(t('fuelRecord.selectVehiclePlaceholder'));
+      return;
+    }
+
     setLoading(true);
     const payload: CreateFuelRecordRequest = {
       ...values,
@@ -180,7 +277,13 @@ export default function RecordFormPage() {
         await fuelRecordApi.create(vehicleId!, payload);
       }
       message.success(t('common.success'));
-      navigate(`/vehicles/${vehicleId}/records`);
+      // 如果是通过 URL vehicleId 进入的，返回该车辆的记录页
+      // 否则返回到之前的页面（如群组页）
+      if (urlVehicleId) {
+        navigate(`/vehicles/${vehicleId}/records`);
+      } else {
+        navigate(-1);
+      }
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       message.error(error.response?.data?.message || t('common.error'));
@@ -203,7 +306,13 @@ export default function RecordFormPage() {
         <Space>
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => navigate(`/vehicles/${vehicleId}/records`)}
+            onClick={() => {
+              if (urlVehicleId) {
+                navigate(`/vehicles/${urlVehicleId}/records`);
+              } else {
+                navigate(-1);
+              }
+            }}
           />
           <h2>
             {isEdit ? t('fuelRecord.editRecord') : t('fuelRecord.addRecord')}
@@ -224,6 +333,24 @@ export default function RecordFormPage() {
             distance_unit: defaultDistanceUnit,
           }}
         >
+          {/* 车辆选择器（仅当没有 URL vehicleId 时显示） */}
+          {showVehicleSelector && (
+            <Form.Item
+              label={t('fuelRecord.selectVehicle')}
+              required
+            >
+              <Select
+                value={vehiclesLoading ? undefined : selectedVehicleId}
+                onChange={handleVehicleChange}
+                placeholder={t('fuelRecord.selectVehiclePlaceholder')}
+                loading={vehiclesLoading}
+                options={vehicleOptions}
+                showSearch
+                optionFilterProp="label"
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          )}
           <Form.Item
             name="refuel_date"
             label={isEv ? t('fuelRecord.chargingDate') : t('fuelRecord.fuelDate')}
@@ -353,7 +480,13 @@ export default function RecordFormPage() {
                 {t('common.save')}
               </Button>
               <Button
-                onClick={() => navigate(`/vehicles/${vehicleId}/records`)}
+                onClick={() => {
+                  if (urlVehicleId) {
+                    navigate(`/vehicles/${urlVehicleId}/records`);
+                  } else {
+                    navigate(-1);
+                  }
+                }}
               >
                 {t('common.cancel')}
               </Button>

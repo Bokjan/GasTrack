@@ -148,15 +148,20 @@ GET /api/v1/vehicles?include_shared=true
 
 ### 1.7 实现层次
 
+> ⚠️ **当前实现状态**：后端权限控制已全面完成（`verifyVehicleAccess` 统一鉴权模式已在 FuelRecordService / StatsService / ReminderService / VehicleService 四个 Service 中实现），`shared_vehicles` 数据模型已就绪。剩余工作：3 条 API（Share/Unshare/List）+ 前端 UI。
+
 ```
-Model:    SharedVehicle (新增)
-DTO:      ShareVehicleRequest, SharedVehicleResponse (新增)
-Repo:     SharedVehicleRepository — Create/Delete/ListByGroup/ListByUser/Exists (新增)
-Service:  SharedVehicleService — Share/Unshare/List + 权限校验 (新增)
-          VehicleService — 改造 List 方法，支持 include_shared
-          FuelRecordService — 改造 Create，允许为共享车辆创建记录
-Handler:  GroupHandler — 新增 ShareVehicle/UnshareVehicle/ListSharedVehicles
-Router:   新增 3 条路由
+Model:    SharedVehicle (✅ 已实现)
+DTO:      ShareVehicleRequest, SharedVehicleResponse (待实现)
+Repo:     GroupRepository.IsVehicleSharedToUser (✅ 已实现)
+          SharedVehicleRepository — Create/Delete/ListByGroup/ListByUser/Exists (待实现)
+Service:  FuelRecordService.verifyVehicleAccess (✅ 已实现)
+          StatsService.verifyVehicleAccess (✅ 已实现)
+          ReminderService.verifyVehicleAccess (✅ 已实现)
+          VehicleService — GetByID 共享回退 (✅ 已实现), List include_shared (待实现)
+          SharedVehicleService — Share/Unshare/List + 权限校验 (待实现)
+Handler:  GroupHandler — 新增 ShareVehicle/UnshareVehicle/ListSharedVehicles (待实现)
+Router:   新增 3 条路由 (待实现)
 ```
 
 ---

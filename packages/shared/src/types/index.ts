@@ -162,6 +162,10 @@ export interface Vehicle {
   is_archived: boolean;
   created_at: string;
   updated_at: string;
+  /** 共享车辆来源群组 ID（仅 include_shared=true 时有值） */
+  shared_from_group_id?: string;
+  /** 共享车辆来源群组名称（仅 include_shared=true 时有值） */
+  shared_from_group_name?: string;
 }
 
 /** 后端 CreateVehicleRequest 字段对齐 */
@@ -442,6 +446,7 @@ export interface JoinGroupResponse {
 export interface GroupVehicleSummary {
   vehicle_id: string;
   vehicle_name: string;
+  owner_id: string;
   owner_name: string;
   vehicle_type: string;
   fuel_type: string;
@@ -458,4 +463,137 @@ export interface GroupOverviewResponse {
   member_count: number;
   vehicle_count: number;
   vehicles: GroupVehicleSummary[];
+}
+
+// ---------- Shared Vehicle ----------
+
+/** 共享车辆请求 */
+export interface ShareVehicleRequest {
+  vehicle_id: string;
+}
+
+/** 共享车辆响应 */
+export interface SharedVehicleResponse {
+  id: string;
+  group_id: string;
+  vehicle_id: string;
+  vehicle_name: string;
+  owner_name: string;
+  shared_at: string;
+}
+
+// ---------- Leaderboard ----------
+
+/** 排行榜条目 */
+export interface LeaderboardEntry {
+  rank: number;
+  user_id: string;
+  nickname: string;
+  vehicle_id: string;
+  vehicle_name: string;
+  value: number;
+  diff_from_avg: number;
+  record_count: number;
+  is_self: boolean;
+}
+
+/** 排行榜响应 */
+export interface LeaderboardResponse {
+  group_id: string;
+  group_name: string;
+  metric: string;
+  period: string;
+  period_label: string;
+  group_avg: number;
+  unit: string;
+  rankings: LeaderboardEntry[];
+  total_participants: number;
+}
+
+/** 排行指标类型 */
+export type LeaderboardMetric = 'efficiency' | 'cost' | 'distance' | 'frequency';
+
+/** 排行时间范围 */
+export type LeaderboardPeriod = 'current_month' | 'last_month' | 'last_3_months' | 'current_year';
+
+// ---------- Group Expense Stats ----------
+
+/** 群组费用统计摘要 */
+export interface GroupExpenseSummary {
+  total_cost: number;
+  total_fuel: number;
+  total_distance: number;
+  avg_efficiency: number;
+  cost_change_pct: number;
+  fuel_change_pct: number;
+  distance_change_pct: number;
+  efficiency_change_pct: number;
+}
+
+/** 成员费用分解 */
+export interface MemberCostBreakdown {
+  user_id: string;
+  nickname: string;
+  total_cost: number;
+  total_fuel: number;
+  percentage: number;
+}
+
+/** 成员费用项（趋势图） */
+export interface MemberCostItem {
+  user_id: string;
+  nickname: string;
+  cost: number;
+}
+
+/** 群组趋势项 */
+export interface GroupTrendItem {
+  period_label: string;
+  total_cost: number;
+  total_fuel: number;
+  total_distance: number;
+  avg_efficiency: number;
+  by_member?: MemberCostItem[];
+}
+
+/** 群组费用统计看板响应 */
+export interface GroupExpenseStatsResponse {
+  group_id: string;
+  group_name: string;
+  period: string;
+  year?: number;
+  summary: GroupExpenseSummary;
+  member_breakdown: MemberCostBreakdown[];
+  trend_items: GroupTrendItem[];
+  prev_trend_items?: GroupTrendItem[];
+}
+
+// ---------- Group Station Stats ----------
+
+/** 加油站常客 */
+export interface StationVisitor {
+  user_id: string;
+  nickname: string;
+  count: number;
+}
+
+/** 加油站信息 */
+export interface StationInfo {
+  station_name: string;
+  avg_unit_price: number;
+  latest_unit_price: number;
+  price_trend: 'up' | 'down' | 'stable';
+  currency_code: string;
+  visit_count: number;
+  visitors: StationVisitor[];
+  latest_visit: string;
+  fuel_grades_seen: string[];
+}
+
+/** 加油站推荐共享响应 */
+export interface GroupStationStatsResponse {
+  group_id: string;
+  group_name: string;
+  total_stations: number;
+  stations: StationInfo[];
 }

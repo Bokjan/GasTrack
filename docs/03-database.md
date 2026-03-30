@@ -129,7 +129,7 @@ CREATE TABLE group_members (
 );
 ```
 
-### 3.9 shared_vehicles - 共享车辆表（规划中）
+### 3.9 shared_vehicles - 共享车辆表（已实现）
 ```sql
 CREATE TABLE shared_vehicles (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),

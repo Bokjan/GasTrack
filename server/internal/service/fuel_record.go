@@ -21,6 +21,7 @@ type FuelRecordService struct {
 	recordRepo          *repository.FuelRecordRepository
 	vehicleRepo         *repository.VehicleRepository
 	userRepo            *repository.UserRepository
+	groupRepo           *repository.GroupRepository
 	logger              *zap.Logger
 	notificationService *NotificationService
 }
@@ -30,6 +31,7 @@ func NewFuelRecordService(
 	recordRepo *repository.FuelRecordRepository,
 	vehicleRepo *repository.VehicleRepository,
 	userRepo *repository.UserRepository,
+	groupRepo *repository.GroupRepository,
 	logger *zap.Logger,
 	notificationService *NotificationService,
 ) *FuelRecordService {
@@ -37,6 +39,7 @@ func NewFuelRecordService(
 		recordRepo:          recordRepo,
 		vehicleRepo:         vehicleRepo,
 		userRepo:            userRepo,
+		groupRepo:           groupRepo,
 		logger:              logger,
 		notificationService: notificationService,
 	}
@@ -44,13 +47,9 @@ func NewFuelRecordService(
 
 // Create 创建加油记录
 func (s *FuelRecordService) Create(ctx context.Context, userID, vehicleID uuid.UUID, req *dto.CreateFuelRecordRequest) (*dto.FuelRecordResponse, error) {
-	// 验证车辆归属
-	_, err := s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
-		}
-		return nil, apperror.ErrInternal("verifying vehicle ownership", err)
+	// 验证车辆访问权限
+	if _, err := s.verifyVehicleAccess(ctx, vehicleID, userID); err != nil {
+		return nil, err
 	}
 
 	// 解析加油日期
@@ -96,16 +95,18 @@ func (s *FuelRecordService) Create(ctx context.Context, userID, vehicleID uuid.U
 	}
 
 	// 异步检查：异常油耗预警 & 保养里程提醒
+	// 注意：使用 context.WithoutCancel 避免 HTTP 请求结束后 context 被取消导致异步操作失败
 	if s.notificationService != nil {
+		asyncCtx := context.WithoutCancel(ctx)
 		if record.FuelEfficiency > 0 {
-			go s.notificationService.CheckFuelAnomaly(ctx, userID, vehicleID, record.ID, record.FuelEfficiency)
+			go s.notificationService.CheckFuelAnomaly(asyncCtx, userID, vehicleID, record.ID, record.FuelEfficiency)
 		}
 		// 将里程转为 km 后检查保养提醒
 		odometerKm := record.Odometer
 		if record.DistanceUnit == "mi" {
 			odometerKm = record.Odometer * 1.60934
 		}
-		go s.notificationService.CheckMaintenanceReminders(ctx, userID, vehicleID, odometerKm)
+		go s.notificationService.CheckMaintenanceReminders(asyncCtx, userID, vehicleID, odometerKm)
 	}
 
 	prefs := s.getUserUnits(ctx, userID)
@@ -115,13 +116,9 @@ func (s *FuelRecordService) Create(ctx context.Context, userID, vehicleID uuid.U
 
 // List 获取车辆的加油记录列表（分页）
 func (s *FuelRecordService) List(ctx context.Context, userID, vehicleID uuid.UUID, page, pageSize int) ([]dto.FuelRecordResponse, int64, error) {
-	// 验证车辆归属
-	_, err := s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, 0, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
-		}
-		return nil, 0, apperror.ErrInternal("verifying vehicle ownership", err)
+	// 验证车辆访问权限
+	if _, err := s.verifyVehicleAccess(ctx, vehicleID, userID); err != nil {
+		return nil, 0, err
 	}
 
 	records, total, err := s.recordRepo.ListByVehicle(ctx, vehicleID, page, pageSize)
@@ -137,8 +134,36 @@ func (s *FuelRecordService) List(ctx context.Context, userID, vehicleID uuid.UUI
 	return result, total, nil
 }
 
+// verifyVehicleAccess 验证用户对车辆的访问权限（所有权或共享访问）
+// 返回 true 表示用户是车主
+func (s *FuelRecordService) verifyVehicleAccess(ctx context.Context, vehicleID, userID uuid.UUID) (isOwner bool, err error) {
+	_, err = s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
+	if err == nil {
+		return true, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return false, apperror.ErrInternal("verifying vehicle ownership", err)
+	}
+	// 不是自己的车辆，检查是否为共享车辆
+	if s.groupRepo != nil {
+		shared, sharedErr := s.groupRepo.IsVehicleSharedToUser(ctx, vehicleID, userID)
+		if sharedErr != nil {
+			return false, apperror.ErrInternal("checking shared vehicle access", sharedErr)
+		}
+		if shared {
+			return false, nil
+		}
+	}
+	return false, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
+}
+
 // GetByID 获取加油记录详情
 func (s *FuelRecordService) GetByID(ctx context.Context, recordID, vehicleID, userID uuid.UUID) (*dto.FuelRecordResponse, error) {
+	// 验证车辆访问权限
+	if _, err := s.verifyVehicleAccess(ctx, vehicleID, userID); err != nil {
+		return nil, err
+	}
+
 	record, err := s.recordRepo.GetByIDAndVehicle(ctx, recordID, vehicleID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -154,12 +179,23 @@ func (s *FuelRecordService) GetByID(ctx context.Context, recordID, vehicleID, us
 
 // Update 更新加油记录
 func (s *FuelRecordService) Update(ctx context.Context, recordID, vehicleID, userID uuid.UUID, req *dto.UpdateFuelRecordRequest) (*dto.FuelRecordResponse, error) {
+	// 验证车辆访问权限
+	isOwner, err := s.verifyVehicleAccess(ctx, vehicleID, userID)
+	if err != nil {
+		return nil, err
+	}
+
 	record, err := s.recordRepo.GetByIDAndVehicle(ctx, recordID, vehicleID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperror.ErrNotFound("record.not_found", "fuel record not found")
 		}
 		return nil, apperror.ErrInternal("fetching fuel record", err)
+	}
+
+	// 非车主只能编辑自己创建的记录
+	if !isOwner && record.UserID != userID {
+		return nil, apperror.ErrForbidden("record.no_permission", "you can only edit your own records")
 	}
 
 	// 部分更新
@@ -223,7 +259,27 @@ func (s *FuelRecordService) Update(ctx context.Context, recordID, vehicleID, use
 }
 
 // Delete 删除加油记录
-func (s *FuelRecordService) Delete(ctx context.Context, recordID, vehicleID uuid.UUID) error {
+func (s *FuelRecordService) Delete(ctx context.Context, recordID, vehicleID, userID uuid.UUID) error {
+	// 验证车辆访问权限
+	isOwner, err := s.verifyVehicleAccess(ctx, vehicleID, userID)
+	if err != nil {
+		return err
+	}
+
+	// 获取记录详情以检查创建者
+	record, err := s.recordRepo.GetByIDAndVehicle(ctx, recordID, vehicleID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return apperror.ErrNotFound("record.not_found", "fuel record not found")
+		}
+		return apperror.ErrInternal("fetching fuel record", err)
+	}
+
+	// 只有车主或记录创建者可以删除
+	if !isOwner && record.UserID != userID {
+		return apperror.ErrForbidden("record.no_permission", "you can only delete your own records")
+	}
+
 	if err := s.recordRepo.Delete(ctx, recordID, vehicleID); err != nil {
 		return apperror.ErrInternal("deleting fuel record", err)
 	}
@@ -232,13 +288,9 @@ func (s *FuelRecordService) Delete(ctx context.Context, recordID, vehicleID uuid
 
 // GetStationSuggestions 获取加油站/充电站名称建议列表
 func (s *FuelRecordService) GetStationSuggestions(ctx context.Context, userID, vehicleID uuid.UUID) ([]string, error) {
-	// 验证车辆归属
-	_, err := s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
-		}
-		return nil, apperror.ErrInternal("verifying vehicle ownership", err)
+	// 验证车辆访问权限
+	if _, err := s.verifyVehicleAccess(ctx, vehicleID, userID); err != nil {
+		return nil, err
 	}
 
 	names, err := s.recordRepo.GetDistinctStationNames(ctx, userID, &vehicleID, 20)
