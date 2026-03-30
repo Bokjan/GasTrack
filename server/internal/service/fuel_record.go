@@ -18,10 +18,11 @@ import (
 
 // FuelRecordService 加油记录业务逻辑
 type FuelRecordService struct {
-	recordRepo  *repository.FuelRecordRepository
-	vehicleRepo *repository.VehicleRepository
-	userRepo    *repository.UserRepository
-	logger      *zap.Logger
+	recordRepo          *repository.FuelRecordRepository
+	vehicleRepo         *repository.VehicleRepository
+	userRepo            *repository.UserRepository
+	logger              *zap.Logger
+	notificationService *NotificationService
 }
 
 // NewFuelRecordService 创建 FuelRecordService 实例
@@ -30,12 +31,14 @@ func NewFuelRecordService(
 	vehicleRepo *repository.VehicleRepository,
 	userRepo *repository.UserRepository,
 	logger *zap.Logger,
+	notificationService *NotificationService,
 ) *FuelRecordService {
 	return &FuelRecordService{
-		recordRepo:  recordRepo,
-		vehicleRepo: vehicleRepo,
-		userRepo:    userRepo,
-		logger:      logger,
+		recordRepo:          recordRepo,
+		vehicleRepo:         vehicleRepo,
+		userRepo:            userRepo,
+		logger:              logger,
+		notificationService: notificationService,
 	}
 }
 
@@ -90,6 +93,19 @@ func (s *FuelRecordService) Create(ctx context.Context, userID, vehicleID uuid.U
 
 	if err := s.recordRepo.Create(ctx, record); err != nil {
 		return nil, apperror.ErrInternal("creating fuel record", err)
+	}
+
+	// 异步检查：异常油耗预警 & 保养里程提醒
+	if s.notificationService != nil {
+		if record.FuelEfficiency > 0 {
+			go s.notificationService.CheckFuelAnomaly(ctx, userID, vehicleID, record.ID, record.FuelEfficiency)
+		}
+		// 将里程转为 km 后检查保养提醒
+		odometerKm := record.Odometer
+		if record.DistanceUnit == "mi" {
+			odometerKm = record.Odometer * 1.60934
+		}
+		go s.notificationService.CheckMaintenanceReminders(ctx, userID, vehicleID, odometerKm)
 	}
 
 	prefs := s.getUserUnits(ctx, userID)

@@ -12,11 +12,13 @@ import {
   MenuOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  ToolOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore, useThemeStore } from '@gastrack/shared';
 import type { MenuProps } from 'antd';
 import LanguageSwitcher from '../components/LanguageSwitcher';
+import NotificationBell from '../components/NotificationBell';
 
 const { Header, Sider, Content } = Layout;
 const { useBreakpoint } = Grid;
@@ -66,6 +68,11 @@ export default function MainLayout() {
       key: '/invites',
       icon: <GiftOutlined />,
       label: t('nav.invites'),
+    },
+    {
+      key: '/reminders',
+      icon: <ToolOutlined />,
+      label: t('nav.reminders'),
     },
     {
       key: '/settings',
@@ -200,6 +207,7 @@ export default function MainLayout() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 16 }}>
             <LanguageSwitcher style={{ fontSize: 18 }} />
+            <NotificationBell />
 
             <Dropdown
               menu={{ items: userMenuItems, onClick: handleUserMenu }}

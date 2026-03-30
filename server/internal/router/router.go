@@ -24,6 +24,8 @@ func New(
 	statsHandler *handler.StatsHandler,
 	inviteHandler *handler.InviteHandler,
 	exportHandler *handler.ExportHandler,
+	reminderHandler *handler.ReminderHandler,
+	notificationHandler *handler.NotificationHandler,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -92,6 +94,20 @@ func New(
 	mux.Handle("GET /api/v1/vehicles/{id}/efficiency-trend", auth(http.HandlerFunc(statsHandler.GetEfficiencyTrend)))
 	mux.Handle("GET /api/v1/vehicles/{id}/period-stats", auth(http.HandlerFunc(statsHandler.GetPeriodStats)))
 	mux.Handle("GET /api/v1/stats/overview", auth(http.HandlerFunc(statsHandler.GetOverview)))
+
+	// 保养提醒
+	mux.Handle("GET /api/v1/reminders", auth(http.HandlerFunc(reminderHandler.List)))
+	mux.Handle("POST /api/v1/reminders", auth(http.HandlerFunc(reminderHandler.Create)))
+	mux.Handle("GET /api/v1/reminders/{id}", auth(http.HandlerFunc(reminderHandler.GetByID)))
+	mux.Handle("PATCH /api/v1/reminders/{id}", auth(http.HandlerFunc(reminderHandler.Update)))
+	mux.Handle("DELETE /api/v1/reminders/{id}", auth(http.HandlerFunc(reminderHandler.Delete)))
+
+	// 通知
+	mux.Handle("GET /api/v1/notifications", auth(http.HandlerFunc(notificationHandler.List)))
+	mux.Handle("GET /api/v1/notifications/unread-count", auth(http.HandlerFunc(notificationHandler.UnreadCount)))
+	mux.Handle("PATCH /api/v1/notifications/{id}/read", auth(http.HandlerFunc(notificationHandler.MarkAsRead)))
+	mux.Handle("POST /api/v1/notifications/read-all", auth(http.HandlerFunc(notificationHandler.MarkAllAsRead)))
+	mux.Handle("DELETE /api/v1/notifications/{id}", auth(http.HandlerFunc(notificationHandler.Delete)))
 
 	// --- 应用全局中间件 ---
 	corsConfig := middleware.CORSConfig{

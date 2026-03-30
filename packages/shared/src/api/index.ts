@@ -24,6 +24,10 @@ import type {
   InviteCode,
   CreateInviteRequest,
   UpdateInviteRequest,
+  Reminder,
+  CreateReminderRequest,
+  UpdateReminderRequest,
+  Notification,
 } from '../types';
 
 // 注意: PaginatedResponse<T> 的 Axios 响应为 AxiosResponse<PaginatedResponse<T>>
@@ -173,4 +177,52 @@ export const statsApi = {
       `/vehicles/${vehicleId}/period-stats`,
       { params },
     ),
+};
+
+// ==================== Reminder ====================
+
+export const reminderApi = {
+  /** 获取提醒列表 */
+  list: () =>
+    apiClient.get<ApiResponse<Reminder[]>>('/reminders'),
+
+  /** 创建提醒 */
+  create: (data: CreateReminderRequest) =>
+    apiClient.post<ApiResponse<Reminder>>('/reminders', data),
+
+  /** 获取提醒详情 */
+  getById: (id: string) =>
+    apiClient.get<ApiResponse<Reminder>>(`/reminders/${id}`),
+
+  /** 更新提醒 */
+  update: (id: string, data: UpdateReminderRequest) =>
+    apiClient.patch<ApiResponse<Reminder>>(`/reminders/${id}`, data),
+
+  /** 删除提醒 */
+  delete: (id: string) =>
+    apiClient.delete<ApiResponse<null>>(`/reminders/${id}`),
+};
+
+// ==================== Notification ====================
+
+export const notificationApi = {
+  /** 获取通知列表 */
+  list: () =>
+    apiClient.get<ApiResponse<Notification[]>>('/notifications'),
+
+  /** 获取未读通知数 */
+  unreadCount: () =>
+    apiClient.get<ApiResponse<{ count: number }>>('/notifications/unread-count'),
+
+  /** 标记通知为已读 */
+  markAsRead: (id: string) =>
+    apiClient.patch<ApiResponse<null>>(`/notifications/${id}/read`),
+
+  /** 标记所有通知为已读 */
+  markAllAsRead: () =>
+    apiClient.post<ApiResponse<null>>('/notifications/read-all'),
+
+  /** 删除通知 */
+  delete: (id: string) =>
+    apiClient.delete<ApiResponse<null>>(`/notifications/${id}`),
 };

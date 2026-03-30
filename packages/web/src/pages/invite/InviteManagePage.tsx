@@ -150,7 +150,7 @@ export default function InviteManagePage() {
     {
       title: t('invite.statusLabel'),
       key: 'status',
-      width: 100,
+      width: 120,
       render: (_, record) => renderStatus(record),
     },
     {

@@ -27,12 +27,13 @@ import (
 
 // AuthService 认证业务逻辑
 type AuthService struct {
-	userRepo         *repository.UserRepository
-	tokenRepo        *repository.RefreshTokenRepository
-	inviteService    *InviteService
-	jwtCfg           *config.JWTConfig
-	registrationMode string // open / invite_only / closed
-	logger           *zap.Logger
+	userRepo            *repository.UserRepository
+	tokenRepo           *repository.RefreshTokenRepository
+	inviteService       *InviteService
+	notificationService *NotificationService
+	jwtCfg              *config.JWTConfig
+	registrationMode    string // open / invite_only / closed
+	logger              *zap.Logger
 }
 
 // NewAuthService 创建 AuthService 实例
@@ -40,17 +41,19 @@ func NewAuthService(
 	userRepo *repository.UserRepository,
 	tokenRepo *repository.RefreshTokenRepository,
 	inviteService *InviteService,
+	notificationService *NotificationService,
 	jwtCfg *config.JWTConfig,
 	registrationMode string,
 	logger *zap.Logger,
 ) *AuthService {
 	return &AuthService{
-		userRepo:         userRepo,
-		tokenRepo:        tokenRepo,
-		inviteService:    inviteService,
-		jwtCfg:           jwtCfg,
-		registrationMode: registrationMode,
-		logger:           logger,
+		userRepo:            userRepo,
+		tokenRepo:           tokenRepo,
+		inviteService:       inviteService,
+		notificationService: notificationService,
+		jwtCfg:              jwtCfg,
+		registrationMode:    registrationMode,
+		logger:              logger,
 	}
 }
 
@@ -118,7 +121,8 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 
 	// 5. 消费邀请码（在用户创建成功后）
 	if req.InviteCode != "" && s.inviteService != nil {
-		if err := s.inviteService.ValidateAndConsumeInviteCode(ctx, req.InviteCode, user.ID); err != nil {
+		invite, err := s.inviteService.ValidateAndConsumeInviteCode(ctx, req.InviteCode, user.ID)
+		if err != nil {
 			// 邀请码消费失败不影响已创建的用户（已进入系统）
 			// 仅记录日志告警
 			s.logger.Warn("failed to consume invite code after user creation",
@@ -126,6 +130,12 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 				zap.String("user_id", user.ID.String()),
 				zap.Error(err),
 			)
+		} else if s.notificationService != nil && invite != nil {
+			// 邀请码消费成功，异步通知邀请码创建者
+			creatorID := invite.CreatedBy
+			code := invite.Code
+			nickname := user.Nickname
+			go s.notificationService.NotifyInviteUsed(ctx, creatorID, code, nickname)
 		}
 	}
 

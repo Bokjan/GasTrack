@@ -254,6 +254,7 @@
     "records": "Records",
     "stats": "Statistics",
     "invites": "Invites",
+    "reminders": "Reminders",
     "settings": "Settings"
   },
   "settings": {
@@ -461,5 +462,56 @@
     "asiaKamchatka": "Kamchatka (UTC+12)",
     "pacificTongatapu": "Tongatapu (UTC+13)",
     "pacificApia": "Apia (UTC+13/+14)"
+  },
+  "reminder": {
+    "title": "Maintenance Reminders",
+    "add": "Add Reminder",
+    "addReminder": "Add Maintenance Reminder",
+    "editReminder": "Edit Maintenance Reminder",
+    "noReminders": "No maintenance reminders yet",
+    "vehicle": "Vehicle",
+    "selectVehicle": "Select vehicle",
+    "categoryLabel": "Maintenance Type",
+    "selectCategory": "Select maintenance type",
+    "titleLabel": "Reminder Title",
+    "titlePlaceholder": "e.g. Oil Change",
+    "description": "Notes",
+    "triggerType": "Trigger Type",
+    "triggerMileage": "By mileage",
+    "triggerTime": "By time",
+    "triggerBoth": "Mileage or time (whichever comes first)",
+    "mileageInterval": "Mileage Interval ({{unit}})",
+    "timeInterval": "Time Interval",
+    "days": "days",
+    "lastMileage": "Last Service Mileage ({{unit}})",
+    "lastDate": "Last Service Date",
+    "nextMileage": "Next mileage",
+    "nextDate": "Next date",
+    "interval": "Interval",
+    "everyMileage": "Every {{value}} {{unit}}",
+    "everyDays": "Every {{count}} days",
+    "overdue": "Overdue",
+    "deleteConfirm": "Are you sure you want to delete this reminder?",
+    "category": {
+      "oil_change": "Oil Change",
+      "tire_rotation": "Tire Rotation",
+      "brake_pads": "Brake Pads",
+      "air_filter": "Air Filter",
+      "transmission": "Transmission Fluid",
+      "coolant": "Coolant",
+      "spark_plugs": "Spark Plugs",
+      "battery": "Battery",
+      "tire_replace": "Tire Replacement",
+      "inspection": "Vehicle Inspection",
+      "custom": "Custom"
+    }
+  },
+  "notification": {
+    "title": "Notifications",
+    "noNotifications": "No notifications",
+    "markAllRead": "Mark all read",
+    "anomalyFuel": "Fuel Anomaly",
+    "maintenanceDue": "Maintenance Due",
+    "inviteUsed": "Invite Used"
   }
 }

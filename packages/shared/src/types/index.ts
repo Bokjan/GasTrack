@@ -300,3 +300,80 @@ export interface PeriodStatsResponse {
   items: PeriodStatsItem[];
   prev_items: PeriodStatsItem[];
 }
+
+// ---------- Reminder ----------
+
+/** 保养提醒类别 */
+export type MaintenanceCategory =
+  | 'oil_change' | 'tire_rotation' | 'brake_pads' | 'air_filter'
+  | 'transmission' | 'coolant' | 'spark_plugs' | 'battery'
+  | 'tire_replace' | 'inspection' | 'custom';
+
+/** 触发方式 */
+export type ReminderTrigger = 'mileage' | 'time' | 'both';
+
+/** 后端 ReminderResponse 字段对齐 */
+export interface Reminder {
+  id: string;
+  vehicle_id: string;
+  vehicle_name: string;
+  type: string;
+  category: MaintenanceCategory;
+  title: string;
+  description?: string;
+  trigger: ReminderTrigger;
+  mileage_interval?: number;
+  time_interval_days?: number;
+  last_mileage?: number;
+  last_date?: string;
+  next_mileage?: number;
+  next_date?: string;
+  is_enabled: boolean;
+  is_overdue: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 创建提醒请求 */
+export interface CreateReminderRequest {
+  vehicle_id: string;
+  category: MaintenanceCategory;
+  title: string;
+  description?: string;
+  trigger: ReminderTrigger;
+  mileage_interval?: number;
+  time_interval_days?: number;
+  last_mileage?: number;
+  last_date?: string;
+}
+
+/** 更新提醒请求 */
+export interface UpdateReminderRequest {
+  category?: MaintenanceCategory;
+  title?: string;
+  description?: string;
+  trigger?: ReminderTrigger;
+  mileage_interval?: number;
+  time_interval_days?: number;
+  last_mileage?: number;
+  last_date?: string;
+  is_enabled?: boolean;
+}
+
+// ---------- Notification ----------
+
+/** 通知类型 */
+export type NotificationType = 'anomaly_fuel' | 'maintenance_due' | 'invite_used';
+
+/** 后端 NotificationResponse 字段对齐 */
+export interface Notification {
+  id: string;
+  vehicle_id?: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  reminder_id?: string;
+  record_id?: string;
+  is_read: boolean;
+  created_at: string;
+}

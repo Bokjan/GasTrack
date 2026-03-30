@@ -62,5 +62,7 @@ func autoMigrate(db *gorm.DB) error {
 		&model.FuelRecord{},
 		&model.RefreshToken{},
 		&model.InviteCode{},
+		&model.Reminder{},
+		&model.Notification{},
 	)
 }

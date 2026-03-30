@@ -57,13 +57,17 @@ func main() {
 	fuelRecordRepo := repository.NewFuelRecordRepository(db)
 	refreshTokenRepo := repository.NewRefreshTokenRepository(db)
 	inviteCodeRepo := repository.NewInviteCodeRepository(db)
+	reminderRepo := repository.NewReminderRepository(db)
+	notificationRepo := repository.NewNotificationRepository(db)
 
 	// 5. 创建 Service 层
 	inviteService := service.NewInviteService(inviteCodeRepo, userRepo, logger)
-	authService := service.NewAuthService(userRepo, refreshTokenRepo, inviteService, &cfg.JWT, cfg.Registration.Mode, logger)
+	reminderService := service.NewReminderService(reminderRepo, vehicleRepo, logger)
+	notificationService := service.NewNotificationService(notificationRepo, fuelRecordRepo, reminderRepo, logger)
+	authService := service.NewAuthService(userRepo, refreshTokenRepo, inviteService, notificationService, &cfg.JWT, cfg.Registration.Mode, logger)
 	userService := service.NewUserService(userRepo, logger)
 	vehicleService := service.NewVehicleService(vehicleRepo, logger)
-	fuelRecordService := service.NewFuelRecordService(fuelRecordRepo, vehicleRepo, userRepo, logger)
+	fuelRecordService := service.NewFuelRecordService(fuelRecordRepo, vehicleRepo, userRepo, logger, notificationService)
 	statsService := service.NewStatsService(fuelRecordRepo, vehicleRepo, userRepo, logger)
 	exportService := service.NewExportService(userRepo, vehicleRepo, fuelRecordRepo, logger)
 
@@ -75,6 +79,8 @@ func main() {
 	statsHandler := handler.NewStatsHandler(statsService, logger)
 	inviteHandler := handler.NewInviteHandler(inviteService, logger)
 	exportHandler := handler.NewExportHandler(exportService, logger)
+	reminderHandler := handler.NewReminderHandler(reminderService, logger)
+	notificationHandler := handler.NewNotificationHandler(notificationService, logger)
 
 	// 7. 注册路由
 	mux := router.New(
@@ -87,6 +93,8 @@ func main() {
 		statsHandler,
 		inviteHandler,
 		exportHandler,
+		reminderHandler,
+		notificationHandler,
 	)
 
 	// 8. 创建 HTTP 服务器

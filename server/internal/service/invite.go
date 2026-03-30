@@ -210,17 +210,18 @@ func generateInviteCode() string {
 }
 
 // ValidateAndConsumeInviteCode 验证并消费邀请码（注册流程使用）
-func (s *InviteService) ValidateAndConsumeInviteCode(ctx context.Context, code string, userID uuid.UUID) error {
-	_, err := s.inviteRepo.ConsumeByCode(ctx, code, userID)
+// 返回消费后的邀请码模型（含 CreatedBy 等信息）
+func (s *InviteService) ValidateAndConsumeInviteCode(ctx context.Context, code string, userID uuid.UUID) (*model.InviteCode, error) {
+	invite, err := s.inviteRepo.ConsumeByCode(ctx, code, userID)
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return apperror.ErrBadRequest("invite.invalid", "invite code not found")
+			return nil, apperror.ErrBadRequest("invite.invalid", "invite code not found")
 		}
 		// ConsumeByCode 内部会检查 IsValid()，失败时返回自定义错误
 		if err.Error() == "invite code is not valid" {
-			return apperror.ErrBadRequest("invite.invalid", "invite code is invalid or expired")
+			return nil, apperror.ErrBadRequest("invite.invalid", "invite code is invalid or expired")
 		}
-		return apperror.ErrInternal(fmt.Sprintf("consuming invite code: %v", err), err)
+		return nil, apperror.ErrInternal(fmt.Sprintf("consuming invite code: %v", err), err)
 	}
-	return nil
+	return invite, nil
 }

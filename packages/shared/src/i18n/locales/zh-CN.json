@@ -254,6 +254,7 @@
     "records": "记录",
     "stats": "统计",
     "invites": "邀请码",
+    "reminders": "保养提醒",
     "settings": "设置"
   },
   "settings": {
@@ -461,5 +462,56 @@
     "asiaKamchatka": "堪察加 (UTC+12)",
     "pacificTongatapu": "汤加塔布 (UTC+13)",
     "pacificApia": "阿皮亚 (UTC+13/+14)"
+  },
+  "reminder": {
+    "title": "保养提醒",
+    "add": "添加提醒",
+    "addReminder": "添加保养提醒",
+    "editReminder": "编辑保养提醒",
+    "noReminders": "暂无保养提醒",
+    "vehicle": "车辆",
+    "selectVehicle": "选择车辆",
+    "categoryLabel": "保养项目",
+    "selectCategory": "选择保养项目",
+    "titleLabel": "提醒标题",
+    "titlePlaceholder": "如：更换机油",
+    "description": "备注",
+    "triggerType": "触发方式",
+    "triggerMileage": "按里程",
+    "triggerTime": "按时间",
+    "triggerBoth": "里程或时间（任一达到即触发）",
+    "mileageInterval": "里程间隔 ({{unit}})",
+    "timeInterval": "时间间隔",
+    "days": "天",
+    "lastMileage": "上次保养里程 ({{unit}})",
+    "lastDate": "上次保养日期",
+    "nextMileage": "下次里程",
+    "nextDate": "下次日期",
+    "interval": "间隔",
+    "everyMileage": "每 {{value}} {{unit}}",
+    "everyDays": "每 {{count}} 天",
+    "overdue": "已到期",
+    "deleteConfirm": "确定要删除这个提醒吗？",
+    "category": {
+      "oil_change": "换机油",
+      "tire_rotation": "轮胎换位",
+      "brake_pads": "刹车片",
+      "air_filter": "空气滤清器",
+      "transmission": "变速箱油",
+      "coolant": "冷却液",
+      "spark_plugs": "火花塞",
+      "battery": "电池/蓄电池",
+      "tire_replace": "换轮胎",
+      "inspection": "年检",
+      "custom": "自定义"
+    }
+  },
+  "notification": {
+    "title": "通知",
+    "noNotifications": "暂无通知",
+    "markAllRead": "全部已读",
+    "anomalyFuel": "异常油耗",
+    "maintenanceDue": "保养到期",
+    "inviteUsed": "邀请码被使用"
   }
 }
