@@ -43,7 +43,8 @@
     "passwordMinLength": "密码至少 8 个字符",
     "passwordMismatch": "两次密码不一致",
     "agreePrefix": "注册即表示您同意",
-    "agreeAnd": "和"
+    "agreeAnd": "和",
+    "agreeSuffix": ""
   },
   "invite": {
     "title": "邀请码",

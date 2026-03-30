@@ -43,7 +43,8 @@
     "passwordMinLength": "パスワードは8文字以上で入力してください",
     "passwordMismatch": "パスワードが一致しません",
     "agreePrefix": "登録することにより、",
-    "agreeAnd": "および"
+    "agreeAnd": "および",
+    "agreeSuffix": "に同意したものとみなされます。"
   },
   "invite": {
     "title": "招待コード",

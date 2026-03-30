@@ -43,7 +43,8 @@
     "passwordMinLength": "Password must be at least 8 characters",
     "passwordMismatch": "Passwords do not match",
     "agreePrefix": "By registering, you agree to the",
-    "agreeAnd": "and"
+    "agreeAnd": "and",
+    "agreeSuffix": ""
   },
   "invite": {
     "title": "Invite Code",

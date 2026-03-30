@@ -232,6 +232,7 @@ export default function RegisterPage() {
               <Link to="/terms">{t('legal.termsOfService')}</Link>
               {' '}{t('auth.agreeAnd')}{' '}
               <Link to="/privacy">{t('legal.privacyPolicy')}</Link>
+              {t('auth.agreeSuffix') ? t('auth.agreeSuffix') : null}
             </Text>
           </Form.Item>
 
