@@ -27,6 +27,7 @@ import {
   formatNumber,
   formatDateTime,
   convertFuelEfficiency,
+  litersToGallons,
   FUEL_EFFICIENCY_UNITS,
   useAuthStore,
 } from '@gastrack/shared';
@@ -359,7 +360,7 @@ export default function RecordListPage() {
             </span>
             <span>{vehicle.year}</span>
             <Tag>{t(`fuelType.${vehicle.fuel_type}`)}</Tag>
-            <span>{isImperial ? (vehicle.tank_capacity / 3.78541).toFixed(1) : vehicle.tank_capacity} {fuelUnit}</span>
+            <span>{isImperial ? formatNumber(litersToGallons(vehicle.tank_capacity), 1) : vehicle.tank_capacity} {fuelUnit}</span>
             {vehicle.license_plate && <span>{vehicle.license_plate}</span>}
           </Space>
         </Card>

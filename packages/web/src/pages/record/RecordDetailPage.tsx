@@ -37,6 +37,7 @@ import {
   formatNumber,
   formatDateTime,
   convertFuelEfficiency,
+  litersToGallons,
   FUEL_EFFICIENCY_UNITS,
   FUEL_GRADES,
   isElectricVehicle,
@@ -151,8 +152,9 @@ export default function RecordDetailPage() {
     // 单次每公里成本
     const costPerKm = tripDistance && totalCost ? totalCost / tripDistance : 0;
 
-    // 油箱利用率
-    const tankCapacity = vehicle?.tank_capacity || 0;
+    // 油箱利用率（tank_capacity 后端存的是原始值，需要按用户偏好转换）
+    const rawTankCapacity = vehicle?.tank_capacity || 0;
+    const tankCapacity = isImperial && !isEv ? litersToGallons(rawTankCapacity) : rawTankCapacity;
     const tankUsage = tankCapacity > 0 ? record.fuel_amount / tankCapacity : 0;
 
     return {

@@ -64,7 +64,7 @@ GasTrack 是一款面向全球用户的油耗/电耗记录与分析系统：
 - ✅ 往年同期对比：按月模式下自动叠加显示去年同期数据（灰色虚线/柱）
 - ✅ 多维度统计卡片：费用、平均油耗/电耗、总里程、加油/充电次数
 - ✅ 仪表盘按车辆维度独立展示统计（多车不混合汇总，油车/电车分别显示）
-- 🔨 前端单位换算展示 — 已完成：`convertFuelEfficiency()` 通用换算函数 + `FUEL_EFFICIENCY_UNITS` 常量；记录列表/详情页已根据用户偏好单位展示并支持 Tooltip 多单位换算；待完成：加油量(L↔gal)、里程(km↔mi)在记录列表/统计页的自动换算
+- ✅ 前端单位换算展示 — 后端 API 已按用户偏好完成全部换算（油耗、加油量、里程），前端使用 `convertFuelEfficiency` 做 Tooltip 多单位展示 + `litersToGallons` 处理 tank_capacity
 - 🔲 多车辆对比图表 (P1)
 - ✅ 数据导出 CSV — GDPR 数据可携带权，`GET /api/v1/users/me/export`（详见 4.4.2）
 - 🔲 数据导出 PDF (P2)
@@ -92,7 +92,7 @@ GasTrack 是一款面向全球用户的油耗/电耗记录与分析系统：
 - ✅ 多币种支持：CNY、USD、EUR、JPY、GBP、KRW
 - ✅ 加油表单支持选择燃油单位(L/gal/kWh)、货币、里程单位(km/mi)
 - ✅ 设置页支持用户偏好单位系统(metric/imperial)、能耗单位、货币的配置与保存
-- 🔨 前端根据用户偏好单位自动展示 — 油耗已完成（记录列表/详情页），加油量/里程换算待完成
+- ✅ 前端根据用户偏好单位自动展示 — 后端 `fuelRecordToResponse` 已按用户偏好做完整转换（fuel_amount L↔gal、odometer km↔mi、trip_distance、fuel_efficiency），Stats API 同样按 isImperial 转换 total_fuel/total_distance；前端直接展示后端返回值 + 对应单位标签；tank_capacity 前端侧使用 `litersToGallons` 工具函数转换
 - 🔲 汇率参考（只读展示，不做实时兑换）(P2)
 
 ### 3.7 深色模式 (P0) — *需求文档新增*
@@ -233,7 +233,7 @@ GasTrack 是一款面向全球用户的油耗/电耗记录与分析系统：
 | # | 任务 | 说明 | 优先级 |
 |---|------|------|--------|
 | ~~1~~ | ~~**响应式适配（移动端）**~~ | ~~✅ 已完成：全站 Sider→Drawer、Table→卡片、表单/统计自适应~~ | ~~⭐⭐⭐~~ |
-| 2 | **前端单位换算完善** | 油耗换算已完成（`convertFuelEfficiency` 在记录列表/详情页使用），剩余：加油量 L↔gal、里程 km↔mi 在列表/统计页自动换算 | ⭐⭐⭐ 高 |
+| ~~2~~ | ~~**前端单位换算完善**~~ | ~~✅ 已完成：后端 API 已按用户偏好完成 fuel_amount/odometer/trip_distance/fuel_efficiency 全部换算，前端直接展示 + tank_capacity 使用 `litersToGallons` 转换~~ | ~~⭐⭐⭐ 高~~ |
 | 3 | **后端 i18n 错误消息** | 引入 `go-i18n`，创建 zh-CN/en-US/ja-JP TOML 翻译文件，API 错误返回翻译后的 message | ⭐⭐ 中 |
 | 4 | **忘记密码流程** | 后端邮件发送 + Token 验证（DTO 已定义），前端登录页"忘记密码"入口 + 重置页面 | ⭐⭐ 中 |
 | 5 | **记录列表筛选 UI** | 后端 API 已支持筛选参数，前端添加日期范围和站点筛选控件 | ⭐ 低 |
