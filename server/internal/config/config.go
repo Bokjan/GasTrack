@@ -4,6 +4,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -108,7 +109,11 @@ func Load(configPath string) (*Config, error) {
 
 	// 环境变量
 	v.SetEnvPrefix("GASTRACK")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
+
+	// 显式绑定关键环境变量（确保嵌套 key 生效）
+	bindEnvKeys(v)
 
 	// 读取配置文件（不存在也可以，靠默认值和环境变量）
 	if err := v.ReadInConfig(); err != nil {
@@ -170,4 +175,20 @@ func setDefaults(v *viper.Viper) {
 
 	// 注册策略
 	v.SetDefault("registration.mode", "invite_only") // 内测阶段默认邀请制
+}
+
+// bindEnvKeys 显式绑定所有嵌套配置 key 到 GASTRACK_ 前缀的环境变量。
+// 例如 "database.host" 绑定到 GASTRACK_DATABASE_HOST。
+func bindEnvKeys(v *viper.Viper) {
+	keys := []string{
+		"server.host", "server.port", "server.cors_origins",
+		"database.host", "database.port", "database.user",
+		"database.password", "database.dbname", "database.sslmode",
+		"jwt.secret",
+		"log.level", "log.format", "log.file_path",
+		"registration.mode",
+	}
+	for _, key := range keys {
+		v.BindEnv(key)
+	}
 }
