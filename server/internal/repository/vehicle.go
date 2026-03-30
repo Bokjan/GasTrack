@@ -72,6 +72,28 @@ func (r *VehicleRepository) ClearDefault(ctx context.Context, userID uuid.UUID) 
 		Update("is_default", false).Error
 }
 
+// DB 返回底层 *gorm.DB 实例（用于 Service 层执行事务）
+func (r *VehicleRepository) DB() *gorm.DB {
+	return r.db
+}
+
+// ClearDefaultTx 在指定事务中清除用户所有车辆的默认标记
+func (r *VehicleRepository) ClearDefaultTx(ctx context.Context, tx *gorm.DB, userID uuid.UUID) error {
+	return tx.WithContext(ctx).Model(&model.Vehicle{}).
+		Where("user_id = ? AND is_default = ?", userID, true).
+		Update("is_default", false).Error
+}
+
+// CreateTx 在指定事务中创建车辆
+func (r *VehicleRepository) CreateTx(ctx context.Context, tx *gorm.DB, vehicle *model.Vehicle) error {
+	return tx.WithContext(ctx).Create(vehicle).Error
+}
+
+// UpdateTx 在指定事务中更新车辆
+func (r *VehicleRepository) UpdateTx(ctx context.Context, tx *gorm.DB, vehicle *model.Vehicle) error {
+	return tx.WithContext(ctx).Save(vehicle).Error
+}
+
 // CountByUser 统计用户的车辆数量
 func (r *VehicleRepository) CountByUser(ctx context.Context, userID uuid.UUID) (int64, error) {
 	var count int64

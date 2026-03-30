@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -85,6 +86,10 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
+		// 捕获数据库 unique violation（并发注册同一邮箱的兜底处理）
+		if isDuplicateKeyError(err) {
+			return nil, apperror.ErrConflict("auth.email_exists", "email already registered")
+		}
 		return nil, apperror.ErrInternal("creating user", err)
 	}
 
@@ -123,13 +128,14 @@ func (s *AuthService) RefreshToken(ctx context.Context, req *dto.RefreshTokenReq
 	// 计算 token hash
 	hash := hashToken(req.RefreshToken)
 
-	// 查找有效的 refresh token
-	tokenRecord, err := s.tokenRepo.GetByTokenHash(ctx, hash)
+	// 原子性地查找并删除 refresh token（SELECT FOR UPDATE + DELETE）
+	// 确保同一个 refresh token 只能被消费一次，防止并发 rotation 竞态
+	tokenRecord, err := s.tokenRepo.ConsumeByTokenHash(ctx, hash)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperror.ErrUnauthorized("auth.invalid_refresh_token", "invalid or expired refresh token")
 		}
-		return nil, apperror.ErrInternal("finding refresh token", err)
+		return nil, apperror.ErrInternal("consuming refresh token", err)
 	}
 
 	// 获取用户
@@ -137,9 +143,6 @@ func (s *AuthService) RefreshToken(ctx context.Context, req *dto.RefreshTokenReq
 	if err != nil {
 		return nil, apperror.ErrInternal("finding user", err)
 	}
-
-	// 删除旧的 refresh token（一次性使用，Refresh Token Rotation）
-	_ = s.tokenRepo.DeleteByID(ctx, tokenRecord.ID)
 
 	return s.generateTokenPair(ctx, user)
 }
@@ -242,4 +245,15 @@ func defaultPreferences(locale string) (fuelUnit, unitSystem, currency string) {
 	default:
 		return "L/100km", "metric", "USD"
 	}
+}
+
+// isDuplicateKeyError 判断是否为数据库唯一约束冲突错误（PostgreSQL error code 23505）
+func isDuplicateKeyError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errMsg := err.Error()
+	return strings.Contains(errMsg, "duplicate key") ||
+		strings.Contains(errMsg, "23505") ||
+		strings.Contains(errMsg, "unique constraint")
 }

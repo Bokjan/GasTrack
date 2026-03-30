@@ -255,6 +255,22 @@
 
 ## 6. 变更日志
 
+### 2026-03-30 — 后端并发安全修复（3 项）
+
+- ✅ **修复**：Refresh Token Rotation 非原子操作（竞态条件）
+  - **问题**：原来的 `RefreshToken()` 流程为「先读→再读 user→再删→再写」，并发请求可能同时读到同一个 refresh token，各自生成新 token，破坏 Rotation 一次性使用语义
+  - **方案**：Repository 层新增 `ConsumeByTokenHash()` 方法，在同一个数据库事务中使用 `SELECT ... FOR UPDATE` 锁定行后 `DELETE`，保证同一 refresh token 只能被消费一次
+  - Service 层 `RefreshToken()` 从先读后删改为单步原子消费，第二个并发请求收到 `gorm.ErrRecordNotFound` → 401
+  - 涉及文件：`repository/refresh_token.go`、`service/auth.go`
+- ✅ **修复**：默认车辆设置的两步操作非原子（竞态条件）
+  - **问题**：`VehicleService` 的 `Create()` / `Update()` 中设置默认车辆时，先 `ClearDefault` 再 `Create/Update`，两步不在同一事务中，并发请求可能各自清除后都设成默认
+  - **方案**：Repository 层新增 `ClearDefaultTx()` / `CreateTx()` / `UpdateTx()` / `DB()` 方法；Service 层将 ClearDefault + Create/Update 包裹在 `db.Transaction()` 中，保证原子性
+  - 涉及文件：`repository/vehicle.go`、`service/vehicle.go`
+- ✅ **修复**：注册时邮箱 unique violation 返回 500 而非 409
+  - **问题**：并发注册同一邮箱时，两个请求都通过了 `ExistsByEmail` 检查，其中一个在 `userRepo.Create()` 触发数据库 unique constraint 错误，但被统一映射为 500 Internal Server Error
+  - **方案**：新增 `isDuplicateKeyError()` 辅助函数检测 PostgreSQL 23505 错误码；`Register()` 中捕获 duplicate key 错误后返回 `409 Conflict`
+  - 涉及文件：`service/auth.go`
+
 ### 2026-03-30 — 加油记录详情页 + UI 优化
 
 - ✅ **新增页面**：加油记录详情页（`RecordDetailPage.tsx`）

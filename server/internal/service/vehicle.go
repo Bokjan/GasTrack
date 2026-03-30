@@ -43,15 +43,21 @@ func (s *VehicleService) Create(ctx context.Context, userID uuid.UUID, req *dto.
 		IsDefault:       req.IsDefault,
 	}
 
-	// 如果设为默认车辆，先清除其他默认
 	if req.IsDefault {
-		if err := s.vehicleRepo.ClearDefault(ctx, userID); err != nil {
-			return nil, apperror.ErrInternal("clearing default vehicle", err)
+		// 如果设为默认车辆，用事务保证 ClearDefault + Create 原子性
+		err := s.vehicleRepo.DB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			if err := s.vehicleRepo.ClearDefaultTx(ctx, tx, userID); err != nil {
+				return err
+			}
+			return s.vehicleRepo.CreateTx(ctx, tx, vehicle)
+		})
+		if err != nil {
+			return nil, apperror.ErrInternal("creating default vehicle", err)
 		}
-	}
-
-	if err := s.vehicleRepo.Create(ctx, vehicle); err != nil {
-		return nil, apperror.ErrInternal("creating vehicle", err)
+	} else {
+		if err := s.vehicleRepo.Create(ctx, vehicle); err != nil {
+			return nil, apperror.ErrInternal("creating vehicle", err)
+		}
 	}
 
 	resp := vehicleToResponse(vehicle)
@@ -136,16 +142,24 @@ func (s *VehicleService) Update(ctx context.Context, vehicleID, userID uuid.UUID
 
 	// 设为默认
 	if req.IsDefault != nil && *req.IsDefault {
-		if err := s.vehicleRepo.ClearDefault(ctx, userID); err != nil {
-			return nil, apperror.ErrInternal("clearing default", err)
+		// 用事务保证 ClearDefault + Update 原子性
+		err := s.vehicleRepo.DB().WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+			if err := s.vehicleRepo.ClearDefaultTx(ctx, tx, userID); err != nil {
+				return err
+			}
+			vehicle.IsDefault = true
+			return s.vehicleRepo.UpdateTx(ctx, tx, vehicle)
+		})
+		if err != nil {
+			return nil, apperror.ErrInternal("updating default vehicle", err)
 		}
-		vehicle.IsDefault = true
-	} else if req.IsDefault != nil && !*req.IsDefault {
-		vehicle.IsDefault = false
-	}
-
-	if err := s.vehicleRepo.Update(ctx, vehicle); err != nil {
-		return nil, apperror.ErrInternal("updating vehicle", err)
+	} else {
+		if req.IsDefault != nil && !*req.IsDefault {
+			vehicle.IsDefault = false
+		}
+		if err := s.vehicleRepo.Update(ctx, vehicle); err != nil {
+			return nil, apperror.ErrInternal("updating vehicle", err)
+		}
 	}
 
 	resp := vehicleToResponse(vehicle)

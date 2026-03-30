@@ -6,7 +6,7 @@
 >
 > **内容类型**: `application/json; charset=utf-8`
 >
-> **更新日期**: 2026-03-26
+> **更新日期**: 2026-03-30
 
 ---
 
@@ -63,6 +63,7 @@
 | 401 | 4010 | 未认证（Token 缺失/无效/过期） |
 | 403 | 4030 | 无权限 |
 | 404 | 4040 | 资源不存在 |
+| 409 | 4090 | 资源冲突（如邮箱已注册） |
 | 422 | 4220 | 校验错误 |
 | 429 | 4290 | 请求频率超限 |
 | 500 | 5000 | 服务器内部错误 |
@@ -134,6 +135,14 @@ POST /api/v1/auth/register
 }
 ```
 
+**错误响应** `409 Conflict`（邮箱已注册）
+```json
+{
+  "code": 4090,
+  "message": "email already registered"
+}
+```
+
 ---
 
 ### 2.2 用户登录
@@ -172,6 +181,8 @@ POST /api/v1/auth/refresh
 **成功响应** `200 OK`
 
 响应格式同「2.1 注册」（返回新的 access_token 和 refresh_token）。
+
+> **Token Rotation 机制**：每次刷新时，旧的 refresh token 会被原子性地消费（SELECT FOR UPDATE + DELETE），确保同一个 refresh token 只能使用一次。如果同一 refresh token 被并发使用，只有第一个请求成功，后续请求返回 `401 Unauthorized`。
 
 ---
 
