@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# 文档
+docs/
+*.md
+
+# 后端（前端构建不需要）
+server/
+
+# 环境与工具
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.codebuddy/
+
+# 依赖（容器内重新安装）
+node_modules/
+packages/*/node_modules/
+
+# 构建产物
+packages/web/dist/
+
+# Docker 自身
+Dockerfile*
+docker-compose*.yaml

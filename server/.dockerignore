@@ -1,0 +1,9 @@
+# 排除非构建文件
+.git
+.gitignore
+*.md
+Dockerfile
+.dockerignore
+config.yaml
+logs/
+uploads/
