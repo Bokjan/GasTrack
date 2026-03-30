@@ -6,7 +6,7 @@
 >
 > **内容类型**: `application/json; charset=utf-8`
 >
-> **更新日期**: 2026-03-30
+> **更新日期**: 2026-03-31
 
 ---
 
@@ -945,3 +945,20 @@ CSV 三段式结构：User Profile → Vehicles → Fuel/Charging Records。
 | PATCH | `/api/v1/notifications/{id}/read` | ✅ | 标记已读 |
 | POST | `/api/v1/notifications/read-all` | ✅ | 全部已读 |
 | DELETE | `/api/v1/notifications/{id}` | ✅ | 删除通知 |
+| GET | `/api/v1/groups` | ✅ | 我的群组列表 |
+| POST | `/api/v1/groups` | ✅ | 创建群组 |
+| POST | `/api/v1/groups/join` | ✅ | 通过邀请码加入群组 |
+| GET | `/api/v1/groups/{id}` | ✅ | 群组详情 |
+| PATCH | `/api/v1/groups/{id}` | ✅ | 更新群组信息 |
+| DELETE | `/api/v1/groups/{id}` | ✅ | 删除群组 |
+| POST | `/api/v1/groups/{id}/regenerate-invite` | ✅ | 重新生成邀请码 |
+| POST | `/api/v1/groups/{id}/leave` | ✅ | 退出群组 |
+| GET | `/api/v1/groups/{id}/overview` | ✅ | 群组数据汇总 |
+| PATCH | `/api/v1/groups/{id}/members/{uid}` | ✅ | 更新成员角色 |
+| DELETE | `/api/v1/groups/{id}/members/{uid}` | ✅ | 移除成员 |
+| POST | `/api/v1/groups/{id}/shared-vehicles` | ✅ | 共享车辆到群组 (🔲) |
+| DELETE | `/api/v1/groups/{id}/shared-vehicles/{vid}` | ✅ | 取消车辆共享 (🔲) |
+| GET | `/api/v1/groups/{id}/shared-vehicles` | ✅ | 群组共享车辆列表 (🔲) |
+| GET | `/api/v1/groups/{id}/leaderboard` | ✅ | 油耗排行榜 (🔲) |
+| GET | `/api/v1/groups/{id}/expense-stats` | ✅ | 费用统计看板 (🔲) |
+| GET | `/api/v1/groups/{id}/stations` | ✅ | 加油站推荐共享 (🔲) |

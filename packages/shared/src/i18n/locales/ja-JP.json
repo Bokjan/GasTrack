@@ -563,6 +563,7 @@
     "avgEfficiency": "平均燃費",
     "noVehicles": "このグループにはまだ車両データがありません",
     "owner": "オーナー",
+    "vehicleOwner": "所有者",
     "joinedAt": "参加日",
     "createdAt": "作成日",
     "groupInfo": "グループ情報",

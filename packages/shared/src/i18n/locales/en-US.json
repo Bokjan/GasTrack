@@ -563,6 +563,7 @@
     "avgEfficiency": "Avg Efficiency",
     "noVehicles": "No vehicle data in this group yet",
     "owner": "Owner",
+    "vehicleOwner": "Owner",
     "joinedAt": "Joined At",
     "createdAt": "Created At",
     "groupInfo": "Group Info",

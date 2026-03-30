@@ -525,7 +525,7 @@ export default function GroupPage() {
                             key: 'vehicle_name',
                           },
                           {
-                            title: t('group.owner'),
+                            title: t('group.vehicleOwner'),
                             dataIndex: 'owner_name',
                             key: 'owner_name',
                           },

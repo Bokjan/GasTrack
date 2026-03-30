@@ -19,7 +19,7 @@ users ──1:N──► vehicles ──1:N──► fuel_records
   │──1:N──► reminders (via vehicles)
   │──1:N──► notifications
   │
-  └──N:M──► groups (via group_members, P1 待实现)
+  └──N:M──► groups (via group_members, ✅ 已实现)
 ```
 
 ## 3. 核心表结构
@@ -127,6 +127,27 @@ CREATE TABLE group_members (
     joined_at       TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (group_id, user_id)
 );
+```
+
+### 3.9 shared_vehicles - 共享车辆表（规划中）
+```sql
+CREATE TABLE shared_vehicles (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    group_id        UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    vehicle_id      UUID NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    shared_by       UUID NOT NULL REFERENCES users(id),    -- 共享发起人（车主）
+    shared_at       TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (group_id, vehicle_id)
+);
+CREATE INDEX idx_shared_vehicles_group ON shared_vehicles(group_id);
+CREATE INDEX idx_shared_vehicles_vehicle ON shared_vehicles(vehicle_id);
+```
+
+**设计要点**：
+- 不修改现有 `vehicles` 表，通过关联表实现共享关系
+- `shared_by` 必须等于 `vehicles.user_id`（Service 层校验）
+- 联合唯一索引 `(group_id, vehicle_id)` 防止重复共享
+- 级联删除：群组或车辆删除时自动清理共享关系
 ```
 
 ### 3.5 refresh_tokens - 刷新令牌表

@@ -1,6 +1,6 @@
 # GasTrack 项目规划
 
-> **最后更新**: 2026-03-30
+> **最后更新**: 2026-03-31
 
 ## 1. 项目结构
 
@@ -16,7 +16,7 @@ GasTrack/
 │   │   ├── handler/             # HTTP 处理器（auth/user/vehicle/fuel_record/stats/invite/export/reminder/notification）
 │   │   ├── service/             # 业务逻辑层
 │   │   ├── repository/          # 数据访问层
-│   │   ├── model/               # 数据库模型（7 个：User/Vehicle/FuelRecord/RefreshToken/InviteCode/Reminder/Notification）
+│   │   ├── model/               # 数据库模型（9 个：User/Vehicle/FuelRecord/RefreshToken/InviteCode/Reminder/Notification/Group/GroupMember）
 │   │   ├── dto/                 # 请求/响应结构体
 │   │   ├── database/            # 数据库连接 & AutoMigrate
 │   │   └── pkg/                 # 内部工具（respond/decode/apperror/convert）
@@ -34,7 +34,7 @@ GasTrack/
 │   └── web/                     # React Web 应用 (@gastrack/web)
 │       └── src/
 │           ├── components/      # 通用组件（NotificationBell 等）
-│           ├── pages/           # auth/dashboard/vehicle/record/stats/invite/reminder/settings/legal
+│           ├── pages/           # auth/dashboard/vehicle/record/stats/invite/reminder/settings/legal/group
 │           ├── layouts/         # MainLayout
 │           ├── hooks/           # useIsMobile 等
 │           └── styles/          # global.css
@@ -73,7 +73,11 @@ GasTrack/
 | PWA 支持（离线 + 安装到桌面） | 🔲 |
 | 多车辆对比图表 | 🔲 |
 | 文件上传（车辆照片 + 头像） | 🔲 |
-| 家庭群组管理 | 🔲 DTO 已规划 |
+| ~~家庭群组管理（基础）~~ | ~~✅ 已完成~~ |
+| 车辆共享标记 | 🔲 设计完成 |
+| 群组油耗排行榜 | 🔲 设计完成 |
+| 群组费用统计看板 | 🔲 设计完成 |
+| 加油站推荐共享 | 🔲 设计完成 |
 | 更多语言（韩语/繁中/西/德/法） | 🔲 |
 | 数据导出 PDF | 🔲 |
 
@@ -90,7 +94,7 @@ GasTrack/
 
 ## 3. API 路由一览（V1）
 
-> 37 条已注册路由 + 2 条待实现
+> 48 条已注册路由 + 8 条待实现
 
 ```
 # 公开路由
@@ -153,6 +157,27 @@ PATCH  /api/v1/notifications/{id}/read     # ✅ 标记已读
 POST   /api/v1/notifications/read-all      # ✅ 全部已读
 DELETE /api/v1/notifications/{id}          # ✅ 删除通知
 
-# 待实现
+# 群组管理（基础）
+GET    /api/v1/groups                      # ✅ 我的群组列表
+POST   /api/v1/groups                      # ✅ 创建群组
+POST   /api/v1/groups/join                 # ✅ 通过邀请码加入
+GET    /api/v1/groups/{id}                 # ✅ 群组详情
+PATCH  /api/v1/groups/{id}                 # ✅ 更新群组信息
+DELETE /api/v1/groups/{id}                 # ✅ 删除群组
+POST   /api/v1/groups/{id}/regenerate-invite # ✅ 重新生成邀请码
+POST   /api/v1/groups/{id}/leave           # ✅ 退出群组
+GET    /api/v1/groups/{id}/overview        # ✅ 群组数据汇总
+PATCH  /api/v1/groups/{id}/members/{uid}   # ✅ 更新成员角色
+DELETE /api/v1/groups/{id}/members/{uid}   # ✅ 移除成员
+
+# 群组扩展（待实现）
+POST   /api/v1/groups/{id}/shared-vehicles        # 🔲 共享车辆到群组
+DELETE /api/v1/groups/{id}/shared-vehicles/{vid}   # 🔲 取消车辆共享
+GET    /api/v1/groups/{id}/shared-vehicles         # 🔲 获取群组共享车辆列表
+GET    /api/v1/groups/{id}/leaderboard             # 🔲 群组油耗排行榜
+GET    /api/v1/groups/{id}/expense-stats           # 🔲 群组费用统计看板
+GET    /api/v1/groups/{id}/stations                # 🔲 加油站推荐共享
+
+# 其他待实现
 POST   /api/v1/upload/image               # 🔲 上传图片 (P1)
 ```

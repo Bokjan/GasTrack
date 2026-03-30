@@ -563,6 +563,7 @@
     "avgEfficiency": "平均油耗",
     "noVehicles": "群组内暂无车辆数据",
     "owner": "群主",
+    "vehicleOwner": "车主",
     "joinedAt": "加入时间",
     "createdAt": "创建时间",
     "groupInfo": "群组信息",
