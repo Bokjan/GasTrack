@@ -14,6 +14,7 @@ import (
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 
 	"gastrack/internal/config"
 	"gastrack/internal/database"
@@ -128,8 +129,11 @@ func main() {
 	logger.Info("GasTrack server stopped gracefully")
 }
 
-// initLogger 根据配置初始化 zap logger
+// initLogger 根据配置初始化 zap logger。
+// 当 cfg.FilePath 非空时，日志同时写入文件（带 lumberjack 自动轮转）和 stderr；
+// 否则仅输出到 stderr，行为与之前一致。
 func initLogger(cfg config.LogConfig) (*zap.Logger, error) {
+	// 1. 解析日志级别
 	var level zapcore.Level
 	switch cfg.Level {
 	case "debug":
@@ -144,13 +148,41 @@ func initLogger(cfg config.LogConfig) (*zap.Logger, error) {
 		level = zapcore.InfoLevel
 	}
 
-	var zapCfg zap.Config
+	// 2. 选择编码器
+	var encoder zapcore.Encoder
 	if cfg.Format == "console" {
-		zapCfg = zap.NewDevelopmentConfig()
+		encoderCfg := zap.NewDevelopmentEncoderConfig()
+		encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+		encoder = zapcore.NewConsoleEncoder(encoderCfg)
 	} else {
-		zapCfg = zap.NewProductionConfig()
+		encoderCfg := zap.NewProductionEncoderConfig()
+		encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+		encoder = zapcore.NewJSONEncoder(encoderCfg)
 	}
-	zapCfg.Level = zap.NewAtomicLevelAt(level)
 
-	return zapCfg.Build()
+	// 3. 构建输出目标
+	cores := []zapcore.Core{
+		// 始终保留 stderr 输出（容器 / systemd 场景友好）
+		zapcore.NewCore(encoder, zapcore.Lock(os.Stderr), level),
+	}
+
+	if cfg.FilePath != "" {
+		// 使用 lumberjack 实现日志文件自动轮转
+		fileWriter := &lumberjack.Logger{
+			Filename:   cfg.FilePath,
+			MaxSize:    cfg.MaxSize,    // MB
+			MaxAge:     cfg.MaxAge,     // 天
+			MaxBackups: cfg.MaxBackups, // 备份文件数
+			Compress:   cfg.Compress,   // gzip 压缩
+			LocalTime:  true,           // 使用本地时间命名备份文件
+		}
+		fileSyncer := zapcore.AddSync(fileWriter)
+		cores = append(cores, zapcore.NewCore(encoder, fileSyncer, level))
+	}
+
+	// 4. 合并 core 并构建 logger
+	core := zapcore.NewTee(cores...)
+	logger := zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
+
+	return logger, nil
 }

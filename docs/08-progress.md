@@ -33,7 +33,7 @@
 |------|------|----------|
 | Go 项目骨架搭建 | ✅ | `server/` 目录结构，Go 1.22 + net/http |
 | 配置管理 (Viper) | ✅ | `internal/config/config.go` + `config.yaml` |
-| 日志系统 (Zap) | ✅ | 结构化日志，支持 JSON/Console 格式 |
+| 日志系统 (Zap + Lumberjack) | ✅ | 结构化日志，支持 JSON/Console 格式，文件输出 + 自动轮转（按大小切割/定期清理/gzip 压缩） |
 | 数据库连接 (GORM + PostgreSQL) | ✅ | `internal/database/database.go`，AutoMigrate |
 | Docker Compose (PostgreSQL) | ✅ | `docker-compose.yaml`，PostgreSQL 16-alpine |
 | 统一响应格式 | ✅ | `internal/pkg/respond/`，OK/Created/Paged/Error |
@@ -254,6 +254,23 @@
 ---
 
 ## 6. 变更日志
+
+### 2026-03-30 — 日志自动轮转（Log Rotation）
+
+- ✅ **新增功能**：基于 lumberjack 的日志文件自动轮转
+  - **背景**：原日志系统仅输出到 stderr，无文件持久化，生产环境长期运行会丢失历史日志
+  - **方案**：
+    - 引入 `gopkg.in/natefinch/lumberjack.v2` 作为 zap 的 `WriteSyncer` 后端
+    - 重写 `initLogger()`：使用 `zapcore.NewTee` 实现 stderr + 文件双写
+    - 文件输出使用 lumberjack 自动管理：按大小切割、保留历史备份、定期清理、gzip 压缩
+    - 当 `file_path` 配置为空时，行为与之前完全一致（仅 stderr），零破坏性
+  - **配置项**（`LogConfig` 新增 5 个字段）：
+    - `file_path`：日志文件路径（留空则仅 stderr）
+    - `max_size`：单文件最大 MB（默认 100MB）
+    - `max_age`：旧日志保留天数（默认 30 天）
+    - `max_backups`：保留备份文件数（默认 10 个）
+    - `compress`：是否 gzip 压缩旧日志（默认开启）
+  - 涉及文件：`config/config.go`、`cmd/server/main.go`、`config.yaml`、`go.mod`
 
 ### 2026-03-30 — 后端并发安全修复（3 项）
 

@@ -71,8 +71,15 @@ type UploadConfig struct {
 
 // LogConfig 日志配置
 type LogConfig struct {
-	Level  string `mapstructure:"level"` // debug/info/warn/error
+	Level  string `mapstructure:"level"`  // debug/info/warn/error
 	Format string `mapstructure:"format"` // json/console
+
+	// 文件输出与轮转（留空 FilePath 则仅输出到 stderr）
+	FilePath   string `mapstructure:"file_path"`   // 日志文件路径，如 ./logs/gastrack.log
+	MaxSize    int    `mapstructure:"max_size"`     // 单个日志文件最大大小（MB），超过后自动轮转
+	MaxAge     int    `mapstructure:"max_age"`      // 旧日志文件保留天数，0 表示不按时间清理
+	MaxBackups int    `mapstructure:"max_backups"`  // 保留的旧日志文件最大数量，0 表示全部保留
+	Compress   bool   `mapstructure:"compress"`     // 是否压缩旧日志文件（gzip）
 }
 
 // Load 从配置文件和环境变量加载配置
@@ -149,4 +156,9 @@ func setDefaults(v *viper.Viper) {
 	// 日志
 	v.SetDefault("log.level", "info")
 	v.SetDefault("log.format", "json")
+	v.SetDefault("log.file_path", "")    // 默认不写文件，仅 stderr
+	v.SetDefault("log.max_size", 100)    // 100MB
+	v.SetDefault("log.max_age", 30)      // 保留 30 天
+	v.SetDefault("log.max_backups", 10)  // 最多 10 个备份
+	v.SetDefault("log.compress", true)   // 压缩旧日志
 }
