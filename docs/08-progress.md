@@ -12,6 +12,7 @@
 |------|------|------|---------|
 | 项目基础设施 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
 | 用户认证 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
+| 邀请注册制 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
 | 用户资料 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
 | 车辆管理 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
 | 加油记录 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
@@ -254,6 +255,46 @@
 ---
 
 ## 6. 变更日志
+
+### 2026-03-30 — 邀请注册制（Invite-Only Registration）
+
+- ✅ **新增功能**：内测阶段邀请注册制，全栈实现
+  - **背景**：系统处于内测阶段，需要关闭公开注册，仅允许持有有效邀请码的用户注册
+  - **注册策略**（`registration.mode` 配置项）：
+    - `invite_only`（默认）：注册时必须提供有效邀请码
+    - `open`：公开注册，邀请码可选（正式上线后切换）
+    - `closed`：完全关闭注册
+  - **邀请码模型**（`invite_codes` 表）：
+    - 格式 `GT-XXXXXX`（6 位大写字母+数字，去除 I/O/0/1 避免混淆）
+    - 支持单次码（`max_uses=1`）和多次码（`max_uses=N`）
+    - 支持过期时间（默认 30 天）和手动禁用（`is_active`）
+    - 并发安全：`ConsumeByCode()` 使用 `SELECT FOR UPDATE` + 事务原子操作
+  - **后端新增/修改文件（10 个）**：
+    - `model/invite_code.go`（新增）— `InviteCode` 模型 + `IsValid()` / `RemainingUses()` 方法
+    - `dto/invite.go`（新增）— 创建/更新/响应/验证 DTO
+    - `dto/auth.go`（修改）— `RegisterRequest` 新增 `invite_code` 字段
+    - `repository/invite_code.go`（新增）— CRUD + `ConsumeByCode()` 原子消费
+    - `service/invite.go`（新增）— 邀请码生成/查询/消费逻辑
+    - `service/auth.go`（修改）— `Register()` 注入注册模式校验 + 邀请码消费
+    - `handler/invite.go`（新增）— 邀请码管理 HTTP 处理器
+    - `router/router.go`（修改）— 新增 6 条路由
+    - `config/config.go`（修改）— 新增 `RegistrationConfig` 结构体
+    - `database/database.go`（修改）— AutoMigrate 新增 `InviteCode`
+    - `cmd/server/main.go`（修改）— 组装邀请码依赖链
+    - `config.yaml`（修改）— 新增 `registration.mode` 配置
+  - **API 新增 6 条路由**：
+    - `GET /api/v1/auth/registration-mode`（公开）— 查询注册模式
+    - `GET /api/v1/invites/{code}`（公开）— 验证邀请码
+    - `POST /api/v1/invites`（认证）— 创建邀请码
+    - `GET /api/v1/invites`（认证）— 我的邀请码列表
+    - `PATCH /api/v1/invites/{id}`（认证）— 更新邀请码
+    - `DELETE /api/v1/invites/{id}`（认证）— 删除邀请码
+  - **前端改动**：
+    - `types/index.ts` — 新增 `RegistrationModeResponse`、`ValidateInviteResponse`、`InviteCode`、`CreateInviteRequest`、`UpdateInviteRequest` 类型，`RegisterRequest` 新增 `invite_code`
+    - `api/index.ts` — 新增 `authApi.getRegistrationMode()` + `inviteApi`（validate/create/list/update/delete）
+    - `stores/authStore.ts` — `register()` 新增 `inviteCode` 参数
+    - `RegisterPage.tsx` — 重写：邀请码输入框置顶 + debounce 500ms 实时校验 + ✅/❌ 状态反馈 + 注册模式感知（`closed` 显示关闭页、`open` 隐藏邀请码字段）
+  - **i18n 三语翻译新增**（`invite.*` 共 24 个 key + `auth.registrationClosed`）
 
 ### 2026-03-30 — 日志自动轮转（Log Rotation）
 

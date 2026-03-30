@@ -41,6 +41,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   nickname: string;
+  invite_code?: string;
 }
 
 /** 后端 AuthResponse: { access_token, refresh_token, expires_in, user } */
@@ -56,6 +57,49 @@ export type AuthTokens = AuthResponse;
 
 export interface RefreshRequest {
   refresh_token: string;
+}
+
+// ---------- Registration Mode ----------
+
+/** 后端 GET /api/v1/auth/registration-mode 返回 */
+export interface RegistrationModeResponse {
+  mode: 'open' | 'invite_only' | 'closed';
+}
+
+/** 邀请码验证响应 */
+export interface ValidateInviteResponse {
+  valid: boolean;
+  remaining_uses?: number;
+  expires_at?: string;
+}
+
+/** 邀请码详情 */
+export interface InviteCode {
+  id: string;
+  code: string;
+  created_by: string;
+  creator_name?: string;
+  max_uses: number;
+  use_count: number;
+  remaining_uses: number;
+  expires_at?: string;
+  note?: string;
+  is_active: boolean;
+  is_valid: boolean;
+  created_at: string;
+}
+
+/** 创建邀请码请求 */
+export interface CreateInviteRequest {
+  max_uses?: number;
+  expires_at?: string;
+  note?: string;
+}
+
+/** 更新邀请码请求 */
+export interface UpdateInviteRequest {
+  is_active?: boolean;
+  note?: string;
 }
 
 // ---------- User ----------

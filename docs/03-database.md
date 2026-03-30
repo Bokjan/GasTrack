@@ -142,6 +142,32 @@ CREATE TABLE refresh_tokens (
 CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
 ```
 
+### 3.6 invite_codes - 邀请码表
+```sql
+CREATE TABLE invite_codes (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code            VARCHAR(20) UNIQUE NOT NULL,     -- 邀请码，如 GT-A3X7K9
+    created_by      UUID NOT NULL REFERENCES users(id),
+    used_by         UUID REFERENCES users(id),       -- 最后使用者（单次码专用）
+    max_uses        INT DEFAULT 1 NOT NULL,          -- 最大使用次数（1=一次性，N=可复用）
+    use_count       INT DEFAULT 0 NOT NULL,          -- 已使用次数
+    expires_at      TIMESTAMPTZ,                     -- 过期时间（NULL=永不过期）
+    note            VARCHAR(255),                    -- 备注
+    is_active       BOOLEAN DEFAULT true NOT NULL,   -- 是否激活
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at      TIMESTAMPTZ                      -- 软删除
+);
+CREATE INDEX idx_invite_codes_creator ON invite_codes(created_by);
+CREATE UNIQUE INDEX idx_invite_codes_code ON invite_codes(code);
+```
+
+**设计要点**：
+- 支持一次性邀请码（`max_uses=1`）和批量邀请码（`max_uses=N`）
+- 邀请码格式 `GT-XXXXXX`，6 位大写字母+数字（去除 I/O/0/1 避免混淆），36^6 ≈ 22 亿种组合
+- 消费时使用 `SELECT FOR UPDATE` + 事务确保并发安全
+- 支持手动禁用（`is_active=false`）和自动过期（`expires_at`）
+
 ## 4. 缓存策略（无 Redis，进程内缓存）
 
 本项目初期不引入 Redis，使用 Go 进程内缓存（`go-cache` 或 `sync.Map`）替代：

@@ -99,6 +99,12 @@ POST /api/v1/auth/register
 | password | string | ✅ | 8-72 字符 | 密码 |
 | nickname | string | ✅ | 1-100 字符 | 昵称 |
 | locale | string | - | `en-US` / `zh-CN` / `ja-JP` | 偏好语言 |
+| invite_code | string | 视模式 | - | 邀请码（`invite_only` 模式下必填） |
+
+> **注册模式**：通过 `GET /api/v1/auth/registration-mode` 查询当前模式。
+> - `open`：公开注册，`invite_code` 可选
+> - `invite_only`：必须携带有效邀请码
+> - `closed`：完全关闭注册，返回 `403 Forbidden`
 
 **请求示例**
 ```json
@@ -106,7 +112,8 @@ POST /api/v1/auth/register
   "email": "user@example.com",
   "password": "mypassword123",
   "nickname": "张三",
-  "locale": "zh-CN"
+  "locale": "zh-CN",
+  "invite_code": "GT-A3X7K9"
 }
 ```
 
@@ -796,7 +803,13 @@ GET /api/v1/health
 | POST | `/api/v1/auth/login` | ❌ | 用户登录 |
 | POST | `/api/v1/auth/refresh` | ❌ | 刷新 Token |
 | POST | `/api/v1/auth/logout` | ✅ | 用户登出 |
+| GET | `/api/v1/auth/registration-mode` | ❌ | 查询注册模式 |
 | GET | `/api/v1/health` | ❌ | 健康检查 |
+| GET | `/api/v1/invites/{code}` | ❌ | 验证邀请码 |
+| POST | `/api/v1/invites` | ✅ | 创建邀请码 |
+| GET | `/api/v1/invites` | ✅ | 我的邀请码列表 |
+| PATCH | `/api/v1/invites/{id}` | ✅ | 更新邀请码 |
+| DELETE | `/api/v1/invites/{id}` | ✅ | 删除邀请码 |
 | GET | `/api/v1/users/me` | ✅ | 获取用户资料 |
 | PATCH | `/api/v1/users/me` | ✅ | 更新用户资料 |
 | PUT | `/api/v1/users/me/password` | ✅ | 修改密码 |

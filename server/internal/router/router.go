@@ -22,6 +22,7 @@ func New(
 	vehicleHandler *handler.VehicleHandler,
 	fuelRecordHandler *handler.FuelRecordHandler,
 	statsHandler *handler.StatsHandler,
+	inviteHandler *handler.InviteHandler,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -32,9 +33,21 @@ func New(
 	mux.HandleFunc("POST /api/v1/auth/login", authHandler.Login)
 	mux.HandleFunc("POST /api/v1/auth/refresh", authHandler.RefreshToken)
 
+	// 邀请码验证（公开，注册前实时校验）
+	mux.HandleFunc("GET /api/v1/invites/{code}", inviteHandler.Validate)
+
 	// 健康检查
 	mux.HandleFunc("GET /api/v1/health", func(w http.ResponseWriter, r *http.Request) {
 		respond.OK(w, map[string]string{"status": "ok"})
+	})
+
+	// 注册模式查询（公开，前端根据此决定是否显示邀请码字段）
+	registrationMode := cfg.Registration.Mode
+	if registrationMode == "" {
+		registrationMode = "invite_only"
+	}
+	mux.HandleFunc("GET /api/v1/auth/registration-mode", func(w http.ResponseWriter, r *http.Request) {
+		respond.OK(w, map[string]string{"mode": registrationMode})
 	})
 
 	// --- 需要认证的路由 ---
@@ -42,6 +55,12 @@ func New(
 
 	// 登出（需要认证）
 	mux.Handle("POST /api/v1/auth/logout", auth(http.HandlerFunc(authHandler.Logout)))
+
+	// 邀请码管理（需要认证）
+	mux.Handle("POST /api/v1/invites", auth(http.HandlerFunc(inviteHandler.Create)))
+	mux.Handle("GET /api/v1/invites", auth(http.HandlerFunc(inviteHandler.List)))
+	mux.Handle("PATCH /api/v1/invites/{id}", auth(http.HandlerFunc(inviteHandler.Update)))
+	mux.Handle("DELETE /api/v1/invites/{id}", auth(http.HandlerFunc(inviteHandler.Delete)))
 
 	// 用户
 	mux.Handle("GET /api/v1/users/me", auth(http.HandlerFunc(userHandler.GetProfile)))

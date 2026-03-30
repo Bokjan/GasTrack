@@ -11,12 +11,18 @@ import (
 
 // Config 是应用的全局配置结构体
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	I18n     I18nConfig     `mapstructure:"i18n"`
-	Upload   UploadConfig   `mapstructure:"upload"`
-	Log      LogConfig      `mapstructure:"log"`
+	Server       ServerConfig       `mapstructure:"server"`
+	Database     DatabaseConfig     `mapstructure:"database"`
+	JWT          JWTConfig          `mapstructure:"jwt"`
+	I18n         I18nConfig         `mapstructure:"i18n"`
+	Upload       UploadConfig       `mapstructure:"upload"`
+	Log          LogConfig          `mapstructure:"log"`
+	Registration RegistrationConfig `mapstructure:"registration"`
+}
+
+// RegistrationConfig 注册策略配置
+type RegistrationConfig struct {
+	Mode string `mapstructure:"mode"` // open（公开注册）| invite_only（邀请制）| closed（完全关闭）
 }
 
 // ServerConfig 服务器相关配置
@@ -161,4 +167,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("log.max_age", 30)      // 保留 30 天
 	v.SetDefault("log.max_backups", 10)  // 最多 10 个备份
 	v.SetDefault("log.compress", true)   // 压缩旧日志
+
+	// 注册策略
+	v.SetDefault("registration.mode", "invite_only") // 内测阶段默认邀请制
 }

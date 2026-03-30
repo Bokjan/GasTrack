@@ -19,6 +19,11 @@ import type {
   FuelEfficiencyTrendResponse,
   PeriodStatsResponse,
   PaginatedResponse,
+  RegistrationModeResponse,
+  ValidateInviteResponse,
+  InviteCode,
+  CreateInviteRequest,
+  UpdateInviteRequest,
 } from '../types';
 
 // 注意: PaginatedResponse<T> 的 Axios 响应为 AxiosResponse<PaginatedResponse<T>>
@@ -37,6 +42,34 @@ export const authApi = {
     apiClient.post<ApiResponse<AuthResponse>>('/auth/refresh', data),
 
   logout: () => apiClient.post<ApiResponse<null>>('/auth/logout'),
+
+  /** 查询当前注册模式（open / invite_only / closed） */
+  getRegistrationMode: () =>
+    apiClient.get<ApiResponse<RegistrationModeResponse>>('/auth/registration-mode'),
+};
+
+// ==================== Invite ====================
+
+export const inviteApi = {
+  /** 验证邀请码是否有效（公开接口） */
+  validate: (code: string) =>
+    apiClient.get<ApiResponse<ValidateInviteResponse>>(`/invites/${code}`),
+
+  /** 创建邀请码 */
+  create: (data: CreateInviteRequest) =>
+    apiClient.post<ApiResponse<InviteCode>>('/invites', data),
+
+  /** 查询我创建的邀请码列表 */
+  list: () =>
+    apiClient.get<ApiResponse<InviteCode[]>>('/invites'),
+
+  /** 更新邀请码 */
+  update: (id: string, data: UpdateInviteRequest) =>
+    apiClient.patch<ApiResponse<InviteCode>>(`/invites/${id}`, data),
+
+  /** 删除邀请码 */
+  delete: (id: string) =>
+    apiClient.delete<ApiResponse<null>>(`/invites/${id}`),
 };
 
 // ==================== User ====================

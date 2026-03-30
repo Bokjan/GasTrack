@@ -6,10 +6,11 @@ package dto
 
 // RegisterRequest 注册请求
 type RegisterRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"password" validate:"required,min=8,max=72"`
-	Nickname string `json:"nickname" validate:"required,min=1,max=100"`
-	Locale   string `json:"locale" validate:"omitempty,oneof=en-US zh-CN ja-JP"`
+	Email      string `json:"email" validate:"required,email"`
+	Password   string `json:"password" validate:"required,min=8,max=72"`
+	Nickname   string `json:"nickname" validate:"required,min=1,max=100"`
+	Locale     string `json:"locale" validate:"omitempty,oneof=en-US zh-CN ja-JP"`
+	InviteCode string `json:"invite_code" validate:"omitempty"` // 邀请码（invite_only 模式下必填）
 }
 
 // LoginRequest 登录请求

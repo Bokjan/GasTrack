@@ -27,30 +27,53 @@ import (
 
 // AuthService 认证业务逻辑
 type AuthService struct {
-	userRepo  *repository.UserRepository
-	tokenRepo *repository.RefreshTokenRepository
-	jwtCfg    *config.JWTConfig
-	logger    *zap.Logger
+	userRepo         *repository.UserRepository
+	tokenRepo        *repository.RefreshTokenRepository
+	inviteService    *InviteService
+	jwtCfg           *config.JWTConfig
+	registrationMode string // open / invite_only / closed
+	logger           *zap.Logger
 }
 
 // NewAuthService 创建 AuthService 实例
 func NewAuthService(
 	userRepo *repository.UserRepository,
 	tokenRepo *repository.RefreshTokenRepository,
+	inviteService *InviteService,
 	jwtCfg *config.JWTConfig,
+	registrationMode string,
 	logger *zap.Logger,
 ) *AuthService {
 	return &AuthService{
-		userRepo:  userRepo,
-		tokenRepo: tokenRepo,
-		jwtCfg:    jwtCfg,
-		logger:    logger,
+		userRepo:         userRepo,
+		tokenRepo:        tokenRepo,
+		inviteService:    inviteService,
+		jwtCfg:           jwtCfg,
+		registrationMode: registrationMode,
+		logger:           logger,
 	}
 }
 
 // Register 用户注册
 func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*dto.AuthResponse, error) {
-	// 检查邮箱是否已注册
+	// 1. 注册模式校验
+	switch s.registrationMode {
+	case "closed":
+		return nil, apperror.ErrForbidden("auth.registration_closed", "registration is currently closed")
+	case "invite_only":
+		if req.InviteCode == "" {
+			return nil, apperror.ErrForbidden("auth.invite_required", "an invite code is required to register")
+		}
+	case "open":
+		// 公开注册，邀请码可选
+	default:
+		// 未知模式视为邀请制
+		if req.InviteCode == "" {
+			return nil, apperror.ErrForbidden("auth.invite_required", "an invite code is required to register")
+		}
+	}
+
+	// 2. 检查邮箱是否已注册
 	exists, err := s.userRepo.ExistsByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, apperror.ErrInternal("checking email existence", err)
@@ -59,13 +82,13 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		return nil, apperror.ErrConflict("auth.email_exists", "email already registered")
 	}
 
-	// 密码哈希（bcrypt, cost=12）
+	// 3. 密码哈希（bcrypt, cost=12）
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
 	if err != nil {
 		return nil, apperror.ErrInternal("hashing password", err)
 	}
 
-	// 默认语言
+	// 4. 默认语言
 	locale := "en-US"
 	if req.Locale != "" {
 		locale = req.Locale
@@ -93,7 +116,20 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		return nil, apperror.ErrInternal("creating user", err)
 	}
 
-	// 生成 Token 对
+	// 5. 消费邀请码（在用户创建成功后）
+	if req.InviteCode != "" && s.inviteService != nil {
+		if err := s.inviteService.ValidateAndConsumeInviteCode(ctx, req.InviteCode, user.ID); err != nil {
+			// 邀请码消费失败不影响已创建的用户（已进入系统）
+			// 仅记录日志告警
+			s.logger.Warn("failed to consume invite code after user creation",
+				zap.String("invite_code", req.InviteCode),
+				zap.String("user_id", user.ID.String()),
+				zap.Error(err),
+			)
+		}
+	}
+
+	// 6. 生成 Token 对
 	return s.generateTokenPair(ctx, user)
 }
 
