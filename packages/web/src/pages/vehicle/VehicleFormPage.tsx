@@ -9,6 +9,8 @@ import {
   Switch,
   Button,
   Space,
+  Row,
+  Col,
   message,
   Spin,
 } from 'antd';
@@ -128,64 +130,66 @@ export default function VehicleFormPage() {
             />
           </Form.Item>
 
-          <Space style={{ width: '100%' }} size="middle">
-            <Form.Item
-              name="brand"
-              label={t('vehicle.brand')}
-              rules={[{ required: true, message: t('common.required') }]}
-              style={{ flex: 1 }}
-            >
-              <Input placeholder={t('vehicle.brand')} />
-            </Form.Item>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="brand"
+                label={t('vehicle.brand')}
+                rules={[{ required: true, message: t('common.required') }]}
+              >
+                <Input placeholder={t('vehicle.brand')} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="model"
+                label={t('vehicle.model')}
+                rules={[{ required: true, message: t('common.required') }]}
+              >
+                <Input placeholder={t('vehicle.model')} />
+              </Form.Item>
+            </Col>
+          </Row>
 
-            <Form.Item
-              name="model"
-              label={t('vehicle.model')}
-              rules={[{ required: true, message: t('common.required') }]}
-              style={{ flex: 1 }}
-            >
-              <Input placeholder={t('vehicle.model')} />
-            </Form.Item>
-          </Space>
-
-          <Space style={{ width: '100%' }} size="middle">
-            <Form.Item
-              name="year"
-              label={t('vehicle.year')}
-              rules={[{ required: true, message: t('common.required') }]}
-              style={{ flex: 1 }}
-            >
-              <InputNumber
-                min={1900}
-                max={new Date().getFullYear() + 1}
-                style={{ width: '100%' }}
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="fuel_type"
-              label={t('vehicle.fuelType')}
-              rules={[{ required: true }]}
-              style={{ flex: 1 }}
-            >
-              <Select
-                popupMatchSelectWidth={false}
-                onChange={(v: FuelType) => {
-                  setFuelType(v);
-                  // 切换为电动时，自动将容量单位改为 kWh
-                  if (isElectricVehicle(v)) {
-                    form.setFieldValue('tank_capacity_unit', 'kWh');
-                  } else if (form.getFieldValue('tank_capacity_unit') === 'kWh') {
-                    form.setFieldValue('tank_capacity_unit', defaultCapacityUnit);
-                  }
-                }}
-                options={FUEL_TYPES.map((item) => ({
-                  value: item.value,
-                  label: t(item.label),
-                }))}
-              />
-            </Form.Item>
-          </Space>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="year"
+                label={t('vehicle.year')}
+                rules={[{ required: true, message: t('common.required') }]}
+              >
+                <InputNumber
+                  min={1900}
+                  max={new Date().getFullYear() + 1}
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                name="fuel_type"
+                label={t('vehicle.fuelType')}
+                rules={[{ required: true }]}
+              >
+                <Select
+                  popupMatchSelectWidth={false}
+                  onChange={(v: FuelType) => {
+                    setFuelType(v);
+                    // 切换为电动时，自动将容量单位改为 kWh
+                    if (isElectricVehicle(v)) {
+                      form.setFieldValue('tank_capacity_unit', 'kWh');
+                    } else if (form.getFieldValue('tank_capacity_unit') === 'kWh') {
+                      form.setFieldValue('tank_capacity_unit', defaultCapacityUnit);
+                    }
+                  }}
+                  options={FUEL_TYPES.map((item) => ({
+                    value: item.value,
+                    label: t(item.label),
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
           {/* 燃油标号（仅燃油车/柴油车/混动车显示） */}
           {!isElectricVehicle(fuelType) && (() => {
@@ -220,29 +224,30 @@ export default function VehicleFormPage() {
             );
           })()}
 
-          <Space style={{ width: '100%' }} size="middle">
-            <Form.Item
-              name="tank_capacity"
-              label={isElectricVehicle(fuelType) ? t('vehicle.batteryCapacity') : t('vehicle.tankCapacity')}
-              rules={[{ required: true, message: t('common.required') }]}
-              style={{ flex: 1 }}
-            >
-              <InputNumber min={1} max={isElectricVehicle(fuelType) ? 200 : 500} style={{ width: '100%' }} />
-            </Form.Item>
-
-            <Form.Item
-              name="tank_capacity_unit"
-              label={isElectricVehicle(fuelType) ? t('fuelRecord.energyUnit') : t('fuelRecord.fuelUnit')}
-              style={{ width: 140 }}
-            >
-              <Select
-                options={(isElectricVehicle(fuelType) ? ENERGY_UNITS : FUEL_UNITS).map((u) => ({
-                  value: u.value,
-                  label: t(u.label),
-                }))}
-              />
-            </Form.Item>
-          </Space>
+          <Row gutter={16}>
+            <Col xs={24} sm={14}>
+              <Form.Item
+                name="tank_capacity"
+                label={isElectricVehicle(fuelType) ? t('vehicle.batteryCapacity') : t('vehicle.tankCapacity')}
+                rules={[{ required: true, message: t('common.required') }]}
+              >
+                <InputNumber min={1} max={isElectricVehicle(fuelType) ? 200 : 500} style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={10}>
+              <Form.Item
+                name="tank_capacity_unit"
+                label={isElectricVehicle(fuelType) ? t('fuelRecord.energyUnit') : t('fuelRecord.fuelUnit')}
+              >
+                <Select
+                  options={(isElectricVehicle(fuelType) ? ENERGY_UNITS : FUEL_UNITS).map((u) => ({
+                    value: u.value,
+                    label: t(u.label),
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
           {hasEngineCC(fuelType) && (
             <Form.Item

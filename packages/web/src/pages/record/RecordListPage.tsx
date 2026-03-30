@@ -10,6 +10,7 @@ import {
   Tag,
   Typography,
   Tooltip,
+  Pagination,
 } from 'antd';
 import {
   PlusOutlined,
@@ -31,12 +32,14 @@ import {
 } from '@gastrack/shared';
 import type { FuelRecord, Vehicle } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function RecordListPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { vehicleId } = useParams<{ vehicleId: string }>();
   const user = useAuthStore((s) => s.user);
+  const isMobile = useIsMobile();
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [records, setRecords] = useState<FuelRecord[]>([]);
@@ -73,7 +76,6 @@ export default function RecordListPage() {
         page: p,
         page_size: 20,
       });
-      // 后端分页格式: { code, message, data: FuelRecord[], meta: { page, page_size, total, total_pages } }
       setRecords(resp.data);
       setTotal(resp.meta.total);
       setPage(p);
@@ -232,6 +234,98 @@ export default function RecordListPage() {
     },
   ];
 
+  /** 移动端卡片列表 */
+  const renderMobileCards = () => (
+    <div className="mobile-card-list">
+      {records.map((record) => (
+        <Card
+          key={record.id}
+          size="small"
+          className="mobile-record-card"
+          onClick={() => navigate(`/vehicles/${vehicleId}/records/${record.id}`)}
+        >
+          <div className="card-header">
+            <span className="date">
+              {formatDateTime(record.refuel_date, userTimezone, 'YYYY-MM-DD')}
+            </span>
+            <span className="cost">
+              {formatCurrency(record.total_cost, currency)}
+            </span>
+          </div>
+
+          {record.station_name && (
+            <div className="card-row">
+              <span className="label">{t('fuelRecord.station')}</span>
+              <span className="value">{record.station_name}</span>
+            </div>
+          )}
+
+          <div className="card-row">
+            <span className="label">{t('fuelRecord.fuelAmount')}</span>
+            <span className="value">{formatNumber(record.fuel_amount)} {fuelUnit}</span>
+          </div>
+
+          <div className="card-row">
+            <span className="label">{t('fuelRecord.odometer')}</span>
+            <span className="value">{formatNumber(record.odometer, 0)} {distanceUnit}</span>
+          </div>
+
+          {record.fuel_efficiency != null && record.fuel_efficiency > 0 && (
+            <div className="card-row">
+              <span className="label">{t('fuelRecord.consumption')}</span>
+              <span className="value">
+                <Tag color="blue" style={{ margin: 0 }}>
+                  {formatNumber(record.fuel_efficiency)} {efficiencyUnit}
+                </Tag>
+              </span>
+            </div>
+          )}
+
+          <div className="card-row">
+            <span className="label">{t('fuelRecord.isFullTank')}</span>
+            <span className="value">
+              {record.is_full_tank ? <Tag color="green" style={{ margin: 0 }}>✓</Tag> : <Tag style={{ margin: 0 }}>✗</Tag>}
+            </span>
+          </div>
+
+          <div className="card-actions" onClick={(e) => e.stopPropagation()}>
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => navigate(`/vehicles/${vehicleId}/records/${record.id}`)}
+            />
+            <Button
+              type="text"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={() => navigate(`/vehicles/${vehicleId}/records/${record.id}/edit`)}
+            />
+            <Popconfirm
+              title={t('fuelRecord.deleteConfirm')}
+              onConfirm={() => handleDelete(record.id)}
+            >
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          </div>
+        </Card>
+      ))}
+
+      {total > 20 && (
+        <div style={{ textAlign: 'center', padding: '12px 0' }}>
+          <Pagination
+            current={page}
+            total={total}
+            pageSize={20}
+            onChange={loadRecords}
+            size="small"
+            simple
+          />
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="page-container">
       <div className="page-header">
@@ -242,7 +336,9 @@ export default function RecordListPage() {
           />
           <h2>
             {vehicle
-              ? `${vehicle.name} - ${t('fuelRecord.title')}`
+              ? isMobile
+                ? t('fuelRecord.title')
+                : `${vehicle.name} - ${t('fuelRecord.title')}`
               : t('fuelRecord.title')}
           </h2>
         </Space>
@@ -251,13 +347,13 @@ export default function RecordListPage() {
           icon={<PlusOutlined />}
           onClick={() => navigate(`/vehicles/${vehicleId}/records/new`)}
         >
-          {t('fuelRecord.addRecord')}
+          {isMobile ? '' : t('fuelRecord.addRecord')}
         </Button>
       </div>
 
       {vehicle && (
         <Card size="small" style={{ marginBottom: 16 }}>
-          <Space split={<Typography.Text type="secondary">|</Typography.Text>}>
+          <Space wrap split={<Typography.Text type="secondary">|</Typography.Text>}>
             <span>
               {vehicle.brand} {vehicle.model}
             </span>
@@ -269,26 +365,30 @@ export default function RecordListPage() {
         </Card>
       )}
 
-      <Card>
-        <Table
-          columns={columns}
-          dataSource={records}
-          rowKey="id"
-          loading={loading}
-          pagination={{
-            current: page,
-            total,
-            pageSize: 20,
-            onChange: loadRecords,
-            showTotal: (total) => t('common.totalItems', { total }),
-          }}
-          scroll={{ x: 1050 }}
-          size="middle"
-          onRow={(record) => ({
-            onClick: () => navigate(`/vehicles/${vehicleId}/records/${record.id}`),
-            style: { cursor: 'pointer' },
-          })}
-        />
+      <Card loading={loading}>
+        {isMobile ? (
+          renderMobileCards()
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={records}
+            rowKey="id"
+            loading={loading}
+            pagination={{
+              current: page,
+              total,
+              pageSize: 20,
+              onChange: loadRecords,
+              showTotal: (total) => t('common.totalItems', { total }),
+            }}
+            scroll={{ x: 1050 }}
+            size="middle"
+            onRow={(record) => ({
+              onClick: () => navigate(`/vehicles/${vehicleId}/records/${record.id}`),
+              style: { cursor: 'pointer' },
+            })}
+          />
+        )}
       </Card>
     </div>
   );

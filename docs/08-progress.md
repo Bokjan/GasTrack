@@ -22,6 +22,7 @@
 | 多币种/单位 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
 | 前后端 API 对齐 | - | ✅ 完成 | ✅ 完成 |
 | 深色模式 | - | ✅ 完成 | ✅ 完成 |
+| 移动端适配 | - | ✅ 完成 | ✅ 完成 |
 
 **图例**: ✅ 完成 | 🔨 进行中 | 🔲 待实现 | ❌ 已放弃
 
@@ -158,13 +159,14 @@
 | 邀请码管理 | `/invites` | ✅ | 邀请码列表（状态/用量/过期时间）、创建弹窗、一键复制、启用/停用切换、删除 |
 | 个人设置 | `/settings` | 🔨 | 基础框架 + 时区选择器（90 个 IANA 时区，可搜索），待完善 |
 
-### 3.4 通用组件
+### 3.4 通用组件 & Hooks
 
-| 组件 | 状态 | 说明 |
-|------|------|------|
-| MainLayout | ✅ | 侧边栏导航 + 用户信息 |
+| 组件/Hook | 状态 | 说明 |
+|-----------|------|------|
+| MainLayout | ✅ | 侧边栏导航（桌面 Sider / 移动端 Drawer）+ 用户信息 |
 | ProtectedRoute | ✅ | 登录态路由守卫 |
 | ECharts 图表 | ✅ | 油耗趋势折线图 + 距离折线图 |
+| useIsMobile | ✅ | 响应式断点 Hook，`matchMedia` 监听 `(max-width: 767px)` |
 
 ### 3.5 前后端 API 对齐审查 ✅
 
@@ -191,7 +193,7 @@
 
 | # | 功能 | 前端 | 后端 | 优先级 | 说明 |
 |---|------|------|------|--------|------|
-| 1 | **响应式适配（移动端）** | 🔲 | - | ⭐⭐⭐ 高 | 添加 `@media` 断点，Sider → Drawer，表格 → 卡片，表单适配小屏 |
+| 1 | ~~**响应式适配（移动端）**~~ | ✅ 完成 | - | ~~⭐⭐⭐ 高~~ | ~~添加 `@media` 断点，Sider → Drawer，表格 → 卡片，表单适配小屏~~ |
 | 2 | **前端单位换算展示** | 🔲 | ✅ 换算引擎已有 | ⭐⭐⭐ 高 | shared 新增 `utils/convert.ts`，记录列表/统计页根据用户偏好自动换算 |
 | 3 | **后端 i18n 错误消息** | - | 🔲 | ⭐⭐ 中 | 引入 go-i18n，zh-CN/en-US/ja-JP TOML 翻译，API 错误返回翻译 message |
 | 4 | **忘记密码流程** | 🔲 | 🔲 DTO 已定义 | ⭐⭐ 中 | 后端邮件发送 + Token 验证，前端登录页入口 + 重置页面 |
@@ -257,6 +259,56 @@
 ---
 
 ## 6. 变更日志
+
+### 2026-03-30 — 移动端响应式适配（Mobile Responsive）
+
+- ✅ **新增功能**：全站移动端响应式适配，覆盖所有页面
+  - **背景**：此前所有页面仅针对桌面端设计，移动端存在侧边栏无法收起、表格横向溢出、表单宽度溢出、统计卡片留白过大等问题
+  - **新增 Hook**：`useIsMobile()`（`hooks/useIsMobile.ts`）
+    - 基于 `window.matchMedia('(max-width: 767px)')` 判断移动端
+    - 使用 `change` 事件监听器实时响应窗口尺寸变化
+    - 全项目统一调用
+  - **MainLayout 移动端适配**：
+    - Sider 在移动端替换为 Drawer 抽屉导航（`placement="left"`），点击菜单项后自动关闭
+    - Header 新增 hamburger 菜单按钮（`MenuOutlined`）触发 Drawer
+    - 桌面端保持原有 Sider 侧边栏不变
+  - **RecordListPage 移动端适配**：
+    - 移动端用卡片列表（`mobile-card-list`）替代 Table 组件，每条记录一张卡片
+    - 卡片展示：日期、总费用、加油量、油耗、加油站、是否加满
+    - 卡片操作区：查看/编辑/删除按钮，带二次确认
+    - 分页组件简化：`simple` 模式，不显示页码跳转
+  - **RecordDetailPage 移动端适配**：
+    - Descriptions label 宽度从 140px 缩小到 90px，尺寸从 `middle` 改为 `small`
+    - 油耗 Tag 改为 `flex-wrap` 布局，移动端自动换行
+    - 智能分析卡片：对比文字中 `·` 分隔符替换为 `<br/>` 换行，字号缩小到 12px
+    - 所有文本块添加 `wordBreak: 'break-word'` 防溢出
+  - **StatsPage 移动端适配**：
+    - 移动端将筛选条件（车辆选择、按月/按年、年份选择器）从标题行拆出独立一行
+    - 车辆选择器宽度改为 `flex: 1` 自适应
+    - Row gutter 从 `[16, 16]` 缩小为 `[8, 8]`
+  - **DashboardPage 移动端适配**：
+    - Row gutter 移动端缩小为 `[8, 8]`
+  - **InviteManagePage 移动端适配**：
+    - 移动端用卡片列表替代 Table 组件
+  - **VehicleFormPage 移动端适配**：
+    - 表单最大宽度移动端取消限制（`maxWidth: '100%'`）
+  - **global.css 移动端全局样式**（新增约 30 行规则）：
+    - `.ant-card-body` padding 缩小至 12px
+    - `.ant-statistic` 标题 12px、数值 18px、图标 16px，`margin-bottom: 0`
+    - `.ant-descriptions-item-content` 添加 `word-break` 防溢出
+    - `.ant-descriptions-item-container` 允许 flex-wrap
+    - 新增 `.mobile-card-list` / `.mobile-record-card` 卡片列表样式
+  - **涉及文件（10 个）**：
+    - `hooks/useIsMobile.ts`（新增）
+    - `layouts/MainLayout.tsx`
+    - `pages/record/RecordListPage.tsx`
+    - `pages/record/RecordDetailPage.tsx`
+    - `pages/stats/StatsPage.tsx`
+    - `pages/dashboard/DashboardPage.tsx`
+    - `pages/invite/InviteManagePage.tsx`
+    - `pages/vehicle/VehicleFormPage.tsx`
+    - `styles/global.css`
+    - `docs/08-progress.md`
 
 ### 2026-03-30 — 邀请码管理页面（Invite Code Management）
 

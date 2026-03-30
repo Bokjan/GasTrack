@@ -28,6 +28,7 @@ import { inviteApi } from '@gastrack/shared/src/api';
 import type { InviteCode, CreateInviteRequest } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const { Text, Paragraph } = Typography;
 
@@ -38,6 +39,7 @@ export default function InviteManagePage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [form] = Form.useForm();
+  const isMobile = useIsMobile();
 
   const fetchInvites = useCallback(async () => {
     setLoading(true);
@@ -210,6 +212,83 @@ export default function InviteManagePage() {
     },
   ];
 
+  /** 移动端卡片列表 */
+  const renderMobileCards = () => {
+    if (invites.length === 0) {
+      return (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={t('invite.noInvites')}
+        />
+      );
+    }
+
+    return (
+      <div className="mobile-card-list">
+        {invites.map((record) => (
+          <Card key={record.id} size="small" className="mobile-record-card" style={{ cursor: 'default' }}>
+            <div className="card-header">
+              <Space>
+                <Text code style={{ fontSize: 14, fontWeight: 600 }}>{record.code}</Text>
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<CopyOutlined />}
+                  onClick={() => handleCopy(record.code)}
+                />
+              </Space>
+              {renderStatus(record)}
+            </div>
+
+            <div className="card-row">
+              <span className="label">{t('invite.usage')}</span>
+              <span className="value">
+                {record.use_count} / {record.max_uses > 0 ? record.max_uses : t('invite.unlimited')}
+              </span>
+            </div>
+
+            {record.expires_at && (
+              <div className="card-row">
+                <span className="label">{t('invite.expiresAt')}</span>
+                <span className="value">{dayjs(record.expires_at).format('YYYY-MM-DD HH:mm')}</span>
+              </div>
+            )}
+
+            {record.note && (
+              <div className="card-row">
+                <span className="label">{t('invite.note')}</span>
+                <span className="value" style={{ maxWidth: '60%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {record.note}
+                </span>
+              </div>
+            )}
+
+            <div className="card-row">
+              <span className="label">{t('invite.createdAt')}</span>
+              <span className="value">{dayjs(record.created_at).format('YYYY-MM-DD')}</span>
+            </div>
+
+            <div className="card-actions">
+              <Switch
+                size="small"
+                checked={record.is_active}
+                onChange={() => handleToggleActive(record)}
+              />
+              <Popconfirm
+                title={t('invite.deleteConfirm')}
+                onConfirm={() => handleDelete(record.id)}
+                okText={t('common.confirm')}
+                cancelText={t('common.cancel')}
+              >
+                <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+              </Popconfirm>
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="page-container">
       <div className="page-header">
@@ -223,28 +302,32 @@ export default function InviteManagePage() {
         </Button>
       </div>
 
-      <Card>
+      <Card loading={loading}>
         <Paragraph type="secondary" style={{ marginBottom: 16 }}>
           <GiftOutlined style={{ marginRight: 6 }} />
           {t('invite.generateForFriend')}
         </Paragraph>
 
-        <Table
-          rowKey="id"
-          columns={columns}
-          dataSource={invites}
-          loading={loading}
-          pagination={false}
-          scroll={{ x: 900 }}
-          locale={{
-            emptyText: (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description={t('invite.noInvites')}
-              />
-            ),
-          }}
-        />
+        {isMobile ? (
+          renderMobileCards()
+        ) : (
+          <Table
+            rowKey="id"
+            columns={columns}
+            dataSource={invites}
+            loading={loading}
+            pagination={false}
+            scroll={{ x: 900 }}
+            locale={{
+              emptyText: (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description={t('invite.noInvites')}
+                />
+              ),
+            }}
+          />
+        )}
       </Card>
 
       {/* 创建邀请码弹窗 */}

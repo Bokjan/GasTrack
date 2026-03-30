@@ -19,6 +19,7 @@ import {
   useThemeStore,
 } from '@gastrack/shared';
 import type { VehicleStats, PeriodStatsItem, PeriodStatsResponse } from '@gastrack/shared';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function StatsPage() {
   const { t } = useTranslation();
@@ -26,6 +27,7 @@ export default function StatsPage() {
   const user = useAuthStore((s) => s.user);
   const resolved = useThemeStore((s) => s.resolved);
   const { token } = theme.useToken();
+  const isMobile = useIsMobile();
 
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [stats, setStats] = useState<VehicleStats | null>(null);
@@ -200,7 +202,7 @@ export default function StatsPage() {
         splitLine: { lineStyle: { color: chartSplitLineColor } },
       },
       series,
-      grid: { left: 55, right: 20, top: hasPrevData && period === 'month' ? 40 : 30, bottom: 30 },
+      grid: { left: isMobile ? 45 : 55, right: 12, top: hasPrevData && period === 'month' ? 40 : 30, bottom: 30 },
     };
   };
 
@@ -229,13 +231,66 @@ export default function StatsPage() {
 
   return (
     <div className="page-container">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+      <div className="page-header">
         <h2 style={{ margin: 0 }}>{t('stats.title')}</h2>
-        <Space wrap>
+        {!isMobile && (
+          <Space wrap>
+            <Select
+              value={selectedVehicleId}
+              onChange={setSelectedVehicleId}
+              style={{ width: 160 }}
+              options={vehicles.map((v) => ({
+                value: v.id,
+                label: v.name,
+              }))}
+            />
+            <Segmented
+              value={period}
+              onChange={(val) => setPeriod(val as 'month' | 'year')}
+              options={[
+                { label: t('stats.byMonth'), value: 'month' },
+                { label: t('stats.byYear'), value: 'year' },
+              ]}
+            />
+            {period === 'month' && (
+              <Space size={4}>
+                <LeftOutlined
+                  style={{ cursor: 'pointer', fontSize: 14, color: token.colorTextSecondary }}
+                  onClick={() => setSelectedYear((y) => y - 1)}
+                />
+                <Select
+                  value={selectedYear}
+                  onChange={setSelectedYear}
+                  style={{ width: 90 }}
+                  options={yearOptions}
+                />
+                <RightOutlined
+                  style={{
+                    cursor: selectedYear >= new Date().getFullYear() ? 'not-allowed' : 'pointer',
+                    fontSize: 14,
+                    color: selectedYear >= new Date().getFullYear()
+                      ? token.colorTextDisabled
+                      : token.colorTextSecondary,
+                  }}
+                  onClick={() => {
+                    if (selectedYear < new Date().getFullYear()) {
+                      setSelectedYear((y) => y + 1);
+                    }
+                  }}
+                />
+              </Space>
+            )}
+          </Space>
+        )}
+      </div>
+
+      {/* 移动端：筛选条件独立一行 */}
+      {isMobile && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 16 }}>
           <Select
             value={selectedVehicleId}
             onChange={setSelectedVehicleId}
-            style={{ width: 160 }}
+            style={{ minWidth: 120, flex: 1 }}
             options={vehicles.map((v) => ({
               value: v.id,
               label: v.name,
@@ -277,12 +332,12 @@ export default function StatsPage() {
               />
             </Space>
           )}
-        </Space>
-      </div>
+        </div>
+      )}
 
       <Spin spinning={loading}>
         {/* 总览统计卡片 */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Row gutter={isMobile ? [8, 8] : [16, 16]} style={{ marginBottom: 24 }}>
           <Col xs={12} sm={6}>
             <Card>
               <Statistic
@@ -339,7 +394,7 @@ export default function StatsPage() {
                     'bar',
                     '#1677ff',
                   )}
-                  style={{ height: 300 }}
+                  style={{ height: isMobile ? 240 : 300 }}
                   theme={isDark ? 'dark' : undefined}
                 />
               </Card>
@@ -353,7 +408,7 @@ export default function StatsPage() {
                     'line',
                     '#faad14',
                   )}
-                  style={{ height: 300 }}
+                  style={{ height: isMobile ? 240 : 300 }}
                   theme={isDark ? 'dark' : undefined}
                 />
               </Card>
@@ -367,7 +422,7 @@ export default function StatsPage() {
                     'bar',
                     '#52c41a',
                   )}
-                  style={{ height: 300 }}
+                  style={{ height: isMobile ? 240 : 300 }}
                   theme={isDark ? 'dark' : undefined}
                 />
               </Card>
@@ -381,7 +436,7 @@ export default function StatsPage() {
                     'bar',
                     '#722ed1',
                   )}
-                  style={{ height: 300 }}
+                  style={{ height: isMobile ? 240 : 300 }}
                   theme={isDark ? 'dark' : undefined}
                 />
               </Card>

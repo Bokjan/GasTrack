@@ -43,6 +43,7 @@ import {
   useAuthStore,
 } from '@gastrack/shared';
 import type { FuelRecord, Vehicle, VehicleStats } from '@gastrack/shared';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const { Title, Text } = Typography;
 
@@ -71,6 +72,7 @@ export default function RecordDetailPage() {
     recordId: string;
   }>();
   const user = useAuthStore((s) => s.user);
+  const isMobile = useIsMobile();
 
   const [record, setRecord] = useState<FuelRecord | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -214,21 +216,21 @@ export default function RecordDetailPage() {
             icon={<ArrowLeftOutlined />}
             onClick={() => navigate(`/vehicles/${vehicleId}/records`)}
           />
-          <h2>{isEv ? t('fuelRecord.titleEv') : t('fuelRecord.title')} — {t('recordDetail.title')}</h2>
+          <h2>{isMobile ? t('recordDetail.title') : `${isEv ? t('fuelRecord.titleEv') : t('fuelRecord.title')} — ${t('recordDetail.title')}`}</h2>
         </Space>
         <Space>
           <Button
             icon={<EditOutlined />}
             onClick={() => navigate(`/vehicles/${vehicleId}/records/${recordId}/edit`)}
           >
-            {t('common.edit')}
+            {isMobile ? '' : t('common.edit')}
           </Button>
           <Popconfirm
             title={t('fuelRecord.deleteConfirm')}
             onConfirm={handleDelete}
           >
             <Button danger icon={<DeleteOutlined />}>
-              {t('common.delete')}
+              {isMobile ? '' : t('common.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -245,7 +247,7 @@ export default function RecordDetailPage() {
               </Space>
             }
           >
-            <Descriptions column={1} labelStyle={{ fontWeight: 500, width: 140 }} colon={false} size="middle">
+            <Descriptions column={1} labelStyle={{ fontWeight: 500, width: isMobile ? 90 : 140 }} colon={false} size={isMobile ? 'small' : 'middle'}>
               <Descriptions.Item label={isEv ? t('fuelRecord.chargingDate') : t('fuelRecord.fuelDate')}>
                 {formatDateTime(record.refuel_date, userTimezone, 'YYYY-MM-DD HH:mm')}
               </Descriptions.Item>
@@ -284,17 +286,19 @@ export default function RecordDetailPage() {
 
               {record.fuel_efficiency != null && record.fuel_efficiency > 0 && (
                 <Descriptions.Item label={isEv ? t('fuelRecord.energyConsumption') : t('fuelRecord.consumption')}>
-                  <Tag color="blue">
-                    {formatNumber(record.fuel_efficiency)} {efficiencyUnit}
-                  </Tag>
-                  {/* 其他单位换算 */}
-                  {!isEv && FUEL_EFFICIENCY_UNITS
-                    .filter((u) => u !== efficiencyUnit)
-                    .map((u) => (
-                      <Tag key={u} style={{ marginLeft: 4 }}>
-                        {formatNumber(convertFuelEfficiency(record.fuel_efficiency!, efficiencyUnit, u))} {u}
-                      </Tag>
-                    ))}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    <Tag color="blue" style={{ margin: 0 }}>
+                      {formatNumber(record.fuel_efficiency)} {efficiencyUnit}
+                    </Tag>
+                    {/* 其他单位换算 */}
+                    {!isEv && FUEL_EFFICIENCY_UNITS
+                      .filter((u) => u !== efficiencyUnit)
+                      .map((u) => (
+                        <Tag key={u} style={{ margin: 0 }}>
+                          {formatNumber(convertFuelEfficiency(record.fuel_efficiency!, efficiencyUnit, u))} {u}
+                        </Tag>
+                      ))}
+                  </div>
                 </Descriptions.Item>
               )}
 
@@ -337,16 +341,16 @@ export default function RecordDetailPage() {
                     <Title level={5} style={{ marginBottom: 4 }}>
                       {isEv ? t('recordDetail.energyRating') : t('recordDetail.efficiencyRating')}
                     </Title>
-                    <Space align="center">
+                    <Space align="center" wrap>
                       <Rate disabled value={insights.rating.stars} />
                       <Tag color={insights.rating.stars >= 4 ? 'green' : insights.rating.stars >= 3 ? 'blue' : 'orange'}>
                         {t(`recordDetail.rating.${insights.rating.key}`)}
                       </Tag>
                     </Space>
-                    <div style={{ marginTop: 4 }}>
-                      <Text type="secondary">
+                    <div style={{ marginTop: 4, wordBreak: 'break-word' }}>
+                      <Text type="secondary" style={{ fontSize: isMobile ? 12 : 14 }}>
                         {t('recordDetail.currentValue')}: {formatNumber(insights.efficiency!)} {efficiencyUnit}
-                        {' · '}
+                        {isMobile ? <br /> : ' · '}
                         {t('recordDetail.avgValue')}: {formatNumber(insights.avgEfficiency)} {efficiencyUnit}
                         {' '}
                         <Text style={{ color: diffColor(insights.efficiency!, insights.avgEfficiency, isLowerBetter) }}>
@@ -366,10 +370,10 @@ export default function RecordDetailPage() {
                       <DollarOutlined />
                       <Text strong>{t('recordDetail.priceComparison')}</Text>
                     </Space>
-                    <div style={{ marginTop: 4 }}>
-                      <Text>
+                    <div style={{ marginTop: 4, wordBreak: 'break-word' }}>
+                      <Text style={{ fontSize: isMobile ? 12 : 14 }}>
                         {t('recordDetail.thisTime')}: {formatCurrency(insights.unitPrice, currency)}/{fuelUnit}
-                        {' · '}
+                        {isMobile ? <br /> : ' · '}
                         {t('recordDetail.historical')}: {formatCurrency(insights.avgUnitPrice, currency)}/{fuelUnit}
                         {' '}
                         <Text style={{ color: diffColor(insights.unitPrice, insights.avgUnitPrice, true) }}>
@@ -387,10 +391,10 @@ export default function RecordDetailPage() {
                       <WalletOutlined />
                       <Text strong>{t('recordDetail.costComparison')}</Text>
                     </Space>
-                    <div style={{ marginTop: 4 }}>
-                      <Text>
+                    <div style={{ marginTop: 4, wordBreak: 'break-word' }}>
+                      <Text style={{ fontSize: isMobile ? 12 : 14 }}>
                         {t('recordDetail.thisTime')}: {formatCurrency(insights.totalCost, currency)}
-                        {' · '}
+                        {isMobile ? <br /> : ' · '}
                         {t('recordDetail.avgPerFill')}: {formatCurrency(insights.avgCostPerFill, currency)}
                         {' '}
                         <Text style={{ color: diffColor(insights.totalCost, insights.avgCostPerFill, true) }}>
@@ -408,10 +412,10 @@ export default function RecordDetailPage() {
                       <DashboardOutlined />
                       <Text strong>{t('recordDetail.costPerDistance', { unit: distanceUnit })}</Text>
                     </Space>
-                    <div style={{ marginTop: 4 }}>
-                      <Text>
+                    <div style={{ marginTop: 4, wordBreak: 'break-word' }}>
+                      <Text style={{ fontSize: isMobile ? 12 : 14 }}>
                         {t('recordDetail.thisTime')}: {formatCurrency(insights.costPerKm, currency)}/{distanceUnit}
-                        {' · '}
+                        {isMobile ? <br /> : ' · '}
                         {t('recordDetail.historical')}: {formatCurrency(insights.avgCostPerKm, currency)}/{distanceUnit}
                         {' '}
                         <Text style={{ color: diffColor(insights.costPerKm, insights.avgCostPerKm, true) }}>
@@ -429,10 +433,10 @@ export default function RecordDetailPage() {
                       <CarOutlined />
                       <Text strong>{t('recordDetail.distanceComparison')}</Text>
                     </Space>
-                    <div style={{ marginTop: 4 }}>
-                      <Text>
+                    <div style={{ marginTop: 4, wordBreak: 'break-word' }}>
+                      <Text style={{ fontSize: isMobile ? 12 : 14 }}>
                         {t('recordDetail.thisTrip')}: {formatNumber(insights.tripDistance, 1)} {distanceUnit}
-                        {' · '}
+                        {isMobile ? <br /> : ' · '}
                         {t('recordDetail.avgTrip')}: {formatNumber(insights.avgDistance, 1)} {distanceUnit}
                         {' '}
                         <Text style={{ color: diffColor(insights.tripDistance, insights.avgDistance) }}>
@@ -450,12 +454,12 @@ export default function RecordDetailPage() {
                       {isEv ? <ThunderboltOutlined /> : <FireOutlined />}
                       <Text strong>{isEv ? t('recordDetail.batteryUsage') : t('recordDetail.tankUsage')}</Text>
                     </Space>
-                    <div style={{ marginTop: 4 }}>
+                    <div style={{ marginTop: 4, wordBreak: 'break-word' }}>
                       <Tooltip title={`${formatNumber(record.fuel_amount)} / ${formatNumber(insights.tankCapacity)} ${fuelUnit}`}>
-                        <Text>
+                        <Text style={{ fontSize: isMobile ? 12 : 14 }}>
                           {(insights.tankUsage * 100).toFixed(0)}%
                           {' '}
-                          <Text type="secondary">
+                          <Text type="secondary" style={{ fontSize: isMobile ? 12 : 14 }}>
                             ({formatNumber(record.fuel_amount)} / {formatNumber(insights.tankCapacity)} {record.fuel_unit || fuelUnit})
                           </Text>
                         </Text>

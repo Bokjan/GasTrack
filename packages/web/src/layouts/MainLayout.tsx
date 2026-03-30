@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { Layout, Menu, Avatar, Dropdown, Typography, theme } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Typography, theme, Drawer, Grid } from 'antd';
 import {
   DashboardOutlined,
   CarOutlined,
@@ -9,6 +9,7 @@ import {
   SettingOutlined,
   LogoutOutlined,
   UserOutlined,
+  MenuOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from '@ant-design/icons';
@@ -18,21 +19,32 @@ import type { MenuProps } from 'antd';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const { Header, Sider, Content } = Layout;
+const { useBreakpoint } = Grid;
 
 export default function MainLayout() {
   const [collapsed, setCollapsed] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation();
   const { user, logout } = useAuthStore();
   const resolved = useThemeStore((s) => s.resolved);
   const { token } = theme.useToken();
+  const screens = useBreakpoint();
+
+  // 是否为移动端（宽度 < lg = 992px）
+  const isMobile = !screens.lg;
 
   // 同步浏览器标题和 html lang 属性
   useEffect(() => {
     document.title = t('app.title');
     document.documentElement.lang = i18n.language;
   }, [i18n.language, t]);
+
+  // 路由变化时关闭 Drawer
+  useEffect(() => {
+    if (isMobile) setDrawerOpen(false);
+  }, [location.pathname, isMobile]);
 
   const menuItems: MenuProps['items'] = [
     {
@@ -62,9 +74,10 @@ export default function MainLayout() {
     },
   ];
 
-  const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
+  const handleMenuClick: MenuProps['onClick'] = useCallback(({ key }: { key: string }) => {
     navigate(key);
-  };
+    if (isMobile) setDrawerOpen(false);
+  }, [navigate, isMobile]);
 
   const handleLogout = async () => {
     await logout();
@@ -100,65 +113,92 @@ export default function MainLayout() {
   // 获取当前选中的菜单 key
   const selectedKey = '/' + (location.pathname.split('/')[1] || '');
 
-  return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        breakpoint="lg"
-        theme={resolved === 'dark' ? 'dark' : 'light'}
+  /** 侧边栏内容（桌面 Sider / 移动 Drawer 共用） */
+  const siderContent = (
+    <>
+      <div
         style={{
-          borderRight: `1px solid ${token.colorBorderSecondary}`,
-          boxShadow: 'var(--gt-shadow-sider)',
-          background: token.colorBgContainer,
+          height: 64,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderBottom: `1px solid ${token.colorBorderSecondary}`,
         }}
       >
-        <div
+        <Typography.Title
+          level={4}
+          style={{ margin: 0, color: token.colorPrimary, whiteSpace: 'nowrap' }}
+        >
+          {collapsed && !isMobile ? '⛽' : '⛽ GasTrack'}
+        </Typography.Title>
+      </div>
+      <Menu
+        mode="inline"
+        selectedKeys={[selectedKey]}
+        items={menuItems}
+        onClick={handleMenuClick}
+        style={{ borderInlineEnd: 'none', marginTop: 8 }}
+      />
+    </>
+  );
+
+  return (
+    <Layout style={{ minHeight: '100vh' }}>
+      {/* ── 桌面端: 传统 Sider ── */}
+      {!isMobile && (
+        <Sider
+          collapsible
+          collapsed={collapsed}
+          onCollapse={setCollapsed}
+          breakpoint="lg"
+          theme={resolved === 'dark' ? 'dark' : 'light'}
           style={{
-            height: 64,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            borderBottom: `1px solid ${token.colorBorderSecondary}`,
+            borderRight: `1px solid ${token.colorBorderSecondary}`,
+            boxShadow: 'var(--gt-shadow-sider)',
+            background: token.colorBgContainer,
           }}
         >
-          <Typography.Title
-            level={4}
-            style={{ margin: 0, color: token.colorPrimary, whiteSpace: 'nowrap' }}
-          >
-            {collapsed ? '⛽' : '⛽ GasTrack'}
-          </Typography.Title>
-        </div>
-        <Menu
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          items={menuItems}
-          onClick={handleMenuClick}
-          style={{ borderInlineEnd: 'none', marginTop: 8 }}
-        />
-      </Sider>
+          {siderContent}
+        </Sider>
+      )}
+
+      {/* ── 移动端: Drawer 抽屉导航 ── */}
+      {isMobile && (
+        <Drawer
+          placement="left"
+          open={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          width={256}
+          bodyStyle={{ padding: 0, background: token.colorBgContainer }}
+          headerStyle={{ display: 'none' }}
+        >
+          {siderContent}
+        </Drawer>
+      )}
 
       <Layout>
         <Header
           style={{
             background: token.colorBgContainer,
-            padding: '0 24px',
+            padding: isMobile ? '0 12px' : '0 24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             borderBottom: `1px solid ${token.colorBorderSecondary}`,
             boxShadow: 'var(--gt-shadow-header)',
+            position: isMobile ? 'sticky' : undefined,
+            top: isMobile ? 0 : undefined,
+            zIndex: isMobile ? 10 : undefined,
           }}
         >
           <div
             style={{ cursor: 'pointer', fontSize: 18 }}
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => (isMobile ? setDrawerOpen(!drawerOpen) : setCollapsed(!collapsed))}
           >
-            {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            {isMobile ? <MenuOutlined /> : (collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />)}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 16 }}>
             <LanguageSwitcher style={{ fontSize: 18 }} />
 
             <Dropdown
@@ -171,7 +211,7 @@ export default function MainLayout() {
                   icon={<UserOutlined />}
                   src={user?.avatar_url || undefined}
                 />
-                {!collapsed && (
+                {!isMobile && (
                   <span>{user?.nickname || user?.email || ''}</span>
                 )}
               </div>
@@ -179,7 +219,7 @@ export default function MainLayout() {
           </div>
         </Header>
 
-        <Content style={{ margin: 0, overflow: 'auto' }}>
+        <Content style={{ margin: 0, overflow: 'auto', paddingBottom: isMobile ? 0 : undefined }}>
           <Outlet />
         </Content>
       </Layout>

@@ -113,6 +113,8 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .page-header h2 {
@@ -165,6 +167,166 @@ body {
 .empty-state p {
   color: var(--gt-text-tertiary);
   margin-top: 12px;
+}
+
+/* ===== 移动端卡片列表（替代 Table） ===== */
+.mobile-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-record-card {
+  border-radius: 12px;
+  cursor: pointer;
+  transition: box-shadow 0.2s;
+}
+
+.mobile-record-card:active {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.mobile-record-card .card-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+}
+
+.mobile-record-card .card-row .label {
+  color: var(--gt-text-secondary);
+  font-size: 13px;
+}
+
+.mobile-record-card .card-row .value {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.mobile-record-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.mobile-record-card .card-header .date {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.mobile-record-card .card-header .cost {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--gt-color-primary);
+}
+
+.mobile-record-card .card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--gt-border-color);
+}
+
+/* ===== 响应式断点 ===== */
+
+/* 平板 (< 768px) */
+@media (max-width: 767px) {
+  .page-container {
+    padding: 16px 12px;
+  }
+
+  .page-header {
+    margin-bottom: 16px;
+  }
+
+  .page-header h2 {
+    font-size: 20px;
+  }
+
+  .auth-container {
+    padding: 16px;
+  }
+
+  .auth-card {
+    padding: 28px 20px;
+    border-radius: 12px;
+  }
+
+  .auth-card .logo h1 {
+    font-size: 24px;
+  }
+
+  .auth-card .logo {
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    padding: 12px;
+  }
+
+  .stat-card .stat-value {
+    font-size: 22px;
+  }
+
+  .empty-state {
+    padding: 40px 16px;
+  }
+
+  /* Descriptions 移动端适配 — 防溢出 */
+  .ant-descriptions-item-content {
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .ant-descriptions-item-container {
+    flex-wrap: wrap;
+  }
+
+  /* Card 内容溢出控制 + 缩小内边距 */
+  .ant-card-body {
+    overflow: hidden;
+    padding: 12px !important;
+  }
+
+  /* Statistic 在移动端缩小字号和间距 */
+  .ant-statistic .ant-statistic-content {
+    font-size: 18px;
+  }
+
+  .ant-statistic .ant-statistic-title {
+    font-size: 12px;
+    margin-bottom: 0 !important;
+  }
+
+  .ant-statistic .ant-statistic-content-prefix {
+    font-size: 16px;
+  }
+}
+
+/* 手机 (< 480px) */
+@media (max-width: 479px) {
+  .page-container {
+    padding: 12px 8px;
+  }
+
+  .page-header h2 {
+    font-size: 18px;
+  }
+
+  .auth-card {
+    padding: 24px 16px;
+  }
+
+  .stat-card .stat-value {
+    font-size: 18px;
+  }
+
+  .stat-card .stat-label {
+    font-size: 12px;
+  }
 }
 
 /* ===== 暗色模式深度微调 ===== */
@@ -270,4 +432,9 @@ body {
 [data-theme='dark'] .ant-btn-default:hover {
   border-color: #4096ff;
   color: #4096ff;
+}
+
+/* 暗色移动端卡片 */
+[data-theme='dark'] .mobile-record-card .card-actions {
+  border-top-color: rgba(255, 255, 255, 0.08);
 }

@@ -20,12 +20,14 @@ import {
   isElectricVehicle,
 } from '@gastrack/shared';
 import type { OverviewStats, VehicleStats, Vehicle } from '@gastrack/shared';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function DashboardPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { vehicles, fetchVehicles, isLoading: vehiclesLoading } = useVehicleStore();
   const user = useAuthStore((s) => s.user);
+  const isMobile = useIsMobile();
   const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
 
@@ -59,7 +61,7 @@ export default function DashboardPage() {
   const renderVehicleStats = (vs: VehicleStats, vehicle?: Vehicle) => {
     const isEv = vehicle ? isElectricVehicle(vehicle.fuel_type) : false;
     return (
-      <Row gutter={[16, 16]}>
+      <Row gutter={isMobile ? [8, 8] : [16, 16]}>
         <Col xs={12} sm={6}>
           <Card loading={statsLoading} size="small">
             <Statistic
@@ -116,7 +118,7 @@ export default function DashboardPage() {
             // 多辆车：按车辆分组展示独立统计
             <>
               {/* 全局概览：仅总车辆数 + 总费用（跨车有意义的指标） */}
-              <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+              <Row gutter={isMobile ? [8, 8] : [16, 16]} style={{ marginBottom: 16 }}>
                 <Col xs={12} sm={6}>
                   <Card loading={statsLoading}>
                     <Statistic
