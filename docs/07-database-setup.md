@@ -228,8 +228,11 @@ COMMENT ON COLUMN refresh_tokens.device_info IS '设备信息';
 
 ```
 users ──1:N──► vehicles ──1:N──► fuel_records
-  │
-  └──1:N──► refresh_tokens
+  │               │
+  │──1:N──► refresh_tokens
+  │──1:N──► invite_codes
+  │──1:N──► reminders (via vehicles)
+  └──1:N──► notifications
 ```
 
 ### 3.2 公共字段
@@ -353,7 +356,7 @@ database:
 
 ### 4.3 GORM AutoMigrate
 
-启动后端服务时，GORM 会自动执行 `AutoMigrate`，创建/更新以下 4 张表（含电动车相关字段）：
+启动后端服务时，GORM 会自动执行 `AutoMigrate`，创建/更新以下 7 张表：
 
 ```go
 db.AutoMigrate(
@@ -361,6 +364,9 @@ db.AutoMigrate(
     &model.Vehicle{},
     &model.FuelRecord{},
     &model.RefreshToken{},
+    &model.InviteCode{},
+    &model.Reminder{},
+    &model.Notification{},
 )
 ```
 

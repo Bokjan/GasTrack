@@ -13,13 +13,13 @@
 
 ```
 users ──1:N──► vehicles ──1:N──► fuel_records
-  │                                    │
-  │──1:N──► user_preferences           │
-  │                                    │
-  │──N:M──► groups (via group_members)  │
-  │                                    │
-  └────────────────────────────────────┘
-              stats (computed)
+  │               │
+  │──1:N──► refresh_tokens
+  │──1:N──► invite_codes (created_by)
+  │──1:N──► reminders (via vehicles)
+  │──1:N──► notifications
+  │
+  └──N:M──► groups (via group_members, P1 待实现)
 ```
 
 ## 3. 核心表结构
@@ -167,6 +167,49 @@ CREATE UNIQUE INDEX idx_invite_codes_code ON invite_codes(code);
 - 邀请码格式 `GT-XXXXXX`，6 位大写字母+数字（去除 I/O/0/1 避免混淆），36^6 ≈ 22 亿种组合
 - 消费时使用 `SELECT FOR UPDATE` + 事务确保并发安全
 - 支持手动禁用（`is_active=false`）和自动过期（`expires_at`）
+
+### 3.7 reminders - 保养提醒表
+```sql
+CREATE TABLE reminders (
+    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id             UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    vehicle_id          UUID NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    type                VARCHAR(30) NOT NULL DEFAULT 'maintenance',
+    category            VARCHAR(30) NOT NULL,        -- oil_change/tire_rotation/brake_pads/air_filter/transmission/coolant/spark_plugs/battery/wiper_blades/timing_belt/other
+    trigger             VARCHAR(20) NOT NULL,        -- mileage/time/both
+    mileage_interval    INT DEFAULT 0,               -- 里程间隔(km)
+    time_interval_days  INT DEFAULT 0,               -- 时间间隔(天)
+    last_mileage        DECIMAL(10,1) DEFAULT 0,     -- 上次保养里程
+    last_date           TIMESTAMPTZ,                 -- 上次保养日期
+    next_mileage        DECIMAL(10,1) DEFAULT 0,     -- 下次保养里程(计算)
+    next_date           TIMESTAMPTZ,                 -- 下次保养日期(计算)
+    is_enabled          BOOLEAN DEFAULT true NOT NULL,
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at          TIMESTAMPTZ
+);
+CREATE INDEX idx_reminders_user ON reminders(user_id);
+CREATE INDEX idx_reminders_vehicle ON reminders(vehicle_id);
+```
+
+### 3.8 notifications - 通知表
+```sql
+CREATE TABLE notifications (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    vehicle_id  UUID,                               -- 可选，邀请码通知无关联车辆
+    type        VARCHAR(30) NOT NULL,               -- anomaly_fuel/maintenance_due/invite_used
+    title       VARCHAR(200) NOT NULL,
+    message     TEXT NOT NULL,
+    reminder_id UUID,                               -- 关联的提醒(可选)
+    record_id   UUID,                               -- 关联的加油记录(可选)
+    is_read     BOOLEAN DEFAULT false NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ DEFAULT NOW(),
+    deleted_at  TIMESTAMPTZ
+);
+CREATE INDEX idx_notifications_user ON notifications(user_id);
+```
 
 ## 4. 缓存策略（无 Redis，进程内缓存）
 

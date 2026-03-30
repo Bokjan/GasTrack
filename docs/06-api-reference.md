@@ -795,7 +795,112 @@ GET /api/v1/health
 
 ---
 
-## 7. API 路由汇总表
+## 7. 保养提醒接口 (Reminder)
+
+### 7.1 获取提醒列表
+
+```
+GET /api/v1/reminders
+```
+
+**🔒 需要认证**
+
+**查询参数**
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| vehicle_id | UUID | 可选，按车辆筛选 |
+
+**成功响应** `200 OK`
+
+返回当前用户的所有保养提醒数组，每项包含 `id`、`vehicle_id`、`type`（固定 `maintenance`）、`category`（11 种保养类型）、`trigger`（`mileage`/`time`/`both`）、`mileage_interval`、`time_interval_days`、`last_mileage`、`last_date`、`next_mileage`、`next_date`、`is_enabled`、`is_overdue`（计算字段）。
+
+---
+
+### 7.2 创建提醒
+
+```
+POST /api/v1/reminders
+```
+
+**🔒 需要认证**
+
+**请求体**
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| vehicle_id | UUID | ✅ | 关联车辆 |
+| category | string | ✅ | `oil_change` / `tire_rotation` / `brake_pads` / `air_filter` / `transmission` / `coolant` / `spark_plugs` / `battery` / `wiper_blades` / `timing_belt` / `other` |
+| trigger | string | ✅ | `mileage` / `time` / `both` |
+| mileage_interval | int | 视 trigger | 里程间隔（km） |
+| time_interval_days | int | 视 trigger | 时间间隔（天） |
+| last_mileage | float | - | 上次保养里程 |
+| last_date | string | - | 上次保养日期 |
+
+**成功响应** `201 Created`
+
+---
+
+### 7.3 ~ 7.5 获取详情 / 更新 / 删除
+
+- `GET /api/v1/reminders/{id}` — 获取详情
+- `PATCH /api/v1/reminders/{id}` — 更新（字段同创建，均可选）
+- `DELETE /api/v1/reminders/{id}` — 删除
+
+---
+
+## 8. 通知接口 (Notification)
+
+### 8.1 获取通知列表
+
+```
+GET /api/v1/notifications
+```
+
+**🔒 需要认证**
+
+返回最近 50 条通知，每项包含 `id`、`vehicle_id`（可选）、`type`（`anomaly_fuel` / `maintenance_due` / `invite_used`）、`title`、`message`、`reminder_id`（可选）、`record_id`（可选）、`is_read`、`created_at`。
+
+---
+
+### 8.2 获取未读数
+
+```
+GET /api/v1/notifications/unread-count
+```
+
+**🔒 需要认证**
+
+**成功响应** `200 OK`
+```json
+{ "code": 0, "message": "success", "data": { "count": 3 } }
+```
+
+---
+
+### 8.3 ~ 8.5 标记已读 / 全部已读 / 删除
+
+- `PATCH /api/v1/notifications/{id}/read` — 标记单条已读
+- `POST /api/v1/notifications/read-all` — 全部标记已读
+- `DELETE /api/v1/notifications/{id}` — 删除通知
+
+---
+
+## 9. 数据导出接口 (Export)
+
+### 9.1 导出我的数据
+
+```
+GET /api/v1/users/me/export
+```
+
+**🔒 需要认证**
+
+导出当前用户的全部数据为 CSV 文件（UTF-8 BOM）。返回二进制流 `Content-Disposition: attachment`。
+
+CSV 三段式结构：User Profile → Vehicles → Fuel/Charging Records。
+
+---
+
+## 10. API 路由汇总表
 
 | 方法 | 路径 | 认证 | 说明 |
 |------|------|------|------|
@@ -814,18 +919,29 @@ GET /api/v1/health
 | PATCH | `/api/v1/users/me` | ✅ | 更新用户资料 |
 | PUT | `/api/v1/users/me/password` | ✅ | 修改密码 |
 | DELETE | `/api/v1/users/me` | ✅ | 注销账号 |
+| GET | `/api/v1/users/me/export` | ✅ | 数据导出 CSV |
 | GET | `/api/v1/vehicles` | ✅ | 车辆列表 |
 | POST | `/api/v1/vehicles` | ✅ | 添加车辆 |
 | GET | `/api/v1/vehicles/{id}` | ✅ | 车辆详情 |
 | PATCH | `/api/v1/vehicles/{id}` | ✅ | 编辑车辆 |
 | DELETE | `/api/v1/vehicles/{id}` | ✅ | 删除车辆 |
-| GET | `/api/v1/vehicles/{id}/records` | ✅ | 加油/充电记录列表 |
-| POST | `/api/v1/vehicles/{id}/records` | ✅ | 添加加油/充电记录 |
+| GET | `/api/v1/vehicles/{id}/records` | ✅ | 记录列表（分页） |
+| POST | `/api/v1/vehicles/{id}/records` | ✅ | 添加记录 |
 | GET | `/api/v1/vehicles/{id}/records/{rid}` | ✅ | 记录详情 |
 | PATCH | `/api/v1/vehicles/{id}/records/{rid}` | ✅ | 编辑记录 |
 | DELETE | `/api/v1/vehicles/{id}/records/{rid}` | ✅ | 删除记录 |
-| GET | `/api/v1/vehicles/{id}/stations` | ✅ | 加油站/充电站名称建议 |
+| GET | `/api/v1/vehicles/{id}/stations` | ✅ | 站名建议 |
 | GET | `/api/v1/vehicles/{id}/stats` | ✅ | 车辆统计 |
-| GET | `/api/v1/vehicles/{id}/efficiency-trend` | ✅ | 油耗/电耗趋势 |
-| GET | `/api/v1/vehicles/{id}/period-stats` | ✅ | 按时段聚合统计（月/年 + 同比） |
+| GET | `/api/v1/vehicles/{id}/efficiency-trend` | ✅ | 油耗趋势 |
+| GET | `/api/v1/vehicles/{id}/period-stats` | ✅ | 按时段聚合（月/年 + 同比） |
 | GET | `/api/v1/stats/overview` | ✅ | 全局统计总览 |
+| GET | `/api/v1/reminders` | ✅ | 提醒列表 |
+| POST | `/api/v1/reminders` | ✅ | 创建提醒 |
+| GET | `/api/v1/reminders/{id}` | ✅ | 提醒详情 |
+| PATCH | `/api/v1/reminders/{id}` | ✅ | 更新提醒 |
+| DELETE | `/api/v1/reminders/{id}` | ✅ | 删除提醒 |
+| GET | `/api/v1/notifications` | ✅ | 通知列表 |
+| GET | `/api/v1/notifications/unread-count` | ✅ | 未读数 |
+| PATCH | `/api/v1/notifications/{id}/read` | ✅ | 标记已读 |
+| POST | `/api/v1/notifications/read-all` | ✅ | 全部已读 |
+| DELETE | `/api/v1/notifications/{id}` | ✅ | 删除通知 |

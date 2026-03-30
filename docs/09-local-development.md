@@ -270,7 +270,7 @@ docker compose up -d
 
 # 方式二：只清空表数据
 docker exec -it gastrack-postgres psql -U gastrack -d gastrack -c "
-  TRUNCATE fuel_records, vehicles, refresh_tokens, users CASCADE;
+  TRUNCATE notifications, reminders, fuel_records, vehicles, invite_codes, refresh_tokens, users CASCADE;
 "
 ```
 
