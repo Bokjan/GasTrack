@@ -13,6 +13,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@gastrack/shared';
 import { authApi, inviteApi } from '@gastrack/shared/src/api';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 const { Text } = Typography;
 
@@ -93,6 +94,9 @@ export default function RegisterPage() {
   if (registrationMode === 'closed') {
     return (
       <div className="auth-container">
+        <div className="auth-lang-switcher">
+          <LanguageSwitcher style={{ fontSize: 20, color: 'rgba(255,255,255,0.85)' }} />
+        </div>
         <div className="auth-card">
           <div className="logo">
             <div style={{ fontSize: 48 }}>⛽</div>
@@ -126,6 +130,9 @@ export default function RegisterPage() {
 
   return (
     <div className="auth-container">
+      <div className="auth-lang-switcher">
+        <LanguageSwitcher style={{ fontSize: 20, color: 'rgba(255,255,255,0.85)' }} />
+      </div>
       <div className="auth-card">
         <div className="logo">
           <div style={{ fontSize: 48 }}>⛽</div>

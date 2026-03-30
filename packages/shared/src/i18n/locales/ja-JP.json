@@ -68,7 +68,18 @@
     "unlimited": "無制限",
     "expired": "期限切れ",
     "used": "使用済み",
-    "generateForFriend": "招待コードを生成して友達を招待しましょう"
+    "generateForFriend": "招待コードを生成して友達を招待しましょう",
+    "manageTitle": "招待コード管理",
+    "statusLabel": "ステータス",
+    "usage": "使用状況",
+    "createdAt": "作成日時",
+    "actions": "操作",
+    "activate": "有効にする",
+    "deactivate": "無効にする",
+    "copyToClipboard": "クリップボードにコピー",
+    "maxUsesHint": "0 にすると無制限になります",
+    "expiresHint": "空白の場合、デフォルトで 30 日後に期限切れ",
+    "expiresPlaceholder": "有効期限を選択"
   },
   "vehicle": {
     "title": "車両管理",
@@ -240,6 +251,7 @@
     "vehicles": "車両",
     "records": "記録",
     "stats": "統計",
+    "invites": "招待コード",
     "settings": "設定"
   },
   "settings": {

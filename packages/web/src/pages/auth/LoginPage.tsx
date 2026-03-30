@@ -4,6 +4,7 @@ import { Form, Input, Button, message } from 'antd';
 import { MailOutlined, LockOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@gastrack/shared';
+import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -27,6 +28,9 @@ export default function LoginPage() {
 
   return (
     <div className="auth-container">
+      <div className="auth-lang-switcher">
+        <LanguageSwitcher style={{ fontSize: 20, color: 'rgba(255,255,255,0.85)' }} />
+      </div>
       <div className="auth-card">
         <div className="logo">
           <div style={{ fontSize: 48 }}>⛽</div>

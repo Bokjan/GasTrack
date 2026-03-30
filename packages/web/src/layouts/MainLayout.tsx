@@ -5,16 +5,17 @@ import {
   DashboardOutlined,
   CarOutlined,
   BarChartOutlined,
+  GiftOutlined,
   SettingOutlined,
   LogoutOutlined,
   UserOutlined,
-  GlobalOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore, useThemeStore, SUPPORTED_LOCALES } from '@gastrack/shared';
+import { useAuthStore, useThemeStore } from '@gastrack/shared';
 import type { MenuProps } from 'antd';
+import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const { Header, Sider, Content } = Layout;
 
@@ -23,7 +24,7 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation();
-  const { user, logout, updateProfile } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const resolved = useThemeStore((s) => s.resolved);
   const { token } = theme.useToken();
 
@@ -50,6 +51,11 @@ export default function MainLayout() {
       label: t('nav.stats'),
     },
     {
+      key: '/invites',
+      icon: <GiftOutlined />,
+      label: t('nav.invites'),
+    },
+    {
       key: '/settings',
       icon: <SettingOutlined />,
       label: t('nav.settings'),
@@ -63,24 +69,6 @@ export default function MainLayout() {
   const handleLogout = async () => {
     await logout();
     navigate('/login');
-  };
-
-  const languageItems: MenuProps['items'] = SUPPORTED_LOCALES.map((l) => ({
-    key: l.value,
-    label: l.label,
-  }));
-
-  const handleLanguageChange: MenuProps['onClick'] = async ({ key }) => {
-    await i18n.changeLanguage(key);
-    localStorage.setItem('locale', key);
-    // 同步保存到用户后端设置
-    if (user) {
-      try {
-        await updateProfile({ locale: key });
-      } catch {
-        // 静默失败，前端语言已切换
-      }
-    }
   };
 
   const userMenuItems: MenuProps['items'] = [
@@ -171,12 +159,7 @@ export default function MainLayout() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <Dropdown
-              menu={{ items: languageItems, onClick: handleLanguageChange }}
-              placement="bottomRight"
-            >
-              <GlobalOutlined style={{ fontSize: 18, cursor: 'pointer', verticalAlign: 'middle' }} />
-            </Dropdown>
+            <LanguageSwitcher style={{ fontSize: 18 }} />
 
             <Dropdown
               menu={{ items: userMenuItems, onClick: handleUserMenu }}

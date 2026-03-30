@@ -47,6 +47,13 @@ GasTrack/
 │       ├── src/
 │       │   ├── components/      # 通用组件
 │       │   ├── pages/           # 页面
+│       │   │   ├── auth/        # 登录/注册
+│       │   │   ├── dashboard/   # 仪表盘
+│       │   │   ├── vehicle/     # 车辆管理
+│       │   │   ├── record/      # 加油/充电记录
+│       │   │   ├── stats/       # 统计报表
+│       │   │   ├── invite/      # 邀请码管理
+│       │   │   └── settings/    # 设置
 │       │   ├── layouts/         # 布局
 │       │   ├── hooks/           # 自定义 Hooks
 │       │   └── styles/          # 全局样式

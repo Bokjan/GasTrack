@@ -68,7 +68,18 @@
     "unlimited": "不限",
     "expired": "已过期",
     "used": "已用完",
-    "generateForFriend": "生成邀请码，邀请好友加入"
+    "generateForFriend": "生成邀请码，邀请好友加入",
+    "manageTitle": "邀请码管理",
+    "statusLabel": "状态",
+    "usage": "使用情况",
+    "createdAt": "创建时间",
+    "actions": "操作",
+    "activate": "启用",
+    "deactivate": "停用",
+    "copyToClipboard": "复制到剪贴板",
+    "maxUsesHint": "设为 0 表示不限次数",
+    "expiresHint": "留空则默认 30 天后过期",
+    "expiresPlaceholder": "选择过期时间"
   },
   "vehicle": {
     "title": "车辆管理",
@@ -240,6 +251,7 @@
     "vehicles": "车辆",
     "records": "记录",
     "stats": "统计",
+    "invites": "邀请码",
     "settings": "设置"
   },
   "settings": {

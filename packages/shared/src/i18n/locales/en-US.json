@@ -68,7 +68,18 @@
     "unlimited": "Unlimited",
     "expired": "Expired",
     "used": "Used up",
-    "generateForFriend": "Generate an invite code for your friends"
+    "generateForFriend": "Generate an invite code for your friends",
+    "manageTitle": "Invite Codes",
+    "statusLabel": "Status",
+    "usage": "Usage",
+    "createdAt": "Created",
+    "actions": "Actions",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "copyToClipboard": "Copy to clipboard",
+    "maxUsesHint": "Set to 0 for unlimited uses",
+    "expiresHint": "Leave empty for default 30-day expiry",
+    "expiresPlaceholder": "Select expiry date"
   },
   "vehicle": {
     "title": "Vehicles",
@@ -240,6 +251,7 @@
     "vehicles": "Vehicles",
     "records": "Records",
     "stats": "Statistics",
+    "invites": "Invites",
     "settings": "Settings"
   },
   "settings": {

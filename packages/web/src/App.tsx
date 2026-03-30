@@ -11,6 +11,7 @@ import RecordFormPage from './pages/record/RecordFormPage';
 import RecordDetailPage from './pages/record/RecordDetailPage';
 import StatsPage from './pages/stats/StatsPage';
 import SettingsPage from './pages/settings/SettingsPage';
+import InviteManagePage from './pages/invite/InviteManagePage';
 import { useEffect } from 'react';
 
 /** 需要认证的路由守卫 */
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="vehicles/:vehicleId/records/:recordId" element={<RecordDetailPage />} />
         <Route path="vehicles/:vehicleId/records/:recordId/edit" element={<RecordFormPage />} />
         <Route path="stats" element={<StatsPage />} />
+        <Route path="invites" element={<InviteManagePage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
 

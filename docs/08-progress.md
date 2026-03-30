@@ -13,6 +13,7 @@
 | 项目基础设施 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
 | 用户认证 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
 | 邀请注册制 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
+| 邀请码管理 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
 | 用户资料 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
 | 车辆管理 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
 | 加油记录 | ✅ 完成 | ✅ 完成 | ✅ 完成 |
@@ -154,6 +155,7 @@
 | 加油记录详情 | `/vehicles/:id/records/:rid` | ✅ | 基本信息 + 智能分析（油耗评级/对比/利用率），完整 EV 适配 |
 | 添加/编辑记录 | `/vehicles/:id/records/new`, `.../edit` | ✅ | 加油表单（站点自动补全 + 燃油标号 + 自动计算 + EV 适配） |
 | 统计页 | `/stats` | ✅ | 按月/按年维度切换 + 往年同比图表 + 统计卡片（费用/油耗/里程/加油次数） |
+| 邀请码管理 | `/invites` | ✅ | 邀请码列表（状态/用量/过期时间）、创建弹窗、一键复制、启用/停用切换、删除 |
 | 个人设置 | `/settings` | 🔨 | 基础框架 + 时区选择器（90 个 IANA 时区，可搜索），待完善 |
 
 ### 3.4 通用组件
@@ -255,6 +257,28 @@
 ---
 
 ## 6. 变更日志
+
+### 2026-03-30 — 邀请码管理页面（Invite Code Management）
+
+- ✅ **新增页面**：独立的邀请码管理页面 `/invites`
+  - **背景**：邀请注册制后端 API 已全部就绪（创建/列表/更新/删除），但前端缺少管理入口，用户无法生成和管理邀请码
+  - **页面功能**：
+    - 📋 **邀请码列表**：Table 展示所有已创建的邀请码，含状态 Tag（激活/已禁用/已过期/已用完，四种颜色区分）、使用情况（已用/最大次数）、过期时间、备注
+    - ➕ **创建邀请码**：Modal 弹窗表单，可设置最大使用次数（0=不限）、过期时间（DatePicker，留空默认 30 天）、备注
+    - 📋 **一键复制**：每行邀请码右侧复制按钮，调用 `navigator.clipboard` 复制到剪贴板
+    - 🔀 **启用/停用**：Switch 切换开关，快速切换邀请码的 `is_active` 状态
+    - 🗑️ **删除**：Popconfirm 二次确认删除
+    - 📭 **空状态**：无邀请码时显示 Empty 引导用户创建
+  - **路由注册**：`App.tsx` 新增 `/invites` 路由，指向 `InviteManagePage`
+  - **侧边栏入口**：`MainLayout.tsx` 新增 🎁 `GiftOutlined` 图标菜单项「邀请码」，位于「统计」和「设置」之间
+  - **i18n 三语翻译新增**（12 个 key + 1 个导航 key）：
+    - `invite.manageTitle` / `invite.statusLabel` / `invite.usage` / `invite.createdAt` / `invite.actions` / `invite.activate` / `invite.deactivate` / `invite.copyToClipboard` / `invite.maxUsesHint` / `invite.expiresHint` / `invite.expiresPlaceholder`
+    - `nav.invites`（邀请码 / Invites / 招待コード）
+  - **涉及文件**：
+    - `pages/invite/InviteManagePage.tsx`（新增）
+    - `App.tsx`（路由注册）
+    - `layouts/MainLayout.tsx`（侧边栏菜单 + GiftOutlined 图标导入）
+    - `zh-CN.json`、`en-US.json`、`ja-JP.json`（i18n 新增键）
 
 ### 2026-03-30 — 邀请注册制（Invite-Only Registration）
 

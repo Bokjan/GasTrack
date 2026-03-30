@@ -64,6 +64,15 @@ body {
   justify-content: center;
   background: var(--gt-auth-gradient);
   padding: 24px;
+  position: relative;
+}
+
+/* 登录/注册页右上角语言切换 */
+.auth-lang-switcher {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  z-index: 10;
 }
 
 .auth-card {
