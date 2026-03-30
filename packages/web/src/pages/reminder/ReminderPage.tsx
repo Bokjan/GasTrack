@@ -5,7 +5,7 @@ import {
   Row, Col, Grid, Tooltip, Divider,
 } from 'antd';
 import {
-  PlusOutlined, DeleteOutlined, EditOutlined, BellOutlined,
+  PlusOutlined, DeleteOutlined, EditOutlined,
   CarOutlined, DashboardOutlined, CalendarOutlined, ToolOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +15,7 @@ import {
   vehicleApi,
   useAuthStore,
 } from '@gastrack/shared';
-import type { Reminder, Vehicle, CreateReminderRequest, MaintenanceCategory, ReminderTrigger } from '@gastrack/shared';
+import type { Reminder, Vehicle, CreateReminderRequest } from '@gastrack/shared';
 
 const { Title, Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -235,13 +235,13 @@ export default function ReminderPage() {
                   <Divider style={{ margin: '8px 0' }} />
 
                   <Space direction="vertical" size={2} style={{ width: '100%' }}>
-                    {(reminder.trigger === 'mileage' || reminder.trigger === 'both') && reminder.next_mileage > 0 && (
+                    {(reminder.trigger === 'mileage' || reminder.trigger === 'both') && (reminder.next_mileage ?? 0) > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Text type="secondary">
                           <DashboardOutlined style={{ marginRight: 4 }} />
                           {t('reminder.nextMileage')}
                         </Text>
-                        <Text>{reminder.next_mileage.toLocaleString()} {distUnit}</Text>
+                        <Text>{(reminder.next_mileage ?? 0).toLocaleString()} {distUnit}</Text>
                       </div>
                     )}
                     {(reminder.trigger === 'time' || reminder.trigger === 'both') && reminder.next_date && (
@@ -253,16 +253,16 @@ export default function ReminderPage() {
                         <Text>{dayjs(reminder.next_date).format('YYYY-MM-DD')}</Text>
                       </div>
                     )}
-                    {reminder.mileage_interval > 0 && (
+                    {(reminder.mileage_interval ?? 0) > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Text type="secondary">{t('reminder.interval')}</Text>
-                        <Text>{t('reminder.everyMileage', { value: reminder.mileage_interval.toLocaleString(), unit: distUnit })}</Text>
+                        <Text>{t('reminder.everyMileage', { value: (reminder.mileage_interval ?? 0).toLocaleString(), unit: distUnit })}</Text>
                       </div>
                     )}
-                    {reminder.time_interval_days > 0 && (
+                    {(reminder.time_interval_days ?? 0) > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Text type="secondary">{t('reminder.interval')}</Text>
-                        <Text>{t('reminder.everyDays', { count: reminder.time_interval_days })}</Text>
+                        <Text>{t('reminder.everyDays', { count: reminder.time_interval_days ?? 0 })}</Text>
                       </div>
                     )}
                   </Space>
