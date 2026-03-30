@@ -12,6 +12,8 @@ import RecordDetailPage from './pages/record/RecordDetailPage';
 import StatsPage from './pages/stats/StatsPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import InviteManagePage from './pages/invite/InviteManagePage';
+import PrivacyPolicyPage from './pages/legal/PrivacyPolicyPage';
+import TermsOfServicePage from './pages/legal/TermsOfServicePage';
 import { useEffect } from 'react';
 
 /** 需要认证的路由守卫 */
@@ -42,6 +44,8 @@ export default function App() {
       {/* 公开路由 */}
       <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
       <Route path="/register" element={<GuestOnly><RegisterPage /></GuestOnly>} />
+      <Route path="/privacy" element={<PrivacyPolicyPage />} />
+      <Route path="/terms" element={<TermsOfServicePage />} />
 
       {/* 需要认证的路由 */}
       <Route

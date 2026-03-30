@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Card, Form, Input, Select, Button, Space, message, Divider, Popconfirm, Typography, Segmented } from 'antd';
-import { BulbOutlined } from '@ant-design/icons';
+import { BulbOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -27,6 +27,7 @@ export default function SettingsPage() {
   const [passwordForm] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [changingPwd, setChangingPwd] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   if (!user) return null;
 
@@ -91,6 +92,31 @@ export default function SettingsPage() {
       navigate('/login');
     } catch {
       message.error(t('common.error'));
+    }
+  };
+
+  const handleExportData = async () => {
+    setExporting(true);
+    try {
+      const response = await userApi.exportData();
+      // 创建 Blob 下载链接
+      const blob = new Blob([response.data], { type: 'text/csv; charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      // 从响应头提取文件名，或使用默认名
+      const contentDisposition = response.headers['content-disposition'];
+      const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/);
+      link.download = filenameMatch ? filenameMatch[1] : 'gastrack-export.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      message.success(t('settings.exportSuccess'));
+    } catch {
+      message.error(t('common.error'));
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -240,6 +266,32 @@ export default function SettingsPage() {
               </Button>
             </Form.Item>
           </Form>
+        </Card>
+
+        {/* 数据与隐私 */}
+        <Card title={t('settings.dataPrivacy')}>
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <div>
+              <Text>{t('settings.exportDescription')}</Text>
+            </div>
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              loading={exporting}
+              onClick={handleExportData}
+            >
+              {t('settings.exportData')}
+            </Button>
+            <Divider style={{ margin: '8px 0' }} />
+            <Space split={<Divider type="vertical" />}>
+              <a onClick={() => navigate('/privacy')} style={{ cursor: 'pointer' }}>
+                {t('legal.privacyPolicy')}
+              </a>
+              <a onClick={() => navigate('/terms')} style={{ cursor: 'pointer' }}>
+                {t('legal.termsOfService')}
+              </a>
+            </Space>
+          </Space>
         </Card>
 
         {/* 注销账号 */}

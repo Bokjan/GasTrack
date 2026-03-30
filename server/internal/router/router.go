@@ -23,6 +23,7 @@ func New(
 	fuelRecordHandler *handler.FuelRecordHandler,
 	statsHandler *handler.StatsHandler,
 	inviteHandler *handler.InviteHandler,
+	exportHandler *handler.ExportHandler,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -67,6 +68,9 @@ func New(
 	mux.Handle("PATCH /api/v1/users/me", auth(http.HandlerFunc(userHandler.UpdateProfile)))
 	mux.Handle("PUT /api/v1/users/me/password", auth(http.HandlerFunc(userHandler.ChangePassword)))
 	mux.Handle("DELETE /api/v1/users/me", auth(http.HandlerFunc(userHandler.DeleteAccount)))
+
+	// 数据导出（GDPR 数据可携带权）
+	mux.Handle("GET /api/v1/users/me/export", auth(http.HandlerFunc(exportHandler.ExportMyData)))
 
 	// 车辆
 	mux.Handle("GET /api/v1/vehicles", auth(http.HandlerFunc(vehicleHandler.List)))

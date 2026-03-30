@@ -65,6 +65,7 @@ func main() {
 	vehicleService := service.NewVehicleService(vehicleRepo, logger)
 	fuelRecordService := service.NewFuelRecordService(fuelRecordRepo, vehicleRepo, userRepo, logger)
 	statsService := service.NewStatsService(fuelRecordRepo, vehicleRepo, userRepo, logger)
+	exportService := service.NewExportService(userRepo, vehicleRepo, fuelRecordRepo, logger)
 
 	// 6. 创建 Handler 层
 	authHandler := handler.NewAuthHandler(authService, logger)
@@ -73,6 +74,7 @@ func main() {
 	fuelRecordHandler := handler.NewFuelRecordHandler(fuelRecordService, logger)
 	statsHandler := handler.NewStatsHandler(statsService, logger)
 	inviteHandler := handler.NewInviteHandler(inviteService, logger)
+	exportHandler := handler.NewExportHandler(exportService, logger)
 
 	// 7. 注册路由
 	mux := router.New(
@@ -84,6 +86,7 @@ func main() {
 		fuelRecordHandler,
 		statsHandler,
 		inviteHandler,
+		exportHandler,
 	)
 
 	// 8. 创建 HTTP 服务器

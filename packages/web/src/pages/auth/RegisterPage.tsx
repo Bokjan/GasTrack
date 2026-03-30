@@ -227,6 +227,15 @@ export default function RegisterPage() {
           </Form.Item>
 
           <Form.Item>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {t('auth.agreePrefix')}{' '}
+              <Link to="/terms">{t('legal.termsOfService')}</Link>
+              {' '}{t('auth.agreeAnd')}{' '}
+              <Link to="/privacy">{t('legal.privacyPolicy')}</Link>
+            </Text>
+          </Form.Item>
+
+          <Form.Item>
             <Button
               type="primary"
               htmlType="submit"

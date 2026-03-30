@@ -105,6 +105,16 @@ func (r *FuelRecordRepository) GetDistinctStationNames(ctx context.Context, user
 	return names, err
 }
 
+// ListAllByUser 查询用户的所有加油记录（用于数据导出，按时间升序）
+func (r *FuelRecordRepository) ListAllByUser(ctx context.Context, userID uuid.UUID) ([]model.FuelRecord, error) {
+	var records []model.FuelRecord
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("refuel_date ASC").
+		Find(&records).Error
+	return records, err
+}
+
 // --- 统计查询 ---
 
 // StatsResult 统计查询结果
