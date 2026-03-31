@@ -118,7 +118,7 @@ export default function NotificationBell() {
   };
 
   const content = (
-    <div style={{ width: 360, maxHeight: 440, overflow: 'auto' }}>
+    <div style={{ width: 'min(360px, calc(100vw - 32px))', maxHeight: 440, overflow: 'auto' }}>
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -126,9 +126,9 @@ export default function NotificationBell() {
         padding: '0 0 8px',
         borderBottom: '1px solid #f0f0f0',
       }}>
-        <Text strong>{t('notification.title')}</Text>
+        <Text strong style={{ flexShrink: 0 }}>{t('notification.title')}</Text>
         {unreadCount > 0 && (
-          <Button type="link" size="small" onClick={handleMarkAllAsRead}>
+          <Button type="link" size="small" onClick={handleMarkAllAsRead} style={{ flexShrink: 0 }}>
             <CheckOutlined /> {t('notification.markAllRead')}
           </Button>
         )}
@@ -159,16 +159,22 @@ export default function NotificationBell() {
               <List.Item.Meta
                 avatar={getNotificationIcon(item.type)}
                 title={
-                  <Space size={4}>
-                    <Text style={{ fontWeight: item.is_read ? 'normal' : 'bold', fontSize: 13 }}>
+                  <Space size={4} style={{ flexWrap: 'wrap' }}>
+                    <Text
+                      style={{
+                        fontWeight: item.is_read ? 'normal' : 'bold',
+                        fontSize: 13,
+                        wordBreak: 'break-word',
+                      }}
+                    >
                       {item.title}
                     </Text>
                     {getNotificationTag(item.type)}
                   </Space>
                 }
                 description={
-                  <Space direction="vertical" size={0}>
-                    <Text type="secondary" style={{ fontSize: 12 }}>{item.message}</Text>
+                  <Space direction="vertical" size={0} style={{ width: '100%' }}>
+                    <Text type="secondary" style={{ fontSize: 12, wordBreak: 'break-word' }}>{item.message}</Text>
                     <Text type="secondary" style={{ fontSize: 11 }}>
                       {dayjs(item.created_at).fromNow()}
                     </Text>
@@ -196,6 +202,7 @@ export default function NotificationBell() {
       onOpenChange={setOpen}
       placement="bottomRight"
       arrow={false}
+      overlayStyle={{ maxWidth: 'calc(100vw - 16px)' }}
     >
       <Badge count={unreadCount} size="small" offset={[-2, 4]}>
         <BellOutlined style={{ fontSize: 18, cursor: 'pointer' }} />
