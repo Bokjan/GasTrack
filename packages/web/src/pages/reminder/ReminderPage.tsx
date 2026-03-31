@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Typography, Button, Card, Space, Tag, Modal, Form, Input, Select,
   InputNumber, DatePicker, Switch, Empty, Spin, message, Popconfirm,
   Row, Col, Grid, Tooltip, Divider,
 } from 'antd';
 import {
-  PlusOutlined, DeleteOutlined, EditOutlined,
+  PlusOutlined, DeleteOutlined, EditOutlined, WalletOutlined,
   CarOutlined, DashboardOutlined, CalendarOutlined, ToolOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -37,6 +38,7 @@ const CATEGORY_CONFIG: Record<string, { color: string; icon: string }> = {
 
 export default function ReminderPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const screens = useBreakpoint();
   const isMobile = !screens.md;
@@ -199,6 +201,11 @@ export default function ReminderPage() {
                     borderLeft: `3px solid ${isOverdue && reminder.is_enabled ? '#ff4d4f' : 'transparent'}`,
                   }}
                   actions={[
+                    <Tooltip title={t('expense.completeAndLog')} key="expense">
+                      <WalletOutlined onClick={() => navigate(
+                        `/vehicles/${reminder.vehicle_id}/expenses/new?reminder_id=${reminder.id}&category=maintenance&maintenance_category=${reminder.category}&title=${encodeURIComponent(reminder.title)}`
+                      )} />
+                    </Tooltip>,
                     <Tooltip title={t('common.edit')} key="edit">
                       <EditOutlined onClick={() => handleEdit(reminder)} />
                     </Tooltip>,

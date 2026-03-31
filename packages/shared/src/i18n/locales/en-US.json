@@ -655,5 +655,86 @@
       "GBP": "British Pound",
       "KRW": "South Korean Won"
     }
+  },
+  "expense": {
+    "title": "Expenses",
+    "list": "Expense List",
+    "add": "Add Expense",
+    "edit": "Edit Expense",
+    "detail": "Expense Detail",
+    "empty": "No expense records yet",
+    "emptyHint": "Tap the button above to add your first expense",
+    "deleteConfirm": "Are you sure you want to delete this expense?",
+    "deleteSuccess": "Expense deleted",
+    "createSuccess": "Expense added",
+    "updateSuccess": "Expense updated",
+    "category": {
+      "label": "Category",
+      "maintenance": "Maintenance",
+      "repair": "Repair",
+      "insurance": "Insurance",
+      "parking": "Parking",
+      "toll": "Toll",
+      "car_wash": "Car Wash",
+      "inspection": "Inspection",
+      "parts": "Parts",
+      "fine": "Fine",
+      "other": "Other"
+    },
+    "maintenanceCategory": {
+      "label": "Maintenance Type",
+      "oil_change": "Oil Change",
+      "tire_rotation": "Tire Rotation",
+      "brake_pads": "Brake Pads",
+      "air_filter": "Air Filter",
+      "transmission": "Transmission Fluid",
+      "coolant": "Coolant",
+      "spark_plugs": "Spark Plugs",
+      "battery": "Battery",
+      "tire_replace": "Tire Replacement",
+      "inspection": "Inspection",
+      "custom": "Custom"
+    },
+    "field": {
+      "title": "Title",
+      "amount": "Amount",
+      "currency": "Currency",
+      "date": "Date",
+      "vendor": "Vendor",
+      "odometer": "Odometer",
+      "note": "Note",
+      "receipt": "Receipt",
+      "reminder": "Link Reminder"
+    },
+    "filter": {
+      "category": "Category",
+      "dateRange": "Date Range",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "keyword": "Search",
+      "keywordPlaceholder": "Search title, vendor or note",
+      "amountRange": "Amount Range",
+      "minAmount": "Min Amount",
+      "maxAmount": "Max Amount",
+      "all": "All",
+      "clear": "Clear Filters"
+    },
+    "stats": {
+      "title": "Expense Stats",
+      "totalExpense": "Total Expenses",
+      "maintenanceCost": "Maintenance",
+      "repairCost": "Repair",
+      "last30Days": "Last 30 Days",
+      "byCategory": "By Category",
+      "monthlyTrend": "Monthly Trend",
+      "noData": "No stats data yet"
+    },
+    "reminderLink": {
+      "label": "Link Reminder",
+      "none": "None",
+      "linked": "Linked to Reminder",
+      "updatedHint": "Maintenance baseline updated"
+    },
+    "completeAndLog": "Complete & Log Expense"
   }
 }

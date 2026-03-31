@@ -14,6 +14,9 @@ import SettingsPage from './pages/settings/SettingsPage';
 import InviteManagePage from './pages/invite/InviteManagePage';
 import ReminderPage from './pages/reminder/ReminderPage';
 import GroupPage from './pages/group/GroupPage';
+import ExpenseListPage from './pages/expense/ExpenseListPage';
+import ExpenseFormPage from './pages/expense/ExpenseFormPage';
+import ExpenseDetailPage from './pages/expense/ExpenseDetailPage';
 import PrivacyPolicyPage from './pages/legal/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/legal/TermsOfServicePage';
 import { useEffect } from 'react';
@@ -66,6 +69,10 @@ export default function App() {
         <Route path="vehicles/:vehicleId/records/new" element={<RecordFormPage />} />
         <Route path="vehicles/:vehicleId/records/:recordId" element={<RecordDetailPage />} />
         <Route path="vehicles/:vehicleId/records/:recordId/edit" element={<RecordFormPage />} />
+        <Route path="vehicles/:vehicleId/expenses" element={<ExpenseListPage />} />
+        <Route path="vehicles/:vehicleId/expenses/new" element={<ExpenseFormPage />} />
+        <Route path="vehicles/:vehicleId/expenses/:expenseId" element={<ExpenseDetailPage />} />
+        <Route path="vehicles/:vehicleId/expenses/:expenseId/edit" element={<ExpenseFormPage />} />
         <Route path="records/new" element={<RecordFormPage />} />
         <Route path="stats" element={<StatsPage />} />
         <Route path="invites" element={<InviteManagePage />} />

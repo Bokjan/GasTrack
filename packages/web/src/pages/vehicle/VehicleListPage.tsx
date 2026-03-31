@@ -7,6 +7,7 @@ import {
   DeleteOutlined,
   StarOutlined,
   StarFilled,
+  WalletOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useVehicleStore, vehicleApi, FUEL_GRADES } from '@gastrack/shared';
@@ -81,6 +82,15 @@ export default function VehicleListPage() {
                     onClick={(e) => {
                       e.stopPropagation();
                       if (!vehicle.is_default) handleSetDefault(vehicle.id);
+                    }}
+                  />,
+                  <Button
+                    key="expenses"
+                    type="text"
+                    icon={<WalletOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/vehicles/${vehicle.id}/expenses`);
                     }}
                   />,
                   <Button

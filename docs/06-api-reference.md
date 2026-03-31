@@ -968,3 +968,15 @@ CSV 三段式结构：User Profile → Vehicles → Fuel/Charging Records。
 | GET | `/api/v1/groups/{id}/leaderboard` | ✅ | 油耗排行榜 |
 | GET | `/api/v1/groups/{id}/expense-stats` | ✅ | 费用统计看板 |
 | GET | `/api/v1/groups/{id}/stations` | ✅ | 加油站推荐共享 |
+
+### 开销记录
+
+| Method | Path | Status | 说明 |
+|--------|------|--------|------|
+| GET | `/api/v1/vehicles/{id}/expenses` | ✅ | 开销列表（分页+筛选：category/start_date/end_date/keyword/min_amount/max_amount） |
+| POST | `/api/v1/vehicles/{id}/expenses` | ✅ | 创建开销记录 |
+| GET | `/api/v1/vehicles/{id}/expenses/{eid}` | ✅ | 开销详情 |
+| PATCH | `/api/v1/vehicles/{id}/expenses/{eid}` | ✅ | 更新开销记录（partial update，指针字段） |
+| DELETE | `/api/v1/vehicles/{id}/expenses/{eid}` | ✅ | 删除开销记录 |
+| GET | `/api/v1/vehicles/{id}/expense-stats` | ✅ | 开销统计（按币种、按分类、月度趋势、近30天） |
+| GET | `/api/v1/vehicles/{id}/expense-vendors` | ✅ | 商家名称建议（去重Top20） |

@@ -256,3 +256,35 @@ CREATE INDEX idx_notifications_user ON notifications(user_id);
 - 全局限流：Nginx `limit_req_zone` 实现 IP 级别限流
 - 业务限流：Go 内置 `golang.org/x/time/rate` 令牌桶算法
 - 登录防暴力破解：PostgreSQL 记录失败次数 + 内存缓存
+
+## expense_records 表（车辆开销记录）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | UUID (PK) | BaseModel 自动生成 |
+| vehicle_id | UUID (FK, NOT NULL) | 关联车辆 |
+| user_id | UUID (FK, NOT NULL) | 记录创建者 |
+| category | VARCHAR(20) NOT NULL | 开销类别：maintenance/repair/insurance/parking/toll/car_wash/inspection/parts/fine/other |
+| maintenance_category | VARCHAR(30) | 保养子类别（仅 category=maintenance 时），复用 Reminder 的 MaintenanceCategory 枚举 |
+| title | VARCHAR(200) NOT NULL | 标题 |
+| amount | DECIMAL(10,2) NOT NULL | 金额 |
+| currency_code | VARCHAR(3) NOT NULL | 币种 |
+| vendor_name | VARCHAR(200) | 商家/服务商 |
+| odometer | DECIMAL(10,1) | 里程表读数 |
+| distance_unit | VARCHAR(5) DEFAULT 'km' | km / mi |
+| note | TEXT | 备注 |
+| receipt_url | VARCHAR(500) | 凭证图片（预留） |
+| expense_date | TIMESTAMP NOT NULL | 开销日期 |
+| reminder_id | UUID (FK) | 关联保养提醒（可选） |
+| created_at | TIMESTAMP | 创建时间 |
+| updated_at | TIMESTAMP | 更新时间 |
+| deleted_at | TIMESTAMP | 软删除时间 |
+
+**索引：**
+
+| 索引名 | 字段 | 用途 |
+|--------|------|------|
+| idx_expense_records_vehicle_date | vehicle_id, expense_date | 按车辆+日期查询（主列表） |
+| idx_expense_records_vehicle_category | vehicle_id, category | 按车辆+类别筛选 |
+| idx_expense_records_user | user_id | 按用户查询 |
+| idx_expense_records_reminder | reminder_id | 提醒联动查询 |

@@ -655,5 +655,86 @@
       "GBP": "英ポンド",
       "KRW": "韓国ウォン"
     }
+  },
+  "expense": {
+    "title": "経費記録",
+    "list": "経費一覧",
+    "add": "経費を追加",
+    "edit": "経費を編集",
+    "detail": "経費詳細",
+    "empty": "経費記録がありません",
+    "emptyHint": "右上のボタンから最初の経費を追加してください",
+    "deleteConfirm": "この経費記録を削除しますか？",
+    "deleteSuccess": "経費記録を削除しました",
+    "createSuccess": "経費記録を追加しました",
+    "updateSuccess": "経費記録を更新しました",
+    "category": {
+      "label": "カテゴリ",
+      "maintenance": "メンテナンス",
+      "repair": "修理",
+      "insurance": "保険",
+      "parking": "駐車",
+      "toll": "通行料",
+      "car_wash": "洗車",
+      "inspection": "車検",
+      "parts": "部品",
+      "fine": "罰金",
+      "other": "その他"
+    },
+    "maintenanceCategory": {
+      "label": "メンテナンス項目",
+      "oil_change": "オイル交換",
+      "tire_rotation": "タイヤローテーション",
+      "brake_pads": "ブレーキパッド",
+      "air_filter": "エアフィルター",
+      "transmission": "トランスミッションオイル",
+      "coolant": "冷却液",
+      "spark_plugs": "スパークプラグ",
+      "battery": "バッテリー",
+      "tire_replace": "タイヤ交換",
+      "inspection": "車検",
+      "custom": "カスタム"
+    },
+    "field": {
+      "title": "タイトル",
+      "amount": "金額",
+      "currency": "通貨",
+      "date": "日付",
+      "vendor": "店舗/業者",
+      "odometer": "走行距離",
+      "note": "メモ",
+      "receipt": "領収書",
+      "reminder": "リマインダーと連携"
+    },
+    "filter": {
+      "category": "カテゴリ",
+      "dateRange": "期間",
+      "startDate": "開始日",
+      "endDate": "終了日",
+      "keyword": "検索",
+      "keywordPlaceholder": "タイトル、店舗、メモを検索",
+      "amountRange": "金額範囲",
+      "minAmount": "最小金額",
+      "maxAmount": "最大金額",
+      "all": "すべて",
+      "clear": "フィルタをクリア"
+    },
+    "stats": {
+      "title": "経費統計",
+      "totalExpense": "総経費",
+      "maintenanceCost": "メンテナンス費",
+      "repairCost": "修理費",
+      "last30Days": "直近30日の支出",
+      "byCategory": "カテゴリ別",
+      "monthlyTrend": "月次推移",
+      "noData": "統計データがありません"
+    },
+    "reminderLink": {
+      "label": "リマインダーと連携",
+      "none": "連携なし",
+      "linked": "リマインダーと連携済み",
+      "updatedHint": "次回メンテナンス基準を更新しました"
+    },
+    "completeAndLog": "完了して記録"
   }
 }

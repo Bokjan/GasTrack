@@ -655,5 +655,86 @@
       "GBP": "英镑",
       "KRW": "韩元"
     }
+  },
+  "expense": {
+    "title": "开销记录",
+    "list": "开销列表",
+    "add": "添加开销",
+    "edit": "编辑开销",
+    "detail": "开销详情",
+    "empty": "暂无开销记录",
+    "emptyHint": "点击右上角添加第一条开销",
+    "deleteConfirm": "确定要删除这条开销记录吗？",
+    "deleteSuccess": "开销记录已删除",
+    "createSuccess": "开销记录已添加",
+    "updateSuccess": "开销记录已更新",
+    "category": {
+      "label": "类别",
+      "maintenance": "保养",
+      "repair": "维修",
+      "insurance": "保险",
+      "parking": "停车",
+      "toll": "路桥/过路费",
+      "car_wash": "洗车",
+      "inspection": "年检",
+      "parts": "配件",
+      "fine": "罚单",
+      "other": "其他"
+    },
+    "maintenanceCategory": {
+      "label": "保养项目",
+      "oil_change": "换机油",
+      "tire_rotation": "轮胎换位",
+      "brake_pads": "刹车片",
+      "air_filter": "空气滤清器",
+      "transmission": "变速箱油",
+      "coolant": "冷却液",
+      "spark_plugs": "火花塞",
+      "battery": "电池/蓄电池",
+      "tire_replace": "换轮胎",
+      "inspection": "年检",
+      "custom": "自定义"
+    },
+    "field": {
+      "title": "标题",
+      "amount": "金额",
+      "currency": "币种",
+      "date": "日期",
+      "vendor": "商家/服务商",
+      "odometer": "里程",
+      "note": "备注",
+      "receipt": "凭证",
+      "reminder": "关联保养提醒"
+    },
+    "filter": {
+      "category": "按类别",
+      "dateRange": "日期范围",
+      "startDate": "开始日期",
+      "endDate": "结束日期",
+      "keyword": "搜索关键词",
+      "keywordPlaceholder": "搜索标题、商家或备注",
+      "amountRange": "金额范围",
+      "minAmount": "最小金额",
+      "maxAmount": "最大金额",
+      "all": "全部",
+      "clear": "清除筛选"
+    },
+    "stats": {
+      "title": "开销统计",
+      "totalExpense": "总开销",
+      "maintenanceCost": "保养费用",
+      "repairCost": "维修费用",
+      "last30Days": "近30天支出",
+      "byCategory": "按分类",
+      "monthlyTrend": "月度趋势",
+      "noData": "暂无统计数据"
+    },
+    "reminderLink": {
+      "label": "关联保养提醒",
+      "none": "不关联",
+      "linked": "已关联提醒",
+      "updatedHint": "已同步更新下次保养基准"
+    },
+    "completeAndLog": "完成并记账"
   }
 }

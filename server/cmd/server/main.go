@@ -60,6 +60,7 @@ func main() {
 	reminderRepo := repository.NewReminderRepository(db)
 	notificationRepo := repository.NewNotificationRepository(db)
 	groupRepo := repository.NewGroupRepository(db)
+	expenseRecordRepo := repository.NewExpenseRecordRepository(db)
 
 	// 5. 创建 Service 层
 	inviteService := service.NewInviteService(inviteCodeRepo, userRepo, logger)
@@ -72,6 +73,7 @@ func main() {
 	statsService := service.NewStatsService(fuelRecordRepo, vehicleRepo, userRepo, groupRepo, logger)
 	exportService := service.NewExportService(userRepo, vehicleRepo, fuelRecordRepo, logger)
 	groupService := service.NewGroupService(groupRepo, userRepo, vehicleRepo, logger)
+	expenseRecordService := service.NewExpenseRecordService(expenseRecordRepo, vehicleRepo, groupRepo, reminderRepo, logger)
 
 	// 5b. 创建汇率参考服务（无需数据库，纯 API 缓存）
 	exchangeRateService := service.NewExchangeRateService(cfg.ExchangeRate, logger)
@@ -90,6 +92,7 @@ func main() {
 	notificationHandler := handler.NewNotificationHandler(notificationService, logger)
 	groupHandler := handler.NewGroupHandler(groupService, logger)
 	exchangeRateHandler := handler.NewExchangeRateHandler(exchangeRateService, logger)
+	expenseRecordHandler := handler.NewExpenseRecordHandler(expenseRecordService, logger)
 
 	// 7. 注册路由
 	mux := router.New(
@@ -106,6 +109,7 @@ func main() {
 		notificationHandler,
 		groupHandler,
 		exchangeRateHandler,
+		expenseRecordHandler,
 	)
 
 	// 8. 创建 HTTP 服务器

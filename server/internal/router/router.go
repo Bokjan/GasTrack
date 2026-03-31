@@ -28,6 +28,7 @@ func New(
 	notificationHandler *handler.NotificationHandler,
 	groupHandler *handler.GroupHandler,
 	exchangeRateHandler *handler.ExchangeRateHandler,
+	expenseRecordHandler *handler.ExpenseRecordHandler,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -134,6 +135,15 @@ func New(
 	mux.Handle("GET /api/v1/groups/{id}/leaderboard", auth(http.HandlerFunc(groupHandler.GetLeaderboard)))
 	mux.Handle("GET /api/v1/groups/{id}/expense-stats", auth(http.HandlerFunc(groupHandler.GetExpenseStats)))
 	mux.Handle("GET /api/v1/groups/{id}/stations", auth(http.HandlerFunc(groupHandler.GetStationStats)))
+
+	// 开销记录
+	mux.Handle("GET /api/v1/vehicles/{id}/expenses", auth(http.HandlerFunc(expenseRecordHandler.List)))
+	mux.Handle("POST /api/v1/vehicles/{id}/expenses", auth(http.HandlerFunc(expenseRecordHandler.Create)))
+	mux.Handle("GET /api/v1/vehicles/{id}/expenses/{eid}", auth(http.HandlerFunc(expenseRecordHandler.GetByID)))
+	mux.Handle("PATCH /api/v1/vehicles/{id}/expenses/{eid}", auth(http.HandlerFunc(expenseRecordHandler.Update)))
+	mux.Handle("DELETE /api/v1/vehicles/{id}/expenses/{eid}", auth(http.HandlerFunc(expenseRecordHandler.Delete)))
+	mux.Handle("GET /api/v1/vehicles/{id}/expense-stats", auth(http.HandlerFunc(expenseRecordHandler.GetStats)))
+	mux.Handle("GET /api/v1/vehicles/{id}/expense-vendors", auth(http.HandlerFunc(expenseRecordHandler.GetVendorSuggestions)))
 
 	// --- 应用全局中间件 ---
 	corsConfig := middleware.CORSConfig{

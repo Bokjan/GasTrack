@@ -40,6 +40,11 @@ import type {
   GroupExpenseStatsResponse,
   GroupStationStatsResponse,
   ExchangeRateResponse,
+  ExpenseRecord,
+  CreateExpenseRequest,
+  UpdateExpenseRequest,
+  ExpenseListFilter,
+  ExpenseStatsResponse,
 } from '../types';
 
 // 注意: PaginatedResponse<T> 的 Axios 响应为 AxiosResponse<PaginatedResponse<T>>
@@ -325,4 +330,53 @@ export const exchangeRateApi = {
   /** 获取汇率参考数据 */
   getRates: (base?: string) =>
     apiClient.get<ApiResponse<ExchangeRateResponse>>('/exchange-rates', { params: base ? { base } : undefined }),
+};
+
+// ==================== Expense Record ====================
+
+export const expenseApi = {
+  /** 获取开销记录列表 */
+  list: (vehicleId: string, params?: ExpenseListFilter) =>
+    apiClient.get<PaginatedResponse<ExpenseRecord>>(
+      `/vehicles/${vehicleId}/expenses`,
+      { params },
+    ),
+
+  /** 创建开销记录 */
+  create: (vehicleId: string, data: CreateExpenseRequest) =>
+    apiClient.post<ApiResponse<ExpenseRecord>>(
+      `/vehicles/${vehicleId}/expenses`,
+      data,
+    ),
+
+  /** 获取开销记录详情 */
+  getById: (vehicleId: string, expenseId: string) =>
+    apiClient.get<ApiResponse<ExpenseRecord>>(
+      `/vehicles/${vehicleId}/expenses/${expenseId}`,
+    ),
+
+  /** 更新开销记录 */
+  update: (vehicleId: string, expenseId: string, data: UpdateExpenseRequest) =>
+    apiClient.patch<ApiResponse<ExpenseRecord>>(
+      `/vehicles/${vehicleId}/expenses/${expenseId}`,
+      data,
+    ),
+
+  /** 删除开销记录 */
+  delete: (vehicleId: string, expenseId: string) =>
+    apiClient.delete<ApiResponse<null>>(
+      `/vehicles/${vehicleId}/expenses/${expenseId}`,
+    ),
+
+  /** 获取开销统计 */
+  getStats: (vehicleId: string) =>
+    apiClient.get<ApiResponse<ExpenseStatsResponse>>(
+      `/vehicles/${vehicleId}/expense-stats`,
+    ),
+
+  /** 获取商家名称建议列表 */
+  getVendorSuggestions: (vehicleId: string) =>
+    apiClient.get<ApiResponse<string[]>>(
+      `/vehicles/${vehicleId}/expense-vendors`,
+    ),
 };

@@ -608,3 +608,94 @@ export interface ExchangeRateResponse {
   date: string;
   rates: Record<string, number>;
 }
+
+// ---------- Expense Record ----------
+
+/** 开销类别 */
+export type ExpenseCategory =
+  | 'maintenance' | 'repair' | 'insurance' | 'parking'
+  | 'toll' | 'car_wash' | 'inspection' | 'parts' | 'fine' | 'other';
+
+/** 后端 ExpenseResponse 字段对齐 */
+export interface ExpenseRecord {
+  id: string;
+  vehicle_id: string;
+  user_id: string;
+  category: ExpenseCategory;
+  maintenance_category?: MaintenanceCategory;
+  title: string;
+  amount: number;
+  currency_code: string;
+  vendor_name?: string;
+  odometer?: number;
+  distance_unit?: string;
+  note?: string;
+  receipt_url?: string;
+  expense_date: string;
+  reminder_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** 后端 CreateExpenseRequest 字段对齐 */
+export interface CreateExpenseRequest {
+  category: ExpenseCategory;
+  maintenance_category?: MaintenanceCategory;
+  title: string;
+  amount: number;
+  currency_code: string;
+  vendor_name?: string;
+  odometer?: number;
+  distance_unit?: string;
+  note?: string;
+  expense_date: string;
+  reminder_id?: string;
+}
+
+/** 更新开销请求 */
+export type UpdateExpenseRequest = Partial<CreateExpenseRequest>;
+
+/** 开销列表筛选参数 */
+export interface ExpenseListFilter {
+  page?: number;
+  page_size?: number;
+  category?: ExpenseCategory;
+  start_date?: string;
+  end_date?: string;
+  keyword?: string;
+  min_amount?: number;
+  max_amount?: number;
+}
+
+/** 按币种汇总 */
+export interface ExpenseCurrencyTotal {
+  currency_code: string;
+  total_amount: number;
+  record_count: number;
+}
+
+/** 按分类汇总 */
+export interface ExpenseCategoryBreakdown {
+  category: string;
+  total_amount: number;
+  record_count: number;
+  percentage: number;
+}
+
+/** 月度趋势 */
+export interface ExpenseMonthlyTrend {
+  period: string;
+  total_amount: number;
+  record_count: number;
+}
+
+/** 开销统计响应 */
+export interface ExpenseStatsResponse {
+  vehicle_id: string;
+  total_records: number;
+  totals_by_currency: ExpenseCurrencyTotal[];
+  category_breakdown: ExpenseCategoryBreakdown[];
+  monthly_trend: ExpenseMonthlyTrend[];
+  last_30_days_amount: number;
+  last_30_days_currency: string;
+}

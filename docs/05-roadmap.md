@@ -181,6 +181,15 @@ GET    /api/v1/groups/{id}/stations                # ✅ 加油站推荐共享
 # 汇率参考
 GET    /api/v1/exchange-rates              # ✅ 汇率查询
 
+# 开销记录
+GET    /api/v1/vehicles/{id}/expenses                # ✅ 开销列表（分页+筛选）
+POST   /api/v1/vehicles/{id}/expenses                # ✅ 创建开销记录
+GET    /api/v1/vehicles/{id}/expenses/{eid}          # ✅ 开销详情
+PATCH  /api/v1/vehicles/{id}/expenses/{eid}          # ✅ 更新开销记录
+DELETE /api/v1/vehicles/{id}/expenses/{eid}          # ✅ 删除开销记录
+GET    /api/v1/vehicles/{id}/expense-stats           # ✅ 开销统计
+GET    /api/v1/vehicles/{id}/expense-vendors         # ✅ 商家名建议
+
 # 其他待实现
 POST   /api/v1/upload/image               # 🔲 上传图片 (P1)
 ```
