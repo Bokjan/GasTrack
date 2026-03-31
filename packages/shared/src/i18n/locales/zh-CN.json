@@ -765,10 +765,11 @@
     "updateDescription": "GasTrack 有新版本可用，刷新页面即可更新。",
     "refresh": "刷新",
     "installTitle": "安装 GasTrack",
-    "installDescription": "将 GasTrack 安装到主屏幕，享受更快捷的访问体验。",
+    "installDescription": "添加到主屏幕，快速访问。",
     "installButton": "安装",
     "iosInstallTitle": "添加到主屏幕",
-    "iosInstallDescription": "点击分享按钮 {shareIcon} 然后选择",
+    "iosInstallHint": "点击",
+    "iosInstallHintSuffix": "然后选择「添加到主屏幕」",
     "addToHomeScreen": "添加到主屏幕"
   }
 }

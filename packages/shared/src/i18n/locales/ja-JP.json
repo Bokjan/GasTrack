@@ -758,10 +758,11 @@
     "updateDescription": "GasTrack の新バージョンが利用可能です。更新するにはページを更新してください。",
     "refresh": "更新",
     "installTitle": "GasTrack をインストール",
-    "installDescription": "GasTrack をホーム画面に追加して、すばやくアクセスできます。",
+    "installDescription": "ホーム画面に追加してすばやくアクセス。",
     "installButton": "インストール",
     "iosInstallTitle": "ホーム画面に追加",
-    "iosInstallDescription": "共有ボタン {shareIcon} をタップして選択",
+    "iosInstallHint": "タップ",
+    "iosInstallHintSuffix": "→「ホーム画面に追加」を選択",
     "addToHomeScreen": "ホーム画面に追加"
   }
 }

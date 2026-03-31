@@ -760,10 +760,11 @@
     "updateDescription": "A new version of GasTrack is available. Refresh to update.",
     "refresh": "Refresh",
     "installTitle": "Install GasTrack",
-    "installDescription": "Install GasTrack to your home screen for quick access and a better experience.",
+    "installDescription": "Add to home screen for quick access.",
     "installButton": "Install",
     "iosInstallTitle": "Add to Home Screen",
-    "iosInstallDescription": "Tap the Share button {shareIcon} then select",
+    "iosInstallHint": "Tap",
+    "iosInstallHintSuffix": "then \"Add to Home Screen\"",
     "addToHomeScreen": "Add to Home Screen"
   }
 }
