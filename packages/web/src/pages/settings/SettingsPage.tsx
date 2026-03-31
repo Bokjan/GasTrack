@@ -231,7 +231,7 @@ export default function SettingsPage() {
               <Select
                 options={CURRENCIES.map((c) => ({
                   value: c.value,
-                  label: c.label,
+                  label: t(c.label),
                 }))}
               />
             </Form.Item>
@@ -346,7 +346,7 @@ export default function SettingsPage() {
                     render: (_: unknown, row: { code: string; symbol: string; name: string }) => `${row.symbol} ${row.code}`,
                   },
                   {
-                    title: t('exchangeRate.currencyName.CNY').includes('人民币') ? '名称' : 'Name',
+                    title: t('exchangeRate.currencyColumnName'),
                     dataIndex: 'name',
                     key: 'name',
                   },

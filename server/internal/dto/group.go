@@ -139,18 +139,20 @@ type GroupExpenseSummary struct {
 
 // MemberCostBreakdown 成员费用分解
 type MemberCostBreakdown struct {
-	UserID     string  `json:"user_id"`
-	Nickname   string  `json:"nickname"`
-	TotalCost  float64 `json:"total_cost"`
-	TotalFuel  float64 `json:"total_fuel"`
-	Percentage float64 `json:"percentage"`
+	UserID       string  `json:"user_id"`
+	Nickname     string  `json:"nickname"`
+	TotalCost    float64 `json:"total_cost"`
+	CurrencyCode string  `json:"currency_code"`
+	TotalFuel    float64 `json:"total_fuel"`
+	Percentage   float64 `json:"percentage"`
 }
 
 // MemberCostItem 成员费用项（用于趋势图中的 by_member）
 type MemberCostItem struct {
-	UserID   string  `json:"user_id"`
-	Nickname string  `json:"nickname"`
-	Cost     float64 `json:"cost"`
+	UserID       string  `json:"user_id"`
+	Nickname     string  `json:"nickname"`
+	Cost         float64 `json:"cost"`
+	CurrencyCode string  `json:"currency_code"`
 }
 
 // GroupTrendItem 群组趋势项

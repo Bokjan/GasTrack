@@ -339,7 +339,7 @@ export default function InviteManagePage() {
           form.resetFields();
         }}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={form}
@@ -352,7 +352,7 @@ export default function InviteManagePage() {
             label={t('invite.maxUses')}
             extra={t('invite.maxUsesHint')}
           >
-            <InputNumber min={0} style={{ width: '100%' }} placeholder="0 = unlimited" />
+            <InputNumber min={0} style={{ width: '100%' }} placeholder={t('invite.maxUsesPlaceholder')} />
           </Form.Item>
 
           <Form.Item

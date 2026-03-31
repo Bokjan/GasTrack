@@ -82,7 +82,8 @@
     "copyToClipboard": "复制到剪贴板",
     "maxUsesHint": "设为 0 表示不限次数",
     "expiresHint": "留空则默认 30 天后过期",
-    "expiresPlaceholder": "选择过期时间"
+    "expiresPlaceholder": "选择过期时间",
+    "maxUsesPlaceholder": "0 = 不限次数"
   },
   "vehicle": {
     "title": "车辆管理",
@@ -525,7 +526,12 @@
     "markAllRead": "全部已读",
     "anomalyFuel": "异常油耗",
     "maintenanceDue": "保养到期",
-    "inviteUsed": "邀请码被使用"
+    "inviteUsed": "邀请码被使用",
+    "anomalyFuelMsg": "本次加油：{{current}}，历史均值：{{avg}}（{{direction}} {{pct}}%）",
+    "directionHigher": "偏高",
+    "directionLower": "偏低",
+    "maintenanceDueMsg": "当前里程 {{currentOdo}} 已达到预定保养里程 {{targetOdo}}",
+    "inviteUsedMsg": "用户 {{nickname}} 使用了你的邀请码 {{code}} 注册"
   },
   "group": {
     "title": "家庭群组",
@@ -655,6 +661,7 @@
     "referenceCurrency": "参考换算币种",
     "referenceCurrencyAuto": "自动（默认）",
     "referenceCurrencyHint": "费用金额旁会同时显示该币种的参考换算",
+    "currencyColumnName": "名称",
     "currencyName": {
       "CNY": "人民币",
       "USD": "美元",
@@ -663,6 +670,14 @@
       "GBP": "英镑",
       "KRW": "韩元"
     }
+  },
+  "currency": {
+    "CNY": "¥ 人民币",
+    "USD": "$ 美元",
+    "EUR": "€ 欧元",
+    "JPY": "¥ 日元",
+    "GBP": "£ 英镑",
+    "KRW": "₩ 韩元"
   },
   "expense": {
     "title": "开销记录",

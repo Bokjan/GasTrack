@@ -115,9 +115,10 @@ func (s *NotificationService) CheckFuelAnomaly(ctx context.Context, userID, vehi
 		direction = "lower"
 	}
 
-	title := "Abnormal fuel consumption detected"
+	// 存储结构化数据，前端根据 type 和 message 参数渲染本地化文本
+	title := "notification.anomalyFuel"
 	message := fmt.Sprintf(
-		"This refueling: %.1f, historical avg: %.1f (%s by %d%%)",
+		"current=%.1f;avg=%.1f;direction=%s;pct=%d",
 		currentEfficiency, avgEfficiency, direction, deviationPct,
 	)
 
@@ -150,11 +151,11 @@ func (s *NotificationService) CheckMaintenanceReminders(ctx context.Context, use
 	for _, r := range reminders {
 		if r.Trigger == model.ReminderTriggerMileage || r.Trigger == model.ReminderTriggerBoth {
 			if r.NextMileage > 0 && currentOdometer >= r.NextMileage {
-				// 里程已达到，生成保养提醒通知
-				title := fmt.Sprintf("Maintenance due: %s", r.Title)
+				// 里程已达到，生成保养提醒通知（结构化数据）
+				title := "notification.maintenanceDue"
 				message := fmt.Sprintf(
-					"Current mileage %.0f has reached the scheduled maintenance mileage %.0f",
-					currentOdometer, r.NextMileage,
+					"reminderTitle=%s;currentOdo=%.0f;targetOdo=%.0f",
+					r.Title, currentOdometer, r.NextMileage,
 				)
 
 				notification := &model.Notification{
@@ -179,8 +180,9 @@ func (s *NotificationService) CheckMaintenanceReminders(ctx context.Context, use
 
 // NotifyInviteUsed 邀请码被使用时通知创建者
 func (s *NotificationService) NotifyInviteUsed(ctx context.Context, inviteCreatorID uuid.UUID, inviteCode string, newUserNickname string) {
-	title := "Your invite code was used"
-	message := fmt.Sprintf("Someone (%s) registered using your invite code %s", newUserNickname, inviteCode)
+	// 结构化数据，前端根据 type 渲染本地化文本
+	title := "notification.inviteUsed"
+	message := fmt.Sprintf("nickname=%s;code=%s", newUserNickname, inviteCode)
 
 	notification := &model.Notification{
 		UserID:  inviteCreatorID,

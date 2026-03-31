@@ -59,11 +59,11 @@ func (s *FuelRecordService) Create(ctx context.Context, userID, vehicleID uuid.U
 	}
 
 	// 默认单位
-	fuelUnit := "L"
+	fuelUnit := string(convert.UnitLiter)
 	if req.FuelUnit != "" {
 		fuelUnit = req.FuelUnit
 	}
-	distUnit := "km"
+	distUnit := string(convert.UnitKm)
 	if req.DistanceUnit != "" {
 		distUnit = req.DistanceUnit
 	}
@@ -103,8 +103,8 @@ func (s *FuelRecordService) Create(ctx context.Context, userID, vehicleID uuid.U
 		}
 		// 将里程转为 km 后检查保养提醒
 		odometerKm := record.Odometer
-		if record.DistanceUnit == "mi" {
-			odometerKm = record.Odometer * 1.60934
+		if convert.DistanceUnit(record.DistanceUnit) == convert.UnitMile {
+			odometerKm = record.Odometer * convert.MileToKm
 		}
 		go s.notificationService.CheckMaintenanceReminders(asyncCtx, userID, vehicleID, odometerKm)
 	}

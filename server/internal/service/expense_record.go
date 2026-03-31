@@ -12,6 +12,7 @@ import (
 	"gastrack/internal/dto"
 	"gastrack/internal/model"
 	"gastrack/internal/pkg/apperror"
+	"gastrack/internal/pkg/convert"
 	"gastrack/internal/repository"
 )
 
@@ -82,7 +83,7 @@ func (s *ExpenseRecordService) Create(ctx context.Context, userID, vehicleID uui
 	}
 
 	// 默认单位
-	distUnit := "km"
+	distUnit := string(convert.UnitKm)
 	if req.DistanceUnit != "" {
 		distUnit = req.DistanceUnit
 	}
@@ -418,8 +419,8 @@ func (s *ExpenseRecordService) updateReminderBaseline(ctx context.Context, remin
 	if odometer > 0 {
 		// 如果里程单位是 mi，转为 km 存储（提醒系统以 km 为基准）
 		odometerKm := odometer
-		if distUnit == "mi" {
-			odometerKm = odometer * 1.60934
+		if convert.DistanceUnit(distUnit) == convert.UnitMile {
+			odometerKm = odometer * convert.MileToKm
 		}
 		reminder.LastMileage = odometerKm
 	}

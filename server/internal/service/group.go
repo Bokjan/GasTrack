@@ -16,6 +16,7 @@ import (
 	"gastrack/internal/dto"
 	"gastrack/internal/model"
 	"gastrack/internal/pkg/apperror"
+	"gastrack/internal/pkg/convert"
 	"gastrack/internal/repository"
 )
 
@@ -660,19 +661,19 @@ func (s *GroupService) GetLeaderboard(ctx context.Context, groupID, userID uuid.
 		firstOfThisMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 		startDate = firstOfThisMonth.AddDate(0, -1, 0)
 		endDate = firstOfThisMonth
-		periodLabel = startDate.Format("2006年1月")
+		periodLabel = startDate.Format("2006-01")
 	case "last_3_months":
 		endDate = time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC)
 		startDate = endDate.AddDate(0, -3, 0)
-		periodLabel = fmt.Sprintf("%s ~ %s", startDate.Format("2006年1月"), now.Format("2006年1月"))
+		periodLabel = fmt.Sprintf("%s ~ %s", startDate.Format("2006-01"), now.Format("2006-01"))
 	case "current_year":
 		startDate = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, time.UTC)
 		endDate = time.Date(now.Year()+1, 1, 1, 0, 0, 0, 0, time.UTC)
-		periodLabel = fmt.Sprintf("%d年", now.Year())
+		periodLabel = fmt.Sprintf("%d", now.Year())
 	default: // current_month
 		startDate = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 		endDate = startDate.AddDate(0, 1, 0)
-		periodLabel = now.Format("2006年1月")
+		periodLabel = now.Format("2006-01")
 	}
 
 	rows, err := s.groupRepo.GetLeaderboard(ctx, groupID, metric, startDate, endDate)
@@ -682,7 +683,7 @@ func (s *GroupService) GetLeaderboard(ctx context.Context, groupID, userID uuid.
 
 	// 计算群组平均值和单位
 	var groupAvg float64
-	unit := "L/100km"
+	unit := string(convert.UnitL100km)
 	if len(rows) > 0 {
 		var sum float64
 		for _, row := range rows {
@@ -704,7 +705,7 @@ func (s *GroupService) GetLeaderboard(ctx context.Context, groupID, userID uuid.
 	case "cost":
 		unit = ""
 	case "distance":
-		unit = "km"
+		unit = string(convert.UnitKm)
 	case "frequency":
 		unit = ""
 	}
@@ -821,8 +822,14 @@ func (s *GroupService) GetExpenseStats(ctx context.Context, groupID, userID uuid
 	// 计算汇总
 	summary := s.calculateSummary(memberTotals, prevMemberTotals)
 
-	// 计算成员费用占比
-	memberBreakdown := s.buildMemberBreakdown(memberTotals, nicknameMap, summary.TotalCost)
+	// 计算成员费用占比（用原始费用总和计算百分比，而非 summary.TotalCost 的占位 0）
+	var rawTotalCost float64
+	for _, mt := range memberTotals {
+		for _, cost := range mt.CostByCurrency {
+			rawTotalCost += cost
+		}
+	}
+	memberBreakdown := s.buildMemberBreakdown(memberTotals, nicknameMap, rawTotalCost)
 
 	return &dto.GroupExpenseStatsResponse{
 		GroupID:         groupID.String(),
@@ -838,34 +845,33 @@ func (s *GroupService) GetExpenseStats(ctx context.Context, groupID, userID uuid
 
 // memberTotal 成员总计
 type memberTotal struct {
-	Cost       float64
-	Fuel       float64
-	Distance   float64
-	Efficiency float64
-	Count      int
+	CostByCurrency map[string]float64 // currency_code -> cost
+	Fuel           float64
+	Distance       float64
+	Efficiency     float64
+	Count          int
 }
 
 // buildTrendItems 从查询行构建趋势项
 func (s *GroupService) buildTrendItems(rows []repository.GroupExpenseRow, nicknameMap map[string]string) ([]dto.GroupTrendItem, map[string]*memberTotal) {
-	// period -> member -> data
-	periodData := make(map[string]map[string]*repository.GroupExpenseRow)
+	// period -> list of rows
+	periodData := make(map[string][]*repository.GroupExpenseRow)
 	periodOrder := make([]string, 0)
 	memberTotals := make(map[string]*memberTotal)
 
 	for i := range rows {
 		row := &rows[i]
 		if _, ok := periodData[row.PeriodLabel]; !ok {
-			periodData[row.PeriodLabel] = make(map[string]*repository.GroupExpenseRow)
 			periodOrder = append(periodOrder, row.PeriodLabel)
 		}
-		periodData[row.PeriodLabel][row.UserID.String()] = row
+		periodData[row.PeriodLabel] = append(periodData[row.PeriodLabel], row)
 
 		uid := row.UserID.String()
 		if _, ok := memberTotals[uid]; !ok {
-			memberTotals[uid] = &memberTotal{}
+			memberTotals[uid] = &memberTotal{CostByCurrency: make(map[string]float64)}
 		}
 		mt := memberTotals[uid]
-		mt.Cost += row.Cost
+		mt.CostByCurrency[row.CurrencyCode] += row.Cost
 		mt.Fuel += row.Fuel
 		mt.Distance += row.Distance
 		if row.AvgEfficiency > 0 {
@@ -876,23 +882,24 @@ func (s *GroupService) buildTrendItems(rows []repository.GroupExpenseRow, nickna
 
 	trendItems := make([]dto.GroupTrendItem, 0, len(periodOrder))
 	for _, pl := range periodOrder {
-		memberMap := periodData[pl]
-		var totalCost, totalFuel, totalDist, totalEff float64
+		rowList := periodData[pl]
+		var totalFuel, totalDist, totalEff float64
 		var effCount int
-		byMember := make([]dto.MemberCostItem, 0, len(memberMap))
+		byMember := make([]dto.MemberCostItem, 0)
 
-		for uid, row := range memberMap {
-			totalCost += row.Cost
+		for _, row := range rowList {
 			totalFuel += row.Fuel
 			totalDist += row.Distance
 			if row.AvgEfficiency > 0 {
 				totalEff += row.AvgEfficiency
 				effCount++
 			}
+			// 每个 (user, currency) 组合生成一个 MemberCostItem
 			byMember = append(byMember, dto.MemberCostItem{
-				UserID:   uid,
-				Nickname: nicknameMap[uid],
-				Cost:     row.Cost,
+				UserID:       row.UserID.String(),
+				Nickname:     nicknameMap[row.UserID.String()],
+				Cost:         row.Cost,
+				CurrencyCode: row.CurrencyCode,
 			})
 		}
 
@@ -903,7 +910,7 @@ func (s *GroupService) buildTrendItems(rows []repository.GroupExpenseRow, nickna
 
 		trendItems = append(trendItems, dto.GroupTrendItem{
 			PeriodLabel:   pl,
-			TotalCost:     totalCost,
+			TotalCost:     0, // 前端按 by_member 各币种换算后汇总
 			TotalFuel:     totalFuel,
 			TotalDistance:  totalDist,
 			AvgEfficiency: avgEff,
@@ -920,7 +927,9 @@ func (s *GroupService) calculateSummary(current, prev map[string]*memberTotal) d
 	var effCount int
 
 	for _, mt := range current {
-		totalCost += mt.Cost
+		for _, cost := range mt.CostByCurrency {
+			totalCost += cost
+		}
 		totalFuel += mt.Fuel
 		totalDist += mt.Distance
 		if mt.Count > 0 {
@@ -938,7 +947,9 @@ func (s *GroupService) calculateSummary(current, prev map[string]*memberTotal) d
 	var prevCost, prevFuel, prevDist, prevEff float64
 	var prevEffCount int
 	for _, mt := range prev {
-		prevCost += mt.Cost
+		for _, cost := range mt.CostByCurrency {
+			prevCost += cost
+		}
 		prevFuel += mt.Fuel
 		prevDist += mt.Distance
 		if mt.Count > 0 {
@@ -960,7 +971,7 @@ func (s *GroupService) calculateSummary(current, prev map[string]*memberTotal) d
 	}
 
 	return dto.GroupExpenseSummary{
-		TotalCost:           totalCost,
+		TotalCost:           0, // 前端根据 member_breakdown 各币种换算后汇总
 		TotalFuel:           totalFuel,
 		TotalDistance:        totalDist,
 		AvgEfficiency:       avgEff,
@@ -973,19 +984,23 @@ func (s *GroupService) calculateSummary(current, prev map[string]*memberTotal) d
 
 // buildMemberBreakdown 构建成员费用占比
 func (s *GroupService) buildMemberBreakdown(memberTotals map[string]*memberTotal, nicknameMap map[string]string, totalCost float64) []dto.MemberCostBreakdown {
-	result := make([]dto.MemberCostBreakdown, 0, len(memberTotals))
+	result := make([]dto.MemberCostBreakdown, 0)
 	for uid, mt := range memberTotals {
-		pct := 0.0
-		if totalCost > 0 {
-			pct = (mt.Cost / totalCost) * 100
+		// 每个币种生成一条记录
+		for cur, cost := range mt.CostByCurrency {
+			pct := 0.0
+			if totalCost > 0 {
+				pct = (cost / totalCost) * 100
+			}
+			result = append(result, dto.MemberCostBreakdown{
+				UserID:       uid,
+				Nickname:     nicknameMap[uid],
+				TotalCost:    cost,
+				CurrencyCode: cur,
+				TotalFuel:    mt.Fuel,
+				Percentage:   pct,
+			})
 		}
-		result = append(result, dto.MemberCostBreakdown{
-			UserID:     uid,
-			Nickname:   nicknameMap[uid],
-			TotalCost:  mt.Cost,
-			TotalFuel:  mt.Fuel,
-			Percentage: pct,
-		})
 	}
 	return result
 }

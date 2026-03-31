@@ -213,7 +213,7 @@ export default function RecordListPage() {
         return (
           <Tooltip
             title={otherUnits.join('\n')}
-            overlayInnerStyle={{ whiteSpace: 'pre-line' }}
+            styles={{ body: { whiteSpace: 'pre-line' } }}
           >
             <Tag color="blue" style={{ cursor: 'pointer' }}>
               {formatNumber(v)} {efficiencyUnit}
@@ -290,7 +290,7 @@ export default function RecordListPage() {
             </span>
             <Tooltip title={getRateTooltip(record.total_cost)}>
               <span className="cost" style={getRateTooltip(record.total_cost) ? { cursor: 'help' } : undefined}>
-                {formatCurrency(record.total_cost, currency)}
+                {formatCurrency(record.total_cost, record.currency_code || currency)}
               </span>
             </Tooltip>
           </div>

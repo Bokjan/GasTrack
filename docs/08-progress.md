@@ -130,6 +130,24 @@
 
 ### 2026-03-31
 
+- 🔧 **全栈审计修复（11 项高+中优先级）** — 消除硬编码值、魔数和 i18n 缺失：
+  - **H1**: `group.go` 排行榜 `periodLabel` 从中文日期 `"2006年1月"` 改为 ISO `"2006-01"` 格式，前端按 locale 格式化
+  - **H2**: `notification.go` 三处通知（异常油耗/保养到期/邀请使用）从硬编码英文改为结构化 key+参数，前端按 locale 渲染
+  - **H3**: `SettingsPage.tsx` 汇率表头 `.includes('人民币')` 改为 i18n key `exchangeRate.currencyColumnName`
+  - **H4**: `InviteManagePage.tsx` placeholder `"0 = unlimited"` 改为 i18n key `invite.maxUsesPlaceholder`
+  - **H5**: `RecordListPage.tsx` 移动端卡片 `currency` → `record.currency_code || currency`
+  - **M1**: `fuel_record.go` / `expense_record.go` 魔数 `1.60934` → `convert.MileToKm`
+  - **M2**: 服务层字符串字面量 `"mi"/"L"/"km"` → `convert` 包常量
+  - **M3**: `group.go` 排行榜 `unit` 硬编码 → `convert.UnitL100km` / `convert.UnitKm`
+  - **M4**: `GroupPage.tsx` 11 处 `.toFixed()` → `formatNumber()` 统一精度 + 千分位
+  - **M5**: `CURRENCIES` labels 从 `"¥ CNY"` 改为 i18n key `"currency.CNY"`，三语 JSON 添加对应翻译
+  - **M6**: `convert.go` 魔数 `235.215` 提取为 `L100kmMPGFactor` 常量并在函数体中引用
+  - 补全三语 i18n JSON 新增 keys（`exchangeRate.currencyColumnName`/`invite.maxUsesPlaceholder`/`currency.*`/`notification.*Msg`/`notification.direction*`）
+  - `expense_record.go` 添加缺失的 `convert` 包 import
+- 🔧 **Ant Design 弃用 API 修复**: 全部 5 处 `destroyOnClose` → `destroyOnHidden`（`GroupPage.tsx` ×3、`InviteManagePage.tsx` ×1、`ReminderPage.tsx` ×1）；`RecordListPage.tsx` `overlayInnerStyle` → `styles.body`；`MainLayout.tsx` `bodyStyle`+`headerStyle` → `styles` 对象
+- 🔧 **群组费用看板多币种 Bug 修复（全栈）** — 费用看板 `GetGroupExpenseByMonth`/`GetGroupExpenseByYear` SQL 原按 `(period_label, user_id)` 分组，不同币种的金额被直接 SUM 混合汇总（如 JPY + USD 裸加），前端又将未换算的总额贴上用户偏好币种符号显示；修复：SQL 增加 `fr.currency_code` 到 SELECT 和 GROUP BY；`GroupExpenseRow`/DTO/TypeScript 类型链全部加 `currency_code`；Service 层 `memberTotal` 改为 `CostByCurrency map[string]float64` 按币种分账；前端新增 `sumConvertedCosts()` 辅助函数，从 `by_member` / `member_breakdown` 各项按币种逐笔换算后汇总显示
+- 🔧 **群组加油站价格换算 Bug 修复** — 加油站页面价格原使用 `formatCurrency()`（仅格式化不换算），改为 `<ConvertedCost sourceCurrency={station.currency_code}>` 组件，正确将原始币种换算为用户偏好币种显示
+- 🔧 **费用占比 0.0% Bug 修复** — 费用看板成员费用占比始终显示 `0.0%`；原因：`calculateSummary` 将 `TotalCost` 设为占位 `0`（由前端换算汇总），但 `buildMemberBreakdown` 直接拿 `summary.TotalCost` 做分母计算百分比，除以 0 导致全部为 0；修复：在调用 `buildMemberBreakdown` 前从 `memberTotals` 原始数据重新计算费用总和作为分母
 - 🧹 **包管理清理** — 删除多余的 `package-lock.json`（项目使用 pnpm）；根 `package.json` 移除废弃的 `tsc` 包和冲突的 `typescript ^6.0.2`（子包统一 `^5.4.5`）；`engines.pnpm` 约束 `>=8.0.0` → `>=9.0.0`；`.gitignore` 新增 `package-lock.json` 防止误入
 - 🔧 **群组车辆汇总币种 Bug 修复** — `GetGroupVehicleSummary` SQL 中 `currency_code` 原来取自 `users.currency_code`（用户当前偏好），用户修改默认币种后数据不做换算直接错误展示（如 ¥165,687 JPY → $165,687 USD）；修复为子查询从 `fuel_records` 取该车辆使用最多的实际入账币种，无记录时 fallback 到用户偏好
 - 🗑️ **文档清理** — 移除 `docs/11-group-features-design.md`（757 行，群组扩展功能已全部实现并合入主文档，独立设计文档不再需要）；同步清理 `01-requirements.md` 中的文档引用

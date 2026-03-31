@@ -431,6 +431,7 @@ func (r *GroupRepository) GetLeaderboard(ctx context.Context, groupID uuid.UUID,
 type GroupExpenseRow struct {
 	PeriodLabel   string    `gorm:"column:period_label"`
 	UserID        uuid.UUID `gorm:"column:user_id"`
+	CurrencyCode  string    `gorm:"column:currency_code"`
 	Cost          float64   `gorm:"column:cost"`
 	Fuel          float64   `gorm:"column:fuel"`
 	Distance      float64   `gorm:"column:distance"`
@@ -449,6 +450,7 @@ func (r *GroupRepository) GetGroupExpenseByMonth(ctx context.Context, groupID uu
 		SELECT 
 			TO_CHAR(fr.refuel_date, 'YYYY-MM') AS period_label,
 			gm.user_id,
+			fr.currency_code,
 			COALESCE(SUM(fr.total_cost), 0) AS cost,
 			COALESCE(SUM(fr.fuel_amount), 0) AS fuel,
 			COALESCE(SUM(fr.trip_distance), 0) AS distance,
@@ -458,7 +460,7 @@ func (r *GroupRepository) GetGroupExpenseByMonth(ctx context.Context, groupID uu
 		JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL AND v.is_archived = false
 		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
 		WHERE fr.refuel_date >= ? AND fr.refuel_date < ?
-		GROUP BY period_label, gm.user_id
+		GROUP BY period_label, gm.user_id, fr.currency_code
 		ORDER BY period_label ASC, gm.user_id ASC
 	`, groupID, startDate, endDate).Scan(&results).Error
 
@@ -473,6 +475,7 @@ func (r *GroupRepository) GetGroupExpenseByYear(ctx context.Context, groupID uui
 		SELECT 
 			TO_CHAR(fr.refuel_date, 'YYYY') AS period_label,
 			gm.user_id,
+			fr.currency_code,
 			COALESCE(SUM(fr.total_cost), 0) AS cost,
 			COALESCE(SUM(fr.fuel_amount), 0) AS fuel,
 			COALESCE(SUM(fr.trip_distance), 0) AS distance,
@@ -481,7 +484,7 @@ func (r *GroupRepository) GetGroupExpenseByYear(ctx context.Context, groupID uui
 		FROM fuel_records fr
 		JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL AND v.is_archived = false
 		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
-		GROUP BY period_label, gm.user_id
+		GROUP BY period_label, gm.user_id, fr.currency_code
 		ORDER BY period_label ASC, gm.user_id ASC
 	`, groupID).Scan(&results).Error
 

@@ -82,7 +82,8 @@
     "copyToClipboard": "Copy to clipboard",
     "maxUsesHint": "Set to 0 for unlimited uses",
     "expiresHint": "Leave empty for default 30-day expiry",
-    "expiresPlaceholder": "Select expiry date"
+    "expiresPlaceholder": "Select expiry date",
+    "maxUsesPlaceholder": "0 = unlimited"
   },
   "vehicle": {
     "title": "Vehicles",
@@ -655,6 +656,7 @@
     "referenceCurrency": "Reference Currency",
     "referenceCurrencyAuto": "Auto (Default)",
     "referenceCurrencyHint": "Cost amounts will show a reference conversion in this currency",
+    "currencyColumnName": "Name",
     "currencyName": {
       "CNY": "Chinese Yuan",
       "USD": "US Dollar",
@@ -663,6 +665,14 @@
       "GBP": "British Pound",
       "KRW": "South Korean Won"
     }
+  },
+  "currency": {
+    "CNY": "¥ CNY",
+    "USD": "$ USD",
+    "EUR": "€ EUR",
+    "JPY": "¥ JPY",
+    "GBP": "£ GBP",
+    "KRW": "₩ KRW"
   },
   "expense": {
     "title": "Expenses",

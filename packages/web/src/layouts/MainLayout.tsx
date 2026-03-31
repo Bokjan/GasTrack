@@ -182,8 +182,7 @@ export default function MainLayout() {
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           width={256}
-          bodyStyle={{ padding: 0, background: token.colorBgContainer }}
-          headerStyle={{ display: 'none' }}
+          styles={{ body: { padding: 0, background: token.colorBgContainer }, header: { display: 'none' } }}
         >
           {siderContent}
         </Drawer>

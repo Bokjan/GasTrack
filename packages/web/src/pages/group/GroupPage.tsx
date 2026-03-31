@@ -62,11 +62,12 @@ import type {
   LeaderboardPeriod,
   GroupExpenseStatsResponse,
   GroupStationStatsResponse,
+  GroupTrendItem,
 } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { useAuthStore, FUEL_GRADES, formatCurrency, convertFuelEfficiency, convertAmount, litersToGallons, kmToMiles, useExchangeRateStore } from '@gastrack/shared';
+import { useAuthStore, FUEL_GRADES, formatCurrency, formatNumber, convertFuelEfficiency, convertAmount, litersToGallons, kmToMiles, useExchangeRateStore } from '@gastrack/shared';
 
 const { Text } = Typography;
 
@@ -148,6 +149,42 @@ export default function GroupPage() {
         )}
       </span>
     );
+  };
+
+  /** 将多币种费用项分别换算为用户偏好币种后汇总 */
+  const sumConvertedCosts = (items: Array<{ cost: number; currency_code: string }>) => {
+    let total = 0;
+    let anyConverted = false;
+    for (const item of items) {
+      const from = item.currency_code || currency;
+      if (from === currency) {
+        total += item.cost;
+      } else {
+        // 尝试换算
+        let converted = false;
+        if (rateBase === currency && rates) {
+          const fromRate = rates[from];
+          if (fromRate && fromRate > 0) {
+            total += item.cost / fromRate;
+            converted = true;
+          }
+        }
+        if (!converted && rateBase === from && rates) {
+          const result = convertAmount(item.cost, from, currency, rates);
+          if (result !== null) {
+            total += result;
+            converted = true;
+          }
+        }
+        if (converted) {
+          anyConverted = true;
+        } else {
+          // 无法换算，直接加原始金额
+          total += item.cost;
+        }
+      }
+    }
+    return { text: formatCurrency(total, currency), converted: anyConverted };
   };
 
   const [loading, setLoading] = useState(false);
@@ -737,14 +774,14 @@ export default function GroupPage() {
                             dataIndex: 'total_fuel',
                             key: 'total_fuel',
                             width: 120,
-                            render: (val: number) => `${convertFuel(val).toFixed(2)} ${fuelUnit}`,
+                            render: (val: number) => `${formatNumber(convertFuel(val), 2)} ${fuelUnit}`,
                           },
                           {
                             title: t('group.avgEfficiency'),
                             dataIndex: 'avg_efficiency',
                             key: 'avg_efficiency',
                             width: 130,
-                            render: (val: number) => `${convertEfficiency(val).toFixed(2)} ${efficiencyUnit}`,
+                            render: (val: number) => `${formatNumber(convertEfficiency(val), 2)} ${efficiencyUnit}`,
                           },
                           {
                             title: t('group.shareVehicle'),
@@ -865,10 +902,10 @@ export default function GroupPage() {
                           <>
                             <Text strong>
                               {lbMetric === 'efficiency'
-                                ? convertEfficiency(leaderboard.group_avg).toFixed(2)
+                                ? formatNumber(convertEfficiency(leaderboard.group_avg), 2)
                                 : lbMetric === 'distance'
-                                ? convertDistance(leaderboard.group_avg).toFixed(2)
-                                : leaderboard.group_avg.toFixed(2)}
+                                ? formatNumber(convertDistance(leaderboard.group_avg), 0)
+                                : formatNumber(leaderboard.group_avg, 2)}
                             </Text>{' '}
                             {lbMetric === 'efficiency'
                               ? efficiencyUnit
@@ -927,10 +964,10 @@ export default function GroupPage() {
                                     ) : (
                                       <>
                                         {lbMetric === 'efficiency'
-                                          ? convertEfficiency(item.value).toFixed(2)
+                                          ? formatNumber(convertEfficiency(item.value), 2)
                                           : lbMetric === 'distance'
-                                          ? convertDistance(item.value).toFixed(2)
-                                          : item.value.toFixed(2)}{' '}
+                                          ? formatNumber(convertDistance(item.value), 0)
+                                          : formatNumber(item.value, 2)}{' '}
                                         {lbMetric === 'efficiency'
                                           ? efficiencyUnit
                                           : lbMetric === 'distance'
@@ -946,7 +983,7 @@ export default function GroupPage() {
                                     type={item.diff_from_avg < 0 ? 'success' : item.diff_from_avg > 0 ? 'danger' : 'secondary'}
                                     style={{ fontSize: 12 }}
                                   >
-                                    {t('group.diffFromAvg')}: {item.diff_from_avg > 0 ? '+' : ''}{item.diff_from_avg.toFixed(1)}%
+                                    {t('group.diffFromAvg')}: {item.diff_from_avg > 0 ? '+' : ''}{formatNumber(item.diff_from_avg, 1)}%
                                   </Text>
                                 </Space>
                               }
@@ -1014,8 +1051,13 @@ export default function GroupPage() {
                           {
                             title: t('group.totalExpense'),
                             value: (() => {
-                              const r = formatConvertedCost(expenseStats.summary.total_cost);
-                              return { raw: expenseStats.summary.total_cost, displayText: r.text, isConverted: r.converted };
+                              const r = sumConvertedCosts(
+                                (expenseStats.member_breakdown || []).map((m) => ({
+                                  cost: m.total_cost,
+                                  currency_code: m.currency_code,
+                                }))
+                              );
+                              return { raw: 0, displayText: r.text, isConverted: r.converted };
                             })(),
                             change: expenseStats.summary.cost_change_pct,
                             precision: 2,
@@ -1066,7 +1108,7 @@ export default function GroupPage() {
                                           type={card.change > 0 ? 'danger' : 'success'}
                                         >
                                           {card.change > 0 ? <CaretUpOutlined /> : <CaretDownOutlined />}
-                                          {Math.abs(card.change).toFixed(1)}%
+                                          {formatNumber(Math.abs(card.change), 1)}%
                                         </Text>
                                       )}
                                     </span>
@@ -1086,7 +1128,7 @@ export default function GroupPage() {
                                           type={card.change > 0 ? 'danger' : 'success'}
                                         >
                                           {card.change > 0 ? <CaretUpOutlined /> : <CaretDownOutlined />}
-                                          {Math.abs(card.change).toFixed(1)}%
+                                          {formatNumber(Math.abs(card.change), 1)}%
                                         </Text>
                                       )}
                                     </span>
@@ -1120,25 +1162,42 @@ export default function GroupPage() {
                                 title: t('group.totalExpense'),
                                 dataIndex: 'total_cost',
                                 key: 'total_cost',
-                                render: (val: number) => <ConvertedCost amount={val} />,
+                                render: (_val: number, record: GroupTrendItem) => {
+                                  const r = sumConvertedCosts(
+                                    (record.by_member || []).map((m) => ({
+                                      cost: m.cost,
+                                      currency_code: m.currency_code,
+                                    }))
+                                  );
+                                  return (
+                                    <span>
+                                      {r.text}
+                                      {r.converted && (
+                                        <Tooltip title={t('group.converted')}>
+                                          <InfoCircleOutlined style={{ marginLeft: 4, fontSize: 12, color: '#999', cursor: 'help' }} />
+                                        </Tooltip>
+                                      )}
+                                    </span>
+                                  );
+                                },
                               },
                               {
                                 title: t('group.totalFuelAmount'),
                                 dataIndex: 'total_fuel',
                                 key: 'total_fuel',
-                                render: (val: number) => `${convertFuel(val).toFixed(2)} ${fuelUnit}`,
+                                render: (val: number) => `${formatNumber(convertFuel(val), 2)} ${fuelUnit}`,
                               },
                               {
                                 title: t('group.totalMileage'),
                                 dataIndex: 'total_distance',
                                 key: 'total_distance',
-                                render: (val: number) => `${convertDistance(val).toFixed(0)} ${distanceUnit}`,
+                                render: (val: number) => `${formatNumber(convertDistance(val), 0)} ${distanceUnit}`,
                               },
                               {
                                 title: t('group.avgFuelEfficiency'),
                                 dataIndex: 'avg_efficiency',
                                 key: 'avg_efficiency',
-                                render: (val: number) => `${convertEfficiency(val).toFixed(2)} ${efficiencyUnit}`,
+                                render: (val: number) => `${formatNumber(convertEfficiency(val), 2)} ${efficiencyUnit}`,
                               },
                             ]}
                           />
@@ -1151,7 +1210,7 @@ export default function GroupPage() {
                           <Text strong style={{ display: 'block', marginTop: 24, marginBottom: 12 }}>
                             {t('group.costBreakdown')}
                           </Text>
-                          <List
+                            <List
                             dataSource={expenseStats.member_breakdown}
                             renderItem={(item) => (
                               <List.Item>
@@ -1159,12 +1218,12 @@ export default function GroupPage() {
                                   title={item.nickname}
                                   description={
                                     <span>
-                                      <ConvertedCost amount={item.total_cost} /> · {convertFuel(item.total_fuel).toFixed(2)} {fuelUnit}
+                                      <ConvertedCost amount={item.total_cost} sourceCurrency={item.currency_code} /> · {formatNumber(convertFuel(item.total_fuel), 2)} {fuelUnit}
                                     </span>
                                   }
                                 />
                                 <div style={{ minWidth: 60, textAlign: 'right' }}>
-                                  <Text strong>{item.percentage.toFixed(1)}%</Text>
+                                  <Text strong>{formatNumber(item.percentage, 1)}%</Text>
                                 </div>
                               </List.Item>
                             )}
@@ -1253,14 +1312,14 @@ export default function GroupPage() {
                                 <Col span={12}>
                                   <Text type="secondary" style={{ fontSize: 12 }}>{t('group.avgPrice')}</Text>
                                   <div>
-                                    <Text strong>{formatCurrency(station.avg_unit_price, station.currency_code || currency)}</Text>
+                                    <Text strong><ConvertedCost amount={station.avg_unit_price} sourceCurrency={station.currency_code || currency} /></Text>
                                     <Text type="secondary" style={{ fontSize: 12 }}>/{fuelUnit}</Text>
                                   </div>
                                 </Col>
                                 <Col span={12}>
                                   <Text type="secondary" style={{ fontSize: 12 }}>{t('group.latestPrice')}</Text>
                                   <div>
-                                    <Text strong>{formatCurrency(station.latest_unit_price, station.currency_code || currency)}</Text>
+                                    <Text strong><ConvertedCost amount={station.latest_unit_price} sourceCurrency={station.currency_code || currency} /></Text>
                                     <Text type="secondary" style={{ fontSize: 12 }}>/{fuelUnit} </Text>
                                     <Text
                                       type={station.price_trend === 'up' ? 'danger' : station.price_trend === 'down' ? 'success' : 'secondary'}
@@ -1381,7 +1440,7 @@ export default function GroupPage() {
           createForm.resetFields();
         }}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={createForm}
@@ -1440,7 +1499,7 @@ export default function GroupPage() {
           joinForm.resetFields();
         }}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={joinForm}
@@ -1481,7 +1540,7 @@ export default function GroupPage() {
           editForm.resetFields();
         }}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form
           form={editForm}

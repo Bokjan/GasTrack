@@ -10,6 +10,7 @@ const (
 	LiterToGallon  = 1.0 / GallonToLiter
 	MileToKm       = 1.60934 // 1 mile = 1.60934 km
 	KmToMile       = 1.0 / MileToKm
+	L100kmMPGFactor = 235.215 // L/100km ↔ MPG 互转因子: MPG = 235.215 / L100km
 )
 
 // FuelEfficiencyUnit 油耗单位类型
@@ -109,8 +110,8 @@ func L100kmToMPG(l100km float64) float64 {
 	if l100km <= 0 {
 		return 0
 	}
-	// MPG = 235.215 / L/100km
-	return round(235.215/l100km, 2)
+	// MPG = L100kmMPGFactor / L/100km
+	return round(L100kmMPGFactor/l100km, 2)
 }
 
 // MPGToL100km 将 MPG 转为 L/100km
@@ -118,7 +119,7 @@ func MPGToL100km(mpg float64) float64 {
 	if mpg <= 0 {
 		return 0
 	}
-	return round(235.215/mpg, 2)
+	return round(L100kmMPGFactor/mpg, 2)
 }
 
 // ConvertFuelEfficiency 将油耗值从一种单位转为另一种

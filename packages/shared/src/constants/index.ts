@@ -29,12 +29,12 @@ export const EV_MEASUREMENT_SYSTEMS = [
 ] as const;
 
 export const CURRENCIES = [
-  { value: 'CNY', label: '¥ CNY', symbol: '¥' },
-  { value: 'USD', label: '$ USD', symbol: '$' },
-  { value: 'EUR', label: '€ EUR', symbol: '€' },
-  { value: 'JPY', label: '¥ JPY', symbol: '¥' },
-  { value: 'GBP', label: '£ GBP', symbol: '£' },
-  { value: 'KRW', label: '₩ KRW', symbol: '₩' },
+  { value: 'CNY', label: 'currency.CNY', symbol: '¥' },
+  { value: 'USD', label: 'currency.USD', symbol: '$' },
+  { value: 'EUR', label: 'currency.EUR', symbol: '€' },
+  { value: 'JPY', label: 'currency.JPY', symbol: '¥' },
+  { value: 'GBP', label: 'currency.GBP', symbol: '£' },
+  { value: 'KRW', label: 'currency.KRW', symbol: '₩' },
 ] as const;
 
 export const FUEL_UNITS = [

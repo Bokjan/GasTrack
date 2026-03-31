@@ -287,7 +287,7 @@ export default function ReminderPage() {
         onCancel={() => setModalOpen(false)}
         onOk={handleSubmit}
         confirmLoading={submitting}
-        destroyOnClose
+        destroyOnHidden
         width={520}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>

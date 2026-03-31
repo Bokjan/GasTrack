@@ -538,6 +538,7 @@ export interface MemberCostBreakdown {
   user_id: string;
   nickname: string;
   total_cost: number;
+  currency_code: string;
   total_fuel: number;
   percentage: number;
 }
@@ -547,6 +548,7 @@ export interface MemberCostItem {
   user_id: string;
   nickname: string;
   cost: number;
+  currency_code: string;
 }
 
 /** 群组趋势项 */
