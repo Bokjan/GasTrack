@@ -13,7 +13,7 @@ set -euo pipefail
 
 # ---------- 参数检查 ----------
 DOMAIN="${DOMAIN:?请设置 DOMAIN 环境变量，例如: DOMAIN=gas.example.com}"
-EMAIL="${EMAIL:?请设置 EMAIL 环境变量，用于 Let's Encrypt 通知}"
+EMAIL="${EMAIL:?请设置 EMAIL 环境变量，用于 Lets Encrypt 通知}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.prod.yaml}"
 ENV_FILE="${ENV_FILE:-.env.production}"
 
@@ -112,5 +112,5 @@ echo ""
 echo "站点地址: https://${DOMAIN}"
 echo ""
 echo "📌 别忘了设置证书自动续期（crontab -e）:"
-echo "   0 3 * * * cd ${PWD} && docker run --rm -v certbot-etc:/etc/letsencrypt -v certbot-var:/var/lib/letsencrypt -v ${PWD}/${CERTBOT_WWW}:/var/www/certbot certbot/certbot renew --quiet && docker exec gastrack-nginx nginx -s reload"
+echo "   0 3 * * * cd '${PWD}' && docker run --rm -v certbot-etc:/etc/letsencrypt -v certbot-var:/var/lib/letsencrypt -v '${PWD}/${CERTBOT_WWW}':/var/www/certbot certbot/certbot renew --quiet && docker exec gastrack-nginx nginx -s reload"
 echo "============================================"
