@@ -28,6 +28,7 @@
 | 家庭群组管理（基础） | ✅ | ✅ | ✅ |
 | 群组扩展（共享/排行/看板/加油站） | ✅ | ✅ | ✅ |
 | 维修保养等开销记录 | ✅ | ✅ | ✅ |
+| PWA 支持（安装到桌面/离线缓存） | — | ✅ | ✅ |
 
 **图例**: ✅ 完成 | 🔨 进行中 | 🔲 待实现
 
@@ -83,6 +84,7 @@
 - **开销记录页面** ✅ — `/vehicles/{id}/expenses` 开销列表（分页+筛选+统计摘要）+ 创建/编辑表单 + 详情页，10 种开销分类，保养提醒联动
 - **深色模式** ✅ — 三种主题模式, CSS 变量体系, ECharts 暗色适配
 - **响应式** ✅ — useIsMobile Hook, 全站 Table→卡片/Sider→Drawer 适配
+- **PWA** ✅ — vite-plugin-pwa, Web App Manifest, Service Worker (Workbox), 预缓存 + 运行时缓存 (API NetworkFirst / 图片 CacheFirst), 自动更新提示, 安装引导 (Android/Desktop + iOS Safari), GT 品牌图标 (SVG 矢量 + 5 尺寸 PNG 自动生成)
 
 ### 待实现
 
@@ -98,7 +100,7 @@
 
 | 功能 | 说明 |
 |------|------|
-| PWA 支持 | Service Worker + 离线 + 安装到桌面 |
+| PWA 支持 | ~~Service Worker + 离线 + 安装到桌面~~ ✅ 已完成 |
 | 多车对比图表 | 油耗/费用/里程对比 |
 | 文件上传 | 车辆照片 + 头像 (OSS/本地) |
 | 更多语言 | 韩语/繁中/西/德/法 |
@@ -130,6 +132,9 @@
 
 ### 2026-03-31
 
+- ✅ **PWA 支持（安装到桌面）** — `vite-plugin-pwa` 集成：Web App Manifest（standalone 模式 + portrait）、Workbox Service Worker（预缓存构建产物 + 运行时缓存：API NetworkFirst 5min / 图片 CacheFirst 30d）、`PWAUpdatePrompt` 组件（新版本通知 + 每小时检查）、`InstallPrompt` 组件（Android/Desktop `beforeinstallprompt` 安装按钮 + iOS Safari 手动添加引导）、三语 i18n 新增 `pwa.*` 8 键
+- 🎨 **品牌升级** — 全新 GasTrack 图标设计：蓝色渐变背景（#0958d9 → #1677ff）+ 白色 GT 字母标志，简洁有力，小尺寸清晰可辨；SVG 矢量源文件 + `@resvg/resvg-js` 自动生成 5 种 PNG 尺寸（512/192/180/32/16），替换旧 Vite 默认图标；`index.html` 完善 favicon/apple-touch-icon/theme-color meta；新增 `scripts/generate-icons.mjs` 图标生成脚本
+- 📝 **名称与描述更新** — 系统定位从"油耗记录与分析"扩展为"车辆能耗与费用管理"，覆盖油耗/电耗/维保开销全场景；更新 6 处：`index.html` title、`package.json` description、`README.md`、三语 i18n `app.title`（zh-CN/en-US/ja-JP）；侧边栏 logo 从 emoji 改为 SVG 图标
 - 🔧 **移动端表单聚焦自动缩放修复** — iOS Safari 点击 input/select 时页面自动放大（Ant Design 默认 14px < 16px 阈值）；viewport 添加 `maximum-scale=1, user-scalable=no`；全局 CSS 新增表单元素 `font-size: 16px !important`（覆盖原生 + Ant Design 组件选择器）；HTML `text-size-adjust: 100%` 防止文字自动调整
 - 🔧 **全栈审计修复（11 项高+中优先级）** — 消除硬编码值、魔数和 i18n 缺失：
   - **H1**: `group.go` 排行榜 `periodLabel` 从中文日期 `"2006年1月"` 改为 ISO `"2006-01"` 格式，前端按 locale 格式化

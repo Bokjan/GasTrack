@@ -138,12 +138,17 @@ export default function MainLayout() {
           borderBottom: `1px solid ${token.colorBorderSecondary}`,
         }}
       >
-        <Typography.Title
-          level={4}
-          style={{ margin: 0, color: token.colorPrimary, whiteSpace: 'nowrap' }}
-        >
-          {collapsed && !isMobile ? '⛽' : '⛽ GasTrack'}
-        </Typography.Title>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src="/favicon.svg" alt="GasTrack" style={{ width: 28, height: 28 }} />
+          {!(collapsed && !isMobile) && (
+            <Typography.Title
+              level={4}
+              style={{ margin: 0, color: token.colorPrimary, whiteSpace: 'nowrap' }}
+            >
+              GasTrack
+            </Typography.Title>
+          )}
+        </div>
       </div>
       <Menu
         mode="inline"

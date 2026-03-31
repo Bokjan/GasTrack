@@ -2,7 +2,7 @@
   "name": "gastrack",
   "version": "0.1.0",
   "private": true,
-  "description": "GasTrack - 油耗记录与分析系统",
+  "description": "GasTrack - 车辆能耗与费用管理系统",
   "scripts": {
     "dev": "pnpm --filter @gastrack/web dev",
     "build": "pnpm --filter @gastrack/web build",
@@ -13,5 +13,8 @@
   "engines": {
     "node": ">=18.0.0",
     "pnpm": ">=9.0.0"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2"
   }
 }

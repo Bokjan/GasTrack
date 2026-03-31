@@ -1,6 +1,6 @@
 # ⛽ GasTrack
 
-**油耗/电耗记录与分析系统** — 记录每次加油/充电，追踪能耗趋势，辅助用车决策。
+**车辆能耗与费用管理系统** — 记录加油/充电，追踪维保开销，分析能耗趋势，辅助用车决策。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
