@@ -151,6 +151,26 @@ func (r *GroupRepository) ListGroupsByUser(ctx context.Context, userID uuid.UUID
 	return groups, err
 }
 
+// ListMembershipsByUser 查询用户的所有群组成员身份（用于数据导出）
+func (r *GroupRepository) ListMembershipsByUser(ctx context.Context, userID uuid.UUID) ([]model.GroupMember, error) {
+	var members []model.GroupMember
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("joined_at ASC").
+		Find(&members).Error
+	return members, err
+}
+
+// ListSharedVehiclesByUser 查询用户共享出去的车辆记录（用于数据导出）
+func (r *GroupRepository) ListSharedVehiclesByUser(ctx context.Context, userID uuid.UUID) ([]model.SharedVehicle, error) {
+	var svs []model.SharedVehicle
+	err := r.db.WithContext(ctx).
+		Where("shared_by = ?", userID).
+		Order("created_at ASC").
+		Find(&svs).Error
+	return svs, err
+}
+
 // JoinGroupByInviteCode 通过邀请码加入群组（SELECT FOR UPDATE 保证并发安全）
 func (r *GroupRepository) JoinGroupByInviteCode(ctx context.Context, code string, userID uuid.UUID) (*model.Group, error) {
 	var group model.Group

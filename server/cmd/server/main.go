@@ -71,7 +71,7 @@ func main() {
 	vehicleService := service.NewVehicleService(vehicleRepo, groupRepo, logger)
 	fuelRecordService := service.NewFuelRecordService(fuelRecordRepo, vehicleRepo, userRepo, groupRepo, logger, notificationService)
 	statsService := service.NewStatsService(fuelRecordRepo, vehicleRepo, userRepo, groupRepo, logger)
-	exportService := service.NewExportService(userRepo, vehicleRepo, fuelRecordRepo, logger)
+	exportService := service.NewExportService(userRepo, vehicleRepo, fuelRecordRepo, expenseRecordRepo, reminderRepo, notificationRepo, inviteCodeRepo, groupRepo, logger)
 	groupService := service.NewGroupService(groupRepo, userRepo, vehicleRepo, logger)
 	expenseRecordService := service.NewExpenseRecordService(expenseRecordRepo, vehicleRepo, groupRepo, reminderRepo, logger)
 

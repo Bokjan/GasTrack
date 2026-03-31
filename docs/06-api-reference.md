@@ -900,9 +900,27 @@ GET /api/v1/users/me/export
 
 **🔒 需要认证**
 
-导出当前用户的全部数据为 CSV 文件（UTF-8 BOM）。返回二进制流 `Content-Disposition: attachment`。
+导出当前用户的数据。仅导出用户本人数据，不含密码哈希、Token 等敏感内部字段。
 
-CSV 三段式结构：User Profile → Vehicles → Fuel/Charging Records。
+**查询参数：**
+
+| 参数 | 可选值 | 默认 | 说明 |
+|------|--------|------|------|
+| `format` | `csv` / `zip` / `json` | `csv` | 导出文件格式 |
+| `scope` | `basic` / `full` | `basic` | 导出范围 |
+
+**导出范围：**
+
+- `basic`（P0 基础版）：用户资料、车辆、加油/充电记录
+- `full`（P1 完整版）：在基础版基础上增加开销记录、保养提醒、通知、邀请码、群组关系、共享车辆
+
+**格式说明：**
+
+- `csv`：三段式单文件 CSV（UTF-8 BOM），仅在 scope=basic 时可用；scope=full 时自动升级为 zip
+- `zip`：多文件分类导出 ZIP 容器（profile.csv, vehicles.csv, fuel_records.csv, expense_records.csv, reminders.csv, notifications.csv, invite_codes.csv, groups.csv, manifest.json）
+- `json`：结构化 JSON，带 meta 元数据，方便二次处理
+
+返回二进制流 `Content-Disposition: attachment`。
 
 ---
 
@@ -925,7 +943,7 @@ CSV 三段式结构：User Profile → Vehicles → Fuel/Charging Records。
 | PATCH | `/api/v1/users/me` | ✅ | 更新用户资料 |
 | PUT | `/api/v1/users/me/password` | ✅ | 修改密码 |
 | DELETE | `/api/v1/users/me` | ✅ | 注销账号 |
-| GET | `/api/v1/users/me/export` | ✅ | 数据导出 CSV |
+| GET | `/api/v1/users/me/export` | ✅ | 数据导出（CSV/ZIP/JSON） |
 | GET | `/api/v1/vehicles` | ✅ | 车辆列表 |
 | POST | `/api/v1/vehicles` | ✅ | 添加车辆 |
 | GET | `/api/v1/vehicles/{id}` | ✅ | 车辆详情 |

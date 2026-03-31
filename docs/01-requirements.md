@@ -66,7 +66,7 @@ GasTrack 是一款面向全球用户的油耗/电耗记录与分析系统：
 - ✅ 仪表盘按车辆维度独立展示统计（多车不混合汇总，油车/电车分别显示）
 - ✅ 前端单位换算展示 — 后端 API 已按用户偏好完成全部换算（油耗、加油量、里程），前端使用 `convertFuelEfficiency` 做 Tooltip 多单位展示 + `litersToGallons` 处理 tank_capacity
 - 🔲 多车辆对比图表 (P1)
-- ✅ 数据导出 CSV — GDPR 数据可携带权，`GET /api/v1/users/me/export`（详见 4.4.2）
+- ✅ 数据导出 CSV/ZIP/JSON — GDPR 数据可携带权，`GET /api/v1/users/me/export?format=csv|zip|json&scope=basic|full`（详见 4.4.2）
 - 🔲 数据导出 PDF (P2)
 
 ### 3.5 多语言支持 (P0)
@@ -213,26 +213,44 @@ GasTrack 是一款面向全球用户的油耗/电耗记录与分析系统：
 - ✅ 注销后自动登出并跳转登录页
 
 #### 4.4.2 数据可携带权（Right to Data Portability）✅
-- ✅ **用户数据导出** — 用户可导出自己的全部数据，下载为通用格式文件
+- ✅ **已全部实现（P0 基础版 + P1 完整数据版 + P2 JSON 导出）**
   - **后端 API**：`GET /api/v1/users/me/export`（需认证）
-    - 查询当前用户的所有车辆、加油/充电记录、用户设置
-    - 生成 CSV 格式文件并返回二进制流（`Content-Disposition: attachment`）
-    - CSV 结构：三段式（User Profile → Vehicles → Fuel/Charging Records），字段名英文表头
-    - 流式写入（`encoding/csv` Writer），避免一次性加载全部记录到内存
-    - UTF-8 BOM 写入，确保 Excel 正确识别中文
-  - **前端触发**：设置页"数据与隐私"卡片，"导出我的数据"按钮
-    - 调用 `userApi.exportData()`（Axios `responseType: 'blob'`）
+    - 支持两个查询参数：`format`（`csv` / `zip` / `json`，默认 `csv`）、`scope`（`basic` / `full`，默认 `basic`）
+    - **scope=basic**（P0 基础版）：用户资料、车辆列表、全部加油/充电记录
+    - **scope=full**（P1 完整版）：在基础版基础上增加开销记录、保养提醒、通知、邀请码、群组关系（成员身份 + 共享车辆）
+    - **format=csv**：三段式单文件 CSV（UTF-8 BOM），仅在 scope=basic 时可用；scope=full 时自动升级为 zip
+    - **format=zip**：多文件分类导出 ZIP 容器（profile.csv, vehicles.csv, fuel_records.csv, expense_records.csv, reminders.csv, notifications.csv, invite_codes.csv, groups.csv, manifest.json）
+    - **format=json**：结构化 JSON（带 meta 元数据：export_time/version/scope/modules/record_counts），方便二次处理
+    - 实现细节：流式写入（`encoding/csv` Writer / `archive/zip` Writer / `encoding/json` Encoder）+ UTF-8 BOM，兼容 Excel/Numbers/Google Sheets
+    - 返回：二进制流 + `Content-Disposition: attachment`，文件名含时间戳（如 `gastrack-export-20260331-154100.zip`）
+  - **前端触发**：设置页"数据与隐私"卡片
+    - 导出范围选择：基础数据 / 完整数据（Radio.Group 按钮组）
+    - 文件格式选择：CSV / ZIP / JSON（Radio.Group 按钮组，scope=full 时 CSV 禁用自动升级为 ZIP）
+    - 每个选项附带 Hint 说明（三语 i18n 支持）
+    - 调用 `userApi.exportData({ format, scope })`（Axios `responseType: 'blob'`）
     - 浏览器端 Blob URL + 动态 `<a>` 元素触发下载
-    - 从 `Content-Disposition` 头提取文件名（含 regex 回退）
-    - Loading 状态 + `message.success` 提示
-  - **导出内容范围**：
-    - 用户基本信息（ID、邮箱、昵称、偏好设置等，**不含密码**）
-    - 车辆列表（品牌、型号、年份、燃油类型、油箱/电池容量、车牌号等）
-    - 全部加油/充电记录（日期、站点、加油量、单价、总费用、里程、油耗、备注等）
-  - **文件格式**：
-    - 第一期：CSV（兼容性最好，Excel/Numbers/Google Sheets 均可直接打开）
-    - 第二期可选：PDF 格式报表（带图表的可视化报告）
-    - 第二期可选：JSON 格式导出（便于开发者/高级用户二次处理）
+    - 从 `Content-Disposition` 响应头提取文件名（含 regex 回退）
+    - 提供 Loading 状态与成功/失败提示
+
+  - **向后兼容**：无参数调用 `GET /users/me/export` 仍返回原版三段式 CSV，现有功能零影响
+
+  - **边界与合规约束**：
+    - 仅导出**当前用户自身数据**或与其直接相关的业务关系数据
+    - 不导出密码哈希、Refresh Token 哈希、内部审计日志、风控信息等敏感内部字段
+    - 群组相关导出仅包含当前用户的成员身份和共享车辆关系，不泄露其他成员隐私
+    - 所有时间字段统一使用 ISO 8601 / RFC3339 格式，避免跨时区歧义
+    - 字段名稳定，结构可预期
+
+  - **验收标准**（均已满足）：
+    - ✅ 用户可在 3 步内完成导出操作并成功下载文件
+    - ✅ 导出文件可被 Excel、Numbers、Google Sheets 或常见压缩/解析工具正常打开
+    - ✅ 导出结果覆盖全部业务模块（10 个数据源），且不包含密码、Token、内部日志等敏感字段
+    - ✅ 字段结构稳定、时间格式统一、跨语言环境下不出现乱码
+
+  - **后续可选扩展**（P2+）：
+    - 导出历史摘要（最后导出时间、导出版本）
+    - 大数据量异步导出任务模式（生成任务 → 后台打包 → 用户下载）
+    - PDF 可视化报告（附加能力，不替代结构化原始数据导出）
 
 #### 4.4.3 知情同意权（Right to be Informed）✅
 - ✅ **隐私政策页面**（Privacy Policy）
@@ -272,7 +290,7 @@ GasTrack 是一款面向全球用户的油耗/电耗记录与分析系统：
 | 3 | **后端 i18n 错误消息** | 引入 `go-i18n`，创建 zh-CN/en-US/ja-JP TOML 翻译文件，API 错误返回翻译后的 message | ⭐⭐ 中 |
 | 4 | **忘记密码流程** | 后端邮件发送 + Token 验证（DTO 已定义），前端登录页"忘记密码"入口 + 重置页面 | ⭐⭐ 中 |
 | 5 | **记录列表筛选 UI** | 后端 API 已支持筛选参数，前端添加日期范围和站点筛选控件 | ⭐ 低 |
-| ~~6~~ | ~~**数据导出（CSV）**~~ | ~~✅ 已完成：GDPR 数据可携带权，`GET /api/v1/users/me/export` 流式 CSV 导出（UTF-8 BOM），前端设置页下载按钮~~ | ~~⭐⭐ 中~~ |
+| ~~6~~ | ~~**数据导出（CSV/ZIP/JSON）**~~ | ~~✅ 已完成：GDPR 数据可携带权，`GET /api/v1/users/me/export?format=csv|zip|json&scope=basic|full`，支持三种格式 + 两种范围，前端设置页范围/格式选择~~ | ~~⭐⭐ 中~~ |
 | ~~7~~ | ~~**隐私政策与用户协议**~~ | ~~✅ 已完成：`/privacy` + `/terms` 静态页面，三语 i18n 支持，注册页同意链接~~ | ~~⭐ 低~~ |
 
 ## 7. 维修保养等开销记录模块

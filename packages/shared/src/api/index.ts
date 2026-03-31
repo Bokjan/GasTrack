@@ -108,10 +108,11 @@ export const userApi = {
   deleteAccount: () =>
     apiClient.delete<ApiResponse<null>>('/users/me'),
 
-  /** 导出用户全部数据（CSV 文件下载） */
-  exportData: () =>
+  /** 导出用户数据（支持 format=csv|zip|json，scope=basic|full） */
+  exportData: (params?: { format?: 'csv' | 'zip' | 'json'; scope?: 'basic' | 'full' }) =>
     apiClient.get<Blob>('/users/me/export', {
       responseType: 'blob',
+      params,
     }),
 };
 

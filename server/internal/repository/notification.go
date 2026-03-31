@@ -38,6 +38,16 @@ func (r *NotificationRepository) ListByUser(ctx context.Context, userID uuid.UUI
 	return notifications, err
 }
 
+// ListAllByUser 查询用户的所有通知（用于数据导出，不限条数）
+func (r *NotificationRepository) ListAllByUser(ctx context.Context, userID uuid.UUID) ([]model.Notification, error) {
+	var notifications []model.Notification
+	err := r.db.WithContext(ctx).
+		Where("user_id = ?", userID).
+		Order("created_at DESC").
+		Find(&notifications).Error
+	return notifications, err
+}
+
 // CountUnread 统计用户未读通知数
 func (r *NotificationRepository) CountUnread(ctx context.Context, userID uuid.UUID) (int64, error) {
 	var count int64

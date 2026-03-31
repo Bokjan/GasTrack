@@ -293,8 +293,15 @@
     "deleteAccountWarning": "危险操作",
     "dataPrivacy": "数据与隐私",
     "exportData": "导出我的数据",
-    "exportDescription": "下载您在 GasTrack 中的所有数据（包括个人信息、车辆信息、加油/充电记录），文件格式为 CSV。",
-    "exportSuccess": "数据导出成功"
+    "exportDescription": "下载您在 GasTrack 中的数据，仅导出您本人的数据，不含密码等敏感信息。",
+    "exportSuccess": "数据导出成功",
+    "exportScope": "导出范围",
+    "exportScopeBasic": "基础数据",
+    "exportScopeFull": "完整数据",
+    "exportScopeBasicHint": "包含个人资料、车辆信息、加油/充电记录",
+    "exportScopeFullHint": "包含全部数据：加油记录、开销记录、保养提醒、通知、邀请码、群组关系等",
+    "exportFormat": "文件格式",
+    "exportFormatHint": "CSV 适合基础数据直接打开；ZIP 包含多文件分类导出 + 数据清单；JSON 方便二次处理"
   },
   "legal": {
     "privacyPolicy": "隐私政策",

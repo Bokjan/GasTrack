@@ -293,8 +293,15 @@
     "deleteAccountWarning": "Danger Zone",
     "dataPrivacy": "Data & Privacy",
     "exportData": "Export My Data",
-    "exportDescription": "Download all your data in GasTrack (including personal info, vehicles, fuel/charging records) as a CSV file.",
-    "exportSuccess": "Data exported successfully"
+    "exportDescription": "Download your data from GasTrack. Only your own data is exported; sensitive info like passwords is excluded.",
+    "exportSuccess": "Data exported successfully",
+    "exportScope": "Export Scope",
+    "exportScopeBasic": "Basic Data",
+    "exportScopeFull": "Full Data",
+    "exportScopeBasicHint": "Includes profile, vehicles, and fuel/charging records",
+    "exportScopeFullHint": "Includes all data: fuel records, expenses, reminders, notifications, invite codes, groups, etc.",
+    "exportFormat": "File Format",
+    "exportFormatHint": "CSV is best for basic data; ZIP includes categorized files + manifest; JSON for programmatic use"
   },
   "legal": {
     "privacyPolicy": "Privacy Policy",

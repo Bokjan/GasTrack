@@ -293,8 +293,15 @@
     "deleteAccountWarning": "危険な操作",
     "dataPrivacy": "データとプライバシー",
     "exportData": "マイデータをエクスポート",
-    "exportDescription": "GasTrack のすべてのデータ（個人情報、車両情報、給油/充電記録を含む）を CSV ファイルとしてダウンロードします。",
-    "exportSuccess": "データのエクスポートが完了しました"
+    "exportDescription": "GasTrack のデータをダウンロードします。ご本人のデータのみがエクスポートされ、パスワード等の機密情報は含まれません。",
+    "exportSuccess": "データのエクスポートが完了しました",
+    "exportScope": "エクスポート範囲",
+    "exportScopeBasic": "基本データ",
+    "exportScopeFull": "全データ",
+    "exportScopeBasicHint": "プロフィール、車両情報、給油/充電記録を含みます",
+    "exportScopeFullHint": "すべてのデータを含みます：給油記録、経費、リマインダー、通知、招待コード、グループなど",
+    "exportFormat": "ファイル形式",
+    "exportFormatHint": "CSV は基本データ向け、ZIP は分類ファイル＋マニフェスト付き、JSON はプログラム処理向け"
   },
   "legal": {
     "privacyPolicy": "プライバシーポリシー",

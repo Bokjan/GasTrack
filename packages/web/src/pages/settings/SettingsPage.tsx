@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Form, Input, Select, Button, Space, message, Divider, Popconfirm, Typography, Segmented, Table, Spin } from 'antd';
+import { Card, Form, Input, Select, Button, Space, message, Divider, Popconfirm, Typography, Segmented, Table, Spin, Radio } from 'antd';
 import { BulbOutlined, DownloadOutlined, SwapOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +30,8 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [changingPwd, setChangingPwd] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportScope, setExportScope] = useState<'basic' | 'full'>('basic');
+  const [exportFormat, setExportFormat] = useState<'csv' | 'zip' | 'json'>('csv');
 
   const { data: exchangeRateData, isLoading: ratesLoading, fetchRates } = useExchangeRateStore();
 
@@ -110,16 +112,25 @@ export default function SettingsPage() {
   const handleExportData = async () => {
     setExporting(true);
     try {
-      const response = await userApi.exportData();
-      // 创建 Blob 下载链接
-      const blob = new Blob([response.data], { type: 'text/csv; charset=utf-8' });
+      // scope=full 时自动升级为 zip（后端会自动处理，但前端也同步）
+      const actualFormat = exportScope === 'full' && exportFormat === 'csv' ? 'zip' : exportFormat;
+      const response = await userApi.exportData({ format: actualFormat, scope: exportScope });
+
+      // 根据格式确定 MIME type
+      const mimeMap: Record<string, string> = {
+        csv: 'text/csv; charset=utf-8',
+        zip: 'application/zip',
+        json: 'application/json; charset=utf-8',
+      };
+      const blob = new Blob([response.data], { type: mimeMap[actualFormat] || 'application/octet-stream' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       // 从响应头提取文件名，或使用默认名
       const contentDisposition = response.headers['content-disposition'];
       const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/);
-      link.download = filenameMatch ? filenameMatch[1] : 'gastrack-export.csv';
+      const extMap: Record<string, string> = { csv: '.csv', zip: '.zip', json: '.json' };
+      link.download = filenameMatch ? filenameMatch[1] : `gastrack-export${extMap[actualFormat] || '.csv'}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -366,6 +377,48 @@ export default function SettingsPage() {
             <div>
               <Text>{t('settings.exportDescription')}</Text>
             </div>
+
+            <div>
+              <Text strong style={{ display: 'block', marginBottom: 8 }}>{t('settings.exportScope')}</Text>
+              <Radio.Group
+                value={exportScope}
+                onChange={(e) => setExportScope(e.target.value)}
+                optionType="button"
+                buttonStyle="solid"
+                options={[
+                  { label: t('settings.exportScopeBasic'), value: 'basic' },
+                  { label: t('settings.exportScopeFull'), value: 'full' },
+                ]}
+              />
+              <div style={{ marginTop: 4 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {exportScope === 'basic'
+                    ? t('settings.exportScopeBasicHint')
+                    : t('settings.exportScopeFullHint')}
+                </Text>
+              </div>
+            </div>
+
+            <div>
+              <Text strong style={{ display: 'block', marginBottom: 8 }}>{t('settings.exportFormat')}</Text>
+              <Radio.Group
+                value={exportScope === 'full' && exportFormat === 'csv' ? 'zip' : exportFormat}
+                onChange={(e) => setExportFormat(e.target.value)}
+                optionType="button"
+                buttonStyle="solid"
+                options={[
+                  { label: 'CSV', value: 'csv', disabled: exportScope === 'full' },
+                  { label: 'ZIP', value: 'zip' },
+                  { label: 'JSON', value: 'json' },
+                ]}
+              />
+              <div style={{ marginTop: 4 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {t('settings.exportFormatHint')}
+                </Text>
+              </div>
+            </div>
+
             <Button
               type="primary"
               icon={<DownloadOutlined />}

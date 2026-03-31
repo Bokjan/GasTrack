@@ -54,7 +54,7 @@ GasTrack/
 | W4 | 用户资料 + 多语言框架 + 邀请注册制 | ✅ |
 | W5 | 车辆管理 CRUD（汽车/摩托/电动） | ✅ |
 | W6-W7 | 加油/充电记录 CRUD + 油耗计算 | ✅ |
-| W8 | 统计报表 + 深色模式 + 数据导出 CSV | ✅ |
+| W8 | 统计报表 + 深色模式 + 数据导出 CSV/ZIP/JSON | ✅ |
 | W9 | 多币种/单位 + 响应式适配 + 隐私政策 | ✅ |
 | W10 | 通知/提醒系统 + 邀请码管理 | ✅ |
 
@@ -75,6 +75,7 @@ GasTrack/
 - ✅ 群组费用统计看板（API + 前端费用 Tab）
 - ✅ 加油站推荐共享（API + 前端加油站 Tab）
 - ✅ 维修保养开销记录（7 API + 前端列表/表单/详情 + 保养联动）
+- ✅ 数据导出增强（CSV/ZIP/JSON 三种格式 + basic/full 两种范围，10 个数据源全量导出）
 
 **待实现：**
 
@@ -123,7 +124,7 @@ GET    /api/v1/users/me                    # ✅ 获取资料
 PATCH  /api/v1/users/me                    # ✅ 更新资料
 PUT    /api/v1/users/me/password           # ✅ 修改密码
 DELETE /api/v1/users/me                    # ✅ 注销账号
-GET    /api/v1/users/me/export             # ✅ 数据导出 CSV
+GET    /api/v1/users/me/export             # ✅ 数据导出 CSV/ZIP/JSON（format+scope 参数）
 
 # 邀请码
 POST   /api/v1/invites                     # ✅ 创建邀请码
