@@ -19,6 +19,14 @@ type Config struct {
 	Upload       UploadConfig       `mapstructure:"upload"`
 	Log          LogConfig          `mapstructure:"log"`
 	Registration RegistrationConfig `mapstructure:"registration"`
+	ExchangeRate ExchangeRateConfig `mapstructure:"exchange_rate"`
+}
+
+// ExchangeRateConfig 汇率参考服务配置
+type ExchangeRateConfig struct {
+	APIURL          string        `mapstructure:"api_url"`          // frankfurter.app API 地址
+	RefreshInterval time.Duration `mapstructure:"refresh_interval"` // 缓存刷新间隔
+	Timeout         time.Duration `mapstructure:"timeout"`          // HTTP 请求超时
 }
 
 // RegistrationConfig 注册策略配置
@@ -175,6 +183,11 @@ func setDefaults(v *viper.Viper) {
 
 	// 注册策略
 	v.SetDefault("registration.mode", "invite_only") // 内测阶段默认邀请制
+
+	// 汇率参考
+	v.SetDefault("exchange_rate.api_url", "https://api.frankfurter.app")
+	v.SetDefault("exchange_rate.refresh_interval", 24*time.Hour)
+	v.SetDefault("exchange_rate.timeout", 10*time.Second)
 }
 
 // bindEnvKeys 显式绑定所有嵌套配置 key 到 GASTRACK_ 前缀的环境变量。

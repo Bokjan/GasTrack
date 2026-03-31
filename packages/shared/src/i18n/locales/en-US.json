@@ -633,5 +633,27 @@
     "fuelGrades": "Fuel Grades",
     "viewRecords": "View Records",
     "addRecordForShared": "Add Record"
+  },
+  "exchangeRate": {
+    "title": "Exchange Rates",
+    "baseCurrency": "Base Currency",
+    "lastUpdated": "Rates as of {{date}}",
+    "disclaimer": "Rates from European Central Bank (ECB), for reference only",
+    "approx": "approx.",
+    "referenceAmount": "≈ {{amount}}",
+    "noData": "No exchange rate data available",
+    "loading": "Loading rates...",
+    "fetchError": "Failed to load exchange rates",
+    "referenceCurrency": "Reference Currency",
+    "referenceCurrencyAuto": "Auto (Default)",
+    "referenceCurrencyHint": "Cost amounts will show a reference conversion in this currency",
+    "currencyName": {
+      "CNY": "Chinese Yuan",
+      "USD": "US Dollar",
+      "EUR": "Euro",
+      "JPY": "Japanese Yen",
+      "GBP": "British Pound",
+      "KRW": "South Korean Won"
+    }
   }
 }

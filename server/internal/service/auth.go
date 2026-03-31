@@ -273,6 +273,7 @@ func userToResponse(user *model.User) dto.UserResponse {
 		Timezone:           user.Timezone,
 		CountryCode:        user.CountryCode,
 		CurrencyCode:       user.CurrencyCode,
+		ReferenceCurrency:  user.ReferenceCurrency,
 		UnitSystem:         user.UnitSystem,
 		FuelEfficiencyUnit: user.FuelEfficiencyUnit,
 		Status:             user.Status,

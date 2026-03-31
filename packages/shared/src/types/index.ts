@@ -114,6 +114,7 @@ export interface User {
   timezone: string;
   country_code?: string;
   currency_code: string;
+  reference_currency?: string;
   unit_system: string;
   fuel_efficiency_unit: string;
   status: string;
@@ -129,6 +130,7 @@ export interface UpdateUserRequest {
   timezone?: string;
   country_code?: string;
   currency_code?: string;
+  reference_currency?: string;
   unit_system?: string;
   fuel_efficiency_unit?: string;
 }
@@ -596,4 +598,13 @@ export interface GroupStationStatsResponse {
   group_name: string;
   total_stations: number;
   stations: StationInfo[];
+}
+
+// ---------- Exchange Rate ----------
+
+/** 汇率参考响应（只读展示） */
+export interface ExchangeRateResponse {
+  base: string;
+  date: string;
+  rates: Record<string, number>;
 }

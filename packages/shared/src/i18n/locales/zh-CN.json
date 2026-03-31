@@ -633,5 +633,27 @@
     "fuelGrades": "燃油标号",
     "viewRecords": "查看记录",
     "addRecordForShared": "添加记录"
+  },
+  "exchangeRate": {
+    "title": "汇率参考",
+    "baseCurrency": "基准货币",
+    "lastUpdated": "汇率更新日期：{{date}}",
+    "disclaimer": "汇率数据来源于欧洲央行 (ECB)，仅供参考",
+    "approx": "约",
+    "referenceAmount": "≈ {{amount}}",
+    "noData": "暂无汇率数据",
+    "loading": "加载汇率中...",
+    "fetchError": "无法获取汇率数据",
+    "referenceCurrency": "参考换算币种",
+    "referenceCurrencyAuto": "自动（默认）",
+    "referenceCurrencyHint": "费用金额旁会同时显示该币种的参考换算",
+    "currencyName": {
+      "CNY": "人民币",
+      "USD": "美元",
+      "EUR": "欧元",
+      "JPY": "日元",
+      "GBP": "英镑",
+      "KRW": "韩元"
+    }
   }
 }

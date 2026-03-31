@@ -14,6 +14,7 @@ type UserResponse struct {
 	Timezone           string     `json:"timezone"`
 	CountryCode        string     `json:"country_code,omitempty"`
 	CurrencyCode       string     `json:"currency_code"`
+	ReferenceCurrency  string     `json:"reference_currency"`
 	UnitSystem         string     `json:"unit_system"`
 	FuelEfficiencyUnit string     `json:"fuel_efficiency_unit"`
 	Status             string     `json:"status"`
@@ -29,6 +30,7 @@ type UpdateUserRequest struct {
 	Timezone           *string `json:"timezone" validate:"omitempty,max=50"`
 	CountryCode        *string `json:"country_code" validate:"omitempty,len=2"`
 	CurrencyCode       *string `json:"currency_code" validate:"omitempty,len=3"`
+	ReferenceCurrency  *string `json:"reference_currency" validate:"omitempty,max=3"`
 	UnitSystem         *string `json:"unit_system" validate:"omitempty,oneof=metric imperial"`
 	FuelEfficiencyUnit *string `json:"fuel_efficiency_unit" validate:"omitempty,oneof=L/100km km/L MPG"`
 }

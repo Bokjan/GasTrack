@@ -75,6 +75,10 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID uuid.UUID, req *
 		fields["currency_code"] = *req.CurrencyCode
 		user.CurrencyCode = *req.CurrencyCode
 	}
+	if req.ReferenceCurrency != nil {
+		fields["reference_currency"] = *req.ReferenceCurrency
+		user.ReferenceCurrency = *req.ReferenceCurrency
+	}
 	if req.UnitSystem != nil {
 		fields["unit_system"] = *req.UnitSystem
 		user.UnitSystem = *req.UnitSystem

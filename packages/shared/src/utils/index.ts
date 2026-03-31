@@ -146,3 +146,51 @@ export function formatCurrency(amount: number | undefined | null, currency: stri
   const decimals = currency === 'JPY' || currency === 'KRW' ? 0 : 2;
   return `${symbol}${formatNumber(amount ?? 0, decimals)}`;
 }
+
+// ============================================================
+// 汇率参考工具函数
+// ============================================================
+
+/**
+ * 使用汇率数据将金额从一种货币换算为另一种货币。
+ * 仅供参考展示，不影响原始数据。
+ * @param amount       原始金额
+ * @param fromCurrency 原始币种（如 "CNY"）
+ * @param toCurrency   目标币种（如 "USD"）
+ * @param rates        汇率表（以 fromCurrency 为基准）
+ * @returns 换算后的金额，如果无法换算则返回 null
+ */
+export function convertAmount(
+  amount: number,
+  fromCurrency: string,
+  toCurrency: string,
+  rates: Record<string, number>,
+): number | null {
+  if (fromCurrency === toCurrency) return amount;
+  const rate = rates[toCurrency];
+  if (rate == null || rate <= 0) return null;
+  return amount * rate;
+}
+
+/**
+ * 获取参考币种：
+ * - 如果用户已设置 reference_currency，优先使用
+ * - 否则自动推导：USD 用户默认显示 EUR，其他用户默认显示 USD
+ */
+export function getReferenceCurrency(userCurrency: string, referenceCurrency?: string): string {
+  if (referenceCurrency) return referenceCurrency;
+  return userCurrency === 'USD' ? 'EUR' : 'USD';
+}
+
+/**
+ * 获取记录详情页应展示的参考币种列表：
+ * - 如果用户已设置 reference_currency，只返回该币种
+ * - 否则返回最多 3 个其他币种
+ */
+export function getReferenceCurrencies(currentCurrency: string, referenceCurrency?: string): string[] {
+  if (referenceCurrency && referenceCurrency !== currentCurrency) {
+    return [referenceCurrency];
+  }
+  const all = ['USD', 'EUR', 'CNY', 'JPY', 'GBP', 'KRW'];
+  return all.filter((c) => c !== currentCurrency).slice(0, 3);
+}

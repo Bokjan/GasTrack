@@ -1,17 +1,19 @@
-import { useState } from 'react';
-import { Card, Form, Input, Select, Button, Space, message, Divider, Popconfirm, Typography, Segmented } from 'antd';
-import { BulbOutlined, DownloadOutlined } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
+import { Card, Form, Input, Select, Button, Space, message, Divider, Popconfirm, Typography, Segmented, Table, Spin } from 'antd';
+import { BulbOutlined, DownloadOutlined, SwapOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   useAuthStore,
   useThemeStore,
+  useExchangeRateStore,
   userApi,
   CURRENCIES,
   MEASUREMENT_SYSTEMS,
   EV_MEASUREMENT_SYSTEMS,
   SUPPORTED_LOCALES,
   TIMEZONES,
+  formatNumber,
 } from '@gastrack/shared';
 import type { ChangePasswordRequest } from '@gastrack/shared';
 import type { ThemeMode } from '@gastrack/shared';
@@ -29,6 +31,14 @@ export default function SettingsPage() {
   const [changingPwd, setChangingPwd] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  const { data: exchangeRateData, isLoading: ratesLoading, fetchRates } = useExchangeRateStore();
+
+  useEffect(() => {
+    if (user?.currency_code) {
+      fetchRates(user.currency_code);
+    }
+  }, [user?.currency_code]);
+
   if (!user) return null;
 
   // 所有油耗/电耗单位合并
@@ -40,6 +50,7 @@ export default function SettingsPage() {
     timezone: string;
     unit_system: string;
     currency_code: string;
+    reference_currency: string;
     fuel_efficiency_unit: string;
   }) => {
     setSaving(true);
@@ -50,6 +61,7 @@ export default function SettingsPage() {
         timezone: values.timezone,
         unit_system: values.unit_system,
         currency_code: values.currency_code,
+        reference_currency: values.reference_currency ?? '',
         fuel_efficiency_unit: values.fuel_efficiency_unit,
       });
       // 同步前端语言
@@ -162,6 +174,7 @@ export default function SettingsPage() {
               timezone: user.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
               unit_system: user.unit_system || 'metric',
               currency_code: user.currency_code || 'CNY',
+              reference_currency: user.reference_currency || '',
               fuel_efficiency_unit: user.fuel_efficiency_unit || 'L/100km',
             }}
           >
@@ -209,6 +222,26 @@ export default function SettingsPage() {
                   value: c.value,
                   label: c.label,
                 }))}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="reference_currency"
+              label={t('exchangeRate.referenceCurrency')}
+              tooltip={t('exchangeRate.referenceCurrencyHint')}
+            >
+              <Select
+                allowClear
+                placeholder={t('exchangeRate.referenceCurrencyAuto')}
+                options={[
+                  { value: '', label: t('exchangeRate.referenceCurrencyAuto') },
+                  ...CURRENCIES
+                    .filter((c) => c.value !== (profileForm.getFieldValue('currency_code') || user.currency_code))
+                    .map((c) => ({
+                      value: c.value,
+                      label: `${c.symbol} ${t(`exchangeRate.currencyName.${c.value}`)} (${c.value})`,
+                    })),
+                ]}
               />
             </Form.Item>
 
@@ -266,6 +299,65 @@ export default function SettingsPage() {
               </Button>
             </Form.Item>
           </Form>
+        </Card>
+
+        {/* 汇率参考 */}
+        <Card
+          title={
+            <Space>
+              <SwapOutlined />
+              <span>{t('exchangeRate.title')}</span>
+            </Space>
+          }
+        >
+          {ratesLoading ? (
+            <div style={{ textAlign: 'center', padding: 24 }}>
+              <Spin />
+              <div style={{ marginTop: 8 }}>
+                <Text type="secondary">{t('exchangeRate.loading')}</Text>
+              </div>
+            </div>
+          ) : exchangeRateData?.rates ? (
+            <Space direction="vertical" size="small" style={{ width: '100%' }}>
+              <Table
+                dataSource={Object.entries(exchangeRateData.rates).map(([code, rate]) => ({
+                  key: code,
+                  code,
+                  name: t(`exchangeRate.currencyName.${code}`),
+                  symbol: CURRENCIES.find((c) => c.value === code)?.symbol || code,
+                  rate: formatNumber(rate, code === 'JPY' || code === 'KRW' ? 2 : 4),
+                }))}
+                columns={[
+                  {
+                    title: t('exchangeRate.baseCurrency'),
+                    dataIndex: 'code',
+                    key: 'code',
+                    render: (_: unknown, row: { code: string; symbol: string; name: string }) => `${row.symbol} ${row.code}`,
+                  },
+                  {
+                    title: t('exchangeRate.currencyName.CNY').includes('人民币') ? '名称' : 'Name',
+                    dataIndex: 'name',
+                    key: 'name',
+                  },
+                  {
+                    title: `1 ${exchangeRateData.base} =`,
+                    dataIndex: 'rate',
+                    key: 'rate',
+                  },
+                ]}
+                pagination={false}
+                size="small"
+              />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {t('exchangeRate.lastUpdated', { date: exchangeRateData.date })}
+              </Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {t('exchangeRate.disclaimer')}
+              </Text>
+            </Space>
+          ) : (
+            <Text type="secondary">{t('exchangeRate.noData')}</Text>
+          )}
         </Card>
 
         {/* 数据与隐私 */}

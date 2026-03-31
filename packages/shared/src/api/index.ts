@@ -39,6 +39,7 @@ import type {
   LeaderboardResponse,
   GroupExpenseStatsResponse,
   GroupStationStatsResponse,
+  ExchangeRateResponse,
 } from '../types';
 
 // 注意: PaginatedResponse<T> 的 Axios 响应为 AxiosResponse<PaginatedResponse<T>>
@@ -316,4 +317,12 @@ export const groupApi = {
   /** 获取群组加油站推荐 */
   getStationStats: (groupId: string, params?: { fuel_grade?: string; months?: number; sort_by?: string }) =>
     apiClient.get<ApiResponse<GroupStationStatsResponse>>(`/groups/${groupId}/stations`, { params }),
+};
+
+// ==================== Exchange Rate ====================
+
+export const exchangeRateApi = {
+  /** 获取汇率参考数据 */
+  getRates: (base?: string) =>
+    apiClient.get<ApiResponse<ExchangeRateResponse>>('/exchange-rates', { params: base ? { base } : undefined }),
 };

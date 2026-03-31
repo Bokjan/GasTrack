@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Row, Col, Card, Statistic, Select, Empty, Spin, Segmented, Space, theme } from 'antd';
+import { Row, Col, Card, Statistic, Select, Empty, Spin, Segmented, Space, theme, Tooltip } from 'antd';
 import {
   DashboardOutlined,
   DollarOutlined,
@@ -17,6 +17,9 @@ import {
   formatCurrency,
   useAuthStore,
   useThemeStore,
+  useExchangeRateStore,
+  convertAmount,
+  getReferenceCurrency,
 } from '@gastrack/shared';
 import type { VehicleStats, PeriodStatsItem, PeriodStatsResponse } from '@gastrack/shared';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -35,14 +38,19 @@ export default function StatsPage() {
   const [period, setPeriod] = useState<'month' | 'year'>('month');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(false);
+  const { data: ratesData, fetchRates } = useExchangeRateStore();
 
   const currency = user?.currency_code || 'CNY';
+  const refCurrency = getReferenceCurrency(currency, user?.reference_currency);
   const isImperial = user?.unit_system === 'imperial';
   const fuelUnit = isImperial ? 'gal' : 'L';
   const distanceUnit = isImperial ? 'mi' : 'km';
 
   useEffect(() => {
     fetchVehicles();
+    if (currency) {
+      fetchRates(currency);
+    }
   }, []);
 
   useEffect(() => {
@@ -348,17 +356,24 @@ export default function StatsPage() {
             </Card>
           </Col>
           <Col xs={12} sm={6}>
-            <Card>
-              <Statistic
-                title={t('stats.totalCost')}
-                value={
-                  stats
-                    ? formatCurrency(stats.total_cost, currency)
-                    : '-'
-                }
-                prefix={<DollarOutlined />}
-              />
-            </Card>
+            <Tooltip
+              title={stats && ratesData?.rates ? (() => {
+                const ref = convertAmount(stats.total_cost, currency, refCurrency, ratesData.rates);
+                return ref != null ? t('exchangeRate.referenceAmount', { amount: formatCurrency(ref, refCurrency) }) : undefined;
+              })() : undefined}
+            >
+              <Card>
+                <Statistic
+                  title={t('stats.totalCost')}
+                  value={
+                    stats
+                      ? formatCurrency(stats.total_cost, currency)
+                      : '-'
+                  }
+                  prefix={<DollarOutlined />}
+                />
+              </Card>
+            </Tooltip>
           </Col>
           <Col xs={12} sm={6}>
             <Card>

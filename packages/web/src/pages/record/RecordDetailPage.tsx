@@ -42,6 +42,9 @@ import {
   FUEL_GRADES,
   isElectricVehicle,
   useAuthStore,
+  useExchangeRateStore,
+  convertAmount,
+  getReferenceCurrencies,
 } from '@gastrack/shared';
 import type { FuelRecord, Vehicle, VehicleStats } from '@gastrack/shared';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -74,6 +77,7 @@ export default function RecordDetailPage() {
   }>();
   const user = useAuthStore((s) => s.user);
   const isMobile = useIsMobile();
+  const { data: ratesData, fetchRates } = useExchangeRateStore();
 
   const [record, setRecord] = useState<FuelRecord | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -90,6 +94,9 @@ export default function RecordDetailPage() {
   useEffect(() => {
     if (vehicleId && recordId) {
       loadData();
+    }
+    if (user?.currency_code) {
+      fetchRates(user.currency_code);
     }
   }, [vehicleId, recordId]);
 
@@ -274,6 +281,26 @@ export default function RecordDetailPage() {
                 <Text strong style={{ fontSize: 18, color: 'var(--ant-color-primary)' }}>
                   {formatCurrency(record.total_cost, record.currency_code || currency)}
                 </Text>
+                {ratesData?.rates && (() => {
+                  const recordCurrency = record.currency_code || currency;
+                  if (ratesData.base !== recordCurrency) return null;
+                  const tags = getReferenceCurrencies(recordCurrency, user?.reference_currency)
+                    .map((refCode) => {
+                      const refAmount = convertAmount(record.total_cost, recordCurrency, refCode, ratesData.rates);
+                      if (refAmount == null) return null;
+                      return (
+                        <Tag key={refCode} color="default" style={{ margin: 0 }}>
+                          {t('exchangeRate.approx')} {formatCurrency(refAmount, refCode)}
+                        </Tag>
+                      );
+                    })
+                    .filter(Boolean);
+                  return tags.length > 0 ? (
+                    <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {tags}
+                    </div>
+                  ) : null;
+                })()}
               </Descriptions.Item>
 
               <Descriptions.Item label={t('fuelRecord.odometer')}>

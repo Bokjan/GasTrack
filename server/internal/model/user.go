@@ -18,6 +18,7 @@ type User struct {
 	Timezone           string     `gorm:"size:50;default:UTC" json:"timezone"`          // 时区
 	CountryCode        string     `gorm:"size:5" json:"country_code,omitempty"`         // ISO 3166-1 alpha-2
 	CurrencyCode       string     `gorm:"size:3;default:USD" json:"currency_code"`      // ISO 4217
+	ReferenceCurrency  string     `gorm:"size:3;default:''" json:"reference_currency"`  // 参考换算币种（空表示自动推导）
 	UnitSystem         string     `gorm:"size:10;default:metric" json:"unit_system"`    // metric / imperial
 	FuelEfficiencyUnit string     `gorm:"size:10;default:L/100km" json:"fuel_efficiency_unit"` // L/100km / km/L / MPG
 	Status             string     `gorm:"size:20;default:active" json:"status"`         // active/suspended/deleted

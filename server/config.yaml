@@ -46,3 +46,8 @@ log:
 
 registration:
   mode: invite_only     # open（公开注册）| invite_only（邀请制）| closed（完全关闭）
+
+exchange_rate:
+  api_url: https://api.frankfurter.app   # frankfurter.app 免费汇率 API（ECB 数据源）
+  refresh_interval: 24h                   # 缓存刷新间隔
+  timeout: 10s                            # HTTP 请求超时

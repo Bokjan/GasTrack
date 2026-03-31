@@ -633,5 +633,27 @@
     "fuelGrades": "燃料グレード",
     "viewRecords": "記録を見る",
     "addRecordForShared": "記録を追加"
+  },
+  "exchangeRate": {
+    "title": "為替レート参考",
+    "baseCurrency": "基準通貨",
+    "lastUpdated": "為替レート日付：{{date}}",
+    "disclaimer": "欧州中央銀行 (ECB) のデータに基づく参考値です",
+    "approx": "約",
+    "referenceAmount": "≈ {{amount}}",
+    "noData": "為替レートデータがありません",
+    "loading": "為替レートを読み込み中...",
+    "fetchError": "為替レートの取得に失敗しました",
+    "referenceCurrency": "参考換算通貨",
+    "referenceCurrencyAuto": "自動（デフォルト）",
+    "referenceCurrencyHint": "費用の表示に、この通貨での参考換算が併記されます",
+    "currencyName": {
+      "CNY": "人民元",
+      "USD": "米ドル",
+      "EUR": "ユーロ",
+      "JPY": "日本円",
+      "GBP": "英ポンド",
+      "KRW": "韓国ウォン"
+    }
   }
 }

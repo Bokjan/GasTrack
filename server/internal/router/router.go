@@ -27,6 +27,7 @@ func New(
 	reminderHandler *handler.ReminderHandler,
 	notificationHandler *handler.NotificationHandler,
 	groupHandler *handler.GroupHandler,
+	exchangeRateHandler *handler.ExchangeRateHandler,
 ) http.Handler {
 	mux := http.NewServeMux()
 
@@ -95,6 +96,9 @@ func New(
 	mux.Handle("GET /api/v1/vehicles/{id}/efficiency-trend", auth(http.HandlerFunc(statsHandler.GetEfficiencyTrend)))
 	mux.Handle("GET /api/v1/vehicles/{id}/period-stats", auth(http.HandlerFunc(statsHandler.GetPeriodStats)))
 	mux.Handle("GET /api/v1/stats/overview", auth(http.HandlerFunc(statsHandler.GetOverview)))
+
+	// 汇率参考
+	mux.Handle("GET /api/v1/exchange-rates", auth(http.HandlerFunc(exchangeRateHandler.GetRates)))
 
 	// 保养提醒
 	mux.Handle("GET /api/v1/reminders", auth(http.HandlerFunc(reminderHandler.List)))

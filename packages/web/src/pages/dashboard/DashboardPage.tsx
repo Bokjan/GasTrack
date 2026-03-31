@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Row, Col, Card, Statistic, Button, Empty, Space, List, Tag, Divider } from 'antd';
+import { Row, Col, Card, Statistic, Button, Empty, Space, List, Tag, Divider, Tooltip } from 'antd';
 import {
   CarOutlined,
   FileTextOutlined,
@@ -17,23 +17,30 @@ import {
   formatCurrency,
   formatNumber,
   useAuthStore,
+  useExchangeRateStore,
   isElectricVehicle,
+  convertAmount,
+  getReferenceCurrency,
 } from '@gastrack/shared';
 import type { OverviewStats, VehicleStats, Vehicle } from '@gastrack/shared';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 export default function DashboardPage() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
   const { vehicles, fetchVehicles, isLoading: vehiclesLoading } = useVehicleStore();
   const user = useAuthStore((s) => s.user);
   const isMobile = useIsMobile();
   const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+  const { data: ratesData, fetchRates } = useExchangeRateStore();
+  const { t } = useTranslation();
 
   useEffect(() => {
     fetchVehicles();
     loadOverview();
+    if (user?.currency_code) {
+      fetchRates(user.currency_code);
+    }
   }, []);
 
   const loadOverview = async () => {
@@ -52,6 +59,12 @@ export default function DashboardPage() {
   const isImperial = user?.unit_system === 'imperial';
   const distanceUnit = isImperial ? 'mi' : 'km';
   const efficiencyUnit = user?.fuel_efficiency_unit || 'L/100km';
+
+  /** 汇率参考换算：总费用 → 另一种参考币种 */
+  const refCurrency = getReferenceCurrency(currency, user?.reference_currency);
+  const refTotalCost = overview?.total_cost && ratesData?.rates
+    ? convertAmount(overview.total_cost, currency, refCurrency, ratesData.rates)
+    : null;
 
   /** 根据 vehicle_id 找到对应车辆信息 */
   const findVehicle = (vehicleId: string): Vehicle | undefined =>
@@ -120,7 +133,7 @@ export default function DashboardPage() {
               {/* 全局概览：仅总车辆数 + 总费用（跨车有意义的指标） */}
               <Row gutter={isMobile ? [8, 8] : [16, 16]} style={{ marginBottom: 16 }}>
                 <Col xs={12} sm={6}>
-                  <Card loading={statsLoading}>
+                  <Card loading={statsLoading} size="small">
                     <Statistic
                       title={t('stats.totalRecords')}
                       value={overview?.total_records || 0}
@@ -129,13 +142,17 @@ export default function DashboardPage() {
                   </Card>
                 </Col>
                 <Col xs={12} sm={6}>
-                  <Card loading={statsLoading}>
-                    <Statistic
-                      title={t('stats.totalCost')}
-                      value={overview ? formatCurrency(overview.total_cost, currency) : '-'}
-                      prefix={<DollarOutlined />}
-                    />
-                  </Card>
+                  <Tooltip
+                    title={refTotalCost != null ? t('exchangeRate.referenceAmount', { amount: formatCurrency(refTotalCost, refCurrency) }) : undefined}
+                  >
+                    <Card loading={statsLoading} size="small">
+                      <Statistic
+                        title={t('stats.totalCost')}
+                        value={overview ? formatCurrency(overview.total_cost, currency) : '-'}
+                        prefix={<DollarOutlined />}
+                      />
+                    </Card>
+                  </Tooltip>
                 </Col>
               </Row>
 

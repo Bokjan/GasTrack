@@ -73,6 +73,11 @@ func main() {
 	exportService := service.NewExportService(userRepo, vehicleRepo, fuelRecordRepo, logger)
 	groupService := service.NewGroupService(groupRepo, userRepo, vehicleRepo, logger)
 
+	// 5b. 创建汇率参考服务（无需数据库，纯 API 缓存）
+	exchangeRateService := service.NewExchangeRateService(cfg.ExchangeRate, logger)
+	exchangeRateService.Start()
+	defer exchangeRateService.Stop()
+
 	// 6. 创建 Handler 层
 	authHandler := handler.NewAuthHandler(authService, logger)
 	userHandler := handler.NewUserHandler(userService, logger)
@@ -84,6 +89,7 @@ func main() {
 	reminderHandler := handler.NewReminderHandler(reminderService, logger)
 	notificationHandler := handler.NewNotificationHandler(notificationService, logger)
 	groupHandler := handler.NewGroupHandler(groupService, logger)
+	exchangeRateHandler := handler.NewExchangeRateHandler(exchangeRateService, logger)
 
 	// 7. 注册路由
 	mux := router.New(
@@ -99,6 +105,7 @@ func main() {
 		reminderHandler,
 		notificationHandler,
 		groupHandler,
+		exchangeRateHandler,
 	)
 
 	// 8. 创建 HTTP 服务器
