@@ -49,16 +49,17 @@ type GroupMemberDetail struct {
 
 // GroupVehicleSummary 群组车辆汇总
 type GroupVehicleSummary struct {
-	VehicleID   string  `json:"vehicle_id"`
-	VehicleName string  `json:"vehicle_name"`
-	OwnerID     string  `json:"owner_id"`
-	OwnerName   string  `json:"owner_name"`
-	VehicleType string  `json:"vehicle_type"`
-	FuelType    string  `json:"fuel_type"`
-	Records     int64   `json:"total_records"`
-	TotalCost   float64 `json:"total_cost"`
-	TotalFuel   float64 `json:"total_fuel"`
-	AvgEff      float64 `json:"avg_efficiency"`
+	VehicleID    string  `json:"vehicle_id"`
+	VehicleName  string  `json:"vehicle_name"`
+	OwnerID      string  `json:"owner_id"`
+	OwnerName    string  `json:"owner_name"`
+	VehicleType  string  `json:"vehicle_type"`
+	FuelType     string  `json:"fuel_type"`
+	CurrencyCode string  `json:"currency_code"`
+	Records      int64   `json:"total_records"`
+	TotalCost    float64 `json:"total_cost"`
+	TotalFuel    float64 `json:"total_fuel"`
+	AvgEff       float64 `json:"avg_efficiency"`
 }
 
 // GroupOverviewResponse 群组数据汇总响应

@@ -224,15 +224,16 @@ func (r *GroupRepository) JoinGroupByInviteCode(ctx context.Context, code string
 
 // VehicleSummaryRow 车辆汇总查询结果行
 type VehicleSummaryRow struct {
-	VehicleID   uuid.UUID `gorm:"column:vehicle_id"`
-	VehicleName string    `gorm:"column:vehicle_name"`
-	OwnerID     uuid.UUID `gorm:"column:owner_id"`
-	VehicleType string    `gorm:"column:vehicle_type"`
-	FuelType    string    `gorm:"column:fuel_type"`
-	Records     int64     `gorm:"column:total_records"`
-	TotalCost   float64   `gorm:"column:total_cost"`
-	TotalFuel   float64   `gorm:"column:total_fuel"`
-	AvgEff      float64   `gorm:"column:avg_efficiency"`
+	VehicleID    uuid.UUID `gorm:"column:vehicle_id"`
+	VehicleName  string    `gorm:"column:vehicle_name"`
+	OwnerID      uuid.UUID `gorm:"column:owner_id"`
+	VehicleType  string    `gorm:"column:vehicle_type"`
+	FuelType     string    `gorm:"column:fuel_type"`
+	CurrencyCode string    `gorm:"column:currency_code"`
+	Records      int64     `gorm:"column:total_records"`
+	TotalCost    float64   `gorm:"column:total_cost"`
+	TotalFuel    float64   `gorm:"column:total_fuel"`
+	AvgEff       float64   `gorm:"column:avg_efficiency"`
 }
 
 // GetGroupVehicleSummary 获取群组内所有成员的车辆数据汇总
@@ -246,6 +247,7 @@ func (r *GroupRepository) GetGroupVehicleSummary(ctx context.Context, groupID uu
 			v.user_id AS owner_id,
 			v.vehicle_type,
 			v.fuel_type,
+			u.currency_code,
 			COUNT(fr.id) AS total_records,
 			COALESCE(SUM(fr.total_cost), 0) AS total_cost,
 			COALESCE(SUM(fr.fuel_amount), 0) AS total_fuel,
@@ -255,9 +257,10 @@ func (r *GroupRepository) GetGroupVehicleSummary(ctx context.Context, groupID uu
 			END AS avg_efficiency
 		FROM vehicles v
 		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
+		JOIN users u ON u.id = v.user_id
 		LEFT JOIN fuel_records fr ON fr.vehicle_id = v.id
 		WHERE v.deleted_at IS NULL AND v.is_archived = false
-		GROUP BY v.id, v.name, v.user_id, v.vehicle_type, v.fuel_type
+		GROUP BY v.id, v.name, v.user_id, v.vehicle_type, v.fuel_type, u.currency_code
 		ORDER BY v.name ASC
 	`, groupID).Scan(&results).Error
 

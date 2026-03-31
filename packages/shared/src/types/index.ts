@@ -452,6 +452,7 @@ export interface GroupVehicleSummary {
   owner_name: string;
   vehicle_type: string;
   fuel_type: string;
+  currency_code: string;
   total_records: number;
   total_cost: number;
   total_fuel: number;

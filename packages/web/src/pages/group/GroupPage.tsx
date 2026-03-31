@@ -93,33 +93,31 @@ export default function GroupPage() {
   }, [currency, fetchRates]);
 
   // --- 换算辅助函数 ---
-  /** 将后端返回的费用金额（假定为 CNY 基准）换算为用户偏好币种并格式化 */
-  const formatConvertedCost = (amount: number): { text: string; converted: boolean } => {
-    // 后端聚合数据以 CNY 为基准（大部分群组成员使用 CNY）
-    // 如果用户偏好就是 CNY，直接格式化
-    if (currency === 'CNY') {
+  /** 将费用金额从源币种换算为用户偏好币种并格式化 */
+  const formatConvertedCost = (amount: number, sourceCurrency?: string): { text: string; converted: boolean } => {
+    const from = sourceCurrency || currency;
+    // 如果源币种和用户偏好币种相同，直接格式化
+    if (from === currency) {
       return { text: formatCurrency(amount, currency), converted: false };
     }
     // 尝试换算
     if (rateBase === currency && rates) {
-      // rates 是以用户币种为基准的汇率表，要把 CNY 换算为用户币种
-      // convertAmount(amount, fromCurrency, toCurrency, rates) 需要 rates 以 fromCurrency 为 base
-      // 这里 rates 以 currency (用户偏好) 为 base，所以我们需要反向计算
-      const cnyRate = rates['CNY'];
-      if (cnyRate && cnyRate > 0) {
-        const converted = amount / cnyRate;
+      // rates 是以用户币种为基准的汇率表，要把 from 换算为用户币种
+      const fromRate = rates[from];
+      if (fromRate && fromRate > 0) {
+        const converted = amount / fromRate;
         return { text: formatCurrency(converted, currency), converted: true };
       }
     }
-    // 如果 rateBase 是 CNY
-    if (rateBase === 'CNY' && rates) {
-      const result = convertAmount(amount, 'CNY', currency, rates);
+    // 如果 rateBase 是源币种
+    if (rateBase === from && rates) {
+      const result = convertAmount(amount, from, currency, rates);
       if (result !== null) {
         return { text: formatCurrency(result, currency), converted: true };
       }
     }
-    // 无法换算，以 CNY 显示
-    return { text: formatCurrency(amount, 'CNY'), converted: false };
+    // 无法换算，以源币种原样显示
+    return { text: formatCurrency(amount, from), converted: false };
   };
 
   /** 将后端的油量 (L) 按用户偏好转换 */
@@ -138,8 +136,8 @@ export default function GroupPage() {
   };
 
   /** 带"经换算"提示的金额展示组件 */
-  const ConvertedCost = ({ amount }: { amount: number }) => {
-    const { text, converted } = formatConvertedCost(amount);
+  const ConvertedCost = ({ amount, sourceCurrency }: { amount: number; sourceCurrency?: string }) => {
+    const { text, converted } = formatConvertedCost(amount, sourceCurrency);
     return (
       <span>
         {text}
@@ -732,7 +730,7 @@ export default function GroupPage() {
                             dataIndex: 'total_cost',
                             key: 'total_cost',
                             width: 120,
-                            render: (val: number) => <ConvertedCost amount={val} />,
+                            render: (val: number, record: { vehicle_id: string; owner_id: string; currency_code?: string }) => <ConvertedCost amount={val} sourceCurrency={record.currency_code} />,
                           },
                           {
                             title: t('group.totalFuel'),

@@ -391,16 +391,17 @@ func (s *GroupService) GetOverview(ctx context.Context, groupID, userID uuid.UUI
 		}
 
 		vehicles = append(vehicles, dto.GroupVehicleSummary{
-			VehicleID:   row.VehicleID.String(),
-			VehicleName: row.VehicleName,
-			OwnerID:     row.OwnerID.String(),
-			OwnerName:   ownerName,
-			VehicleType: row.VehicleType,
-			FuelType:    row.FuelType,
-			Records:     row.Records,
-			TotalCost:   row.TotalCost,
-			TotalFuel:   row.TotalFuel,
-			AvgEff:      row.AvgEff,
+			VehicleID:    row.VehicleID.String(),
+			VehicleName:  row.VehicleName,
+			OwnerID:      row.OwnerID.String(),
+			OwnerName:    ownerName,
+			VehicleType:  row.VehicleType,
+			FuelType:     row.FuelType,
+			CurrencyCode: row.CurrencyCode,
+			Records:      row.Records,
+			TotalCost:    row.TotalCost,
+			TotalFuel:    row.TotalFuel,
+			AvgEff:       row.AvgEff,
 		})
 	}
 
