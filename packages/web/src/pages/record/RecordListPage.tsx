@@ -30,6 +30,9 @@ import {
   litersToGallons,
   FUEL_EFFICIENCY_UNITS,
   useAuthStore,
+  useExchangeRateStore,
+  convertAmount,
+  getReferenceCurrencies,
 } from '@gastrack/shared';
 import type { FuelRecord, Vehicle } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
@@ -41,6 +44,8 @@ export default function RecordListPage() {
   const { vehicleId } = useParams<{ vehicleId: string }>();
   const user = useAuthStore((s) => s.user);
   const isMobile = useIsMobile();
+
+  const { data: ratesData, fetchRates } = useExchangeRateStore();
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [records, setRecords] = useState<FuelRecord[]>([]);
@@ -58,6 +63,9 @@ export default function RecordListPage() {
     if (vehicleId) {
       loadVehicle();
       loadRecords(1);
+    }
+    if (user?.currency_code) {
+      fetchRates(user.currency_code);
     }
   }, [vehicleId]);
 
@@ -99,6 +107,20 @@ export default function RecordListPage() {
 
   const userTimezone = user?.timezone;
 
+  /** 生成汇率换算 Tooltip 文本 */
+  const getRateTooltip = (amount: number, suffix?: string) => {
+    if (!ratesData?.rates) return undefined;
+    const base = ratesData.base;
+    if (base !== currency) return undefined;
+    const lines = getReferenceCurrencies(currency, user?.reference_currency)
+      .map((refCode) => {
+        const refAmount = convertAmount(amount, currency, refCode, ratesData.rates);
+        return refAmount != null ? `≈ ${formatCurrency(refAmount, refCode)}${suffix || ''}` : null;
+      })
+      .filter(Boolean);
+    return lines.length > 0 ? lines.join('  ·  ') : undefined;
+  };
+
   const columns: ColumnsType<FuelRecord> = [
     {
       title: t('fuelRecord.fuelDate'),
@@ -128,13 +150,29 @@ export default function RecordListPage() {
       title: t('fuelRecord.pricePerUnit'),
       dataIndex: 'unit_price',
       width: 100,
-      render: (v: number) => formatCurrency(v, currency),
+      render: (v: number) => {
+        const tip = v != null ? getRateTooltip(v, `/${fuelUnit}`) : undefined;
+        const text = formatCurrency(v, currency);
+        return tip ? (
+          <Tooltip title={tip}>
+            <span style={{ cursor: 'help' }}>{text}</span>
+          </Tooltip>
+        ) : text;
+      },
     },
     {
       title: t('fuelRecord.totalCost'),
       dataIndex: 'total_cost',
       width: 110,
-      render: (v: number) => formatCurrency(v, currency),
+      render: (v: number) => {
+        const tip = v != null ? getRateTooltip(v) : undefined;
+        const text = formatCurrency(v, currency);
+        return tip ? (
+          <Tooltip title={tip}>
+            <span style={{ cursor: 'help' }}>{text}</span>
+          </Tooltip>
+        ) : text;
+      },
     },
     {
       title: t('fuelRecord.odometer'),
@@ -249,9 +287,11 @@ export default function RecordListPage() {
             <span className="date">
               {formatDateTime(record.refuel_date, userTimezone, 'YYYY-MM-DD')}
             </span>
-            <span className="cost">
-              {formatCurrency(record.total_cost, currency)}
-            </span>
+            <Tooltip title={getRateTooltip(record.total_cost)}>
+              <span className="cost" style={getRateTooltip(record.total_cost) ? { cursor: 'help' } : undefined}>
+                {formatCurrency(record.total_cost, currency)}
+              </span>
+            </Tooltip>
           </div>
 
           {record.station_name && (
@@ -359,7 +399,7 @@ export default function RecordListPage() {
               {vehicle.brand} {vehicle.model}
             </span>
             <span>{vehicle.year}</span>
-            <Tag>{t(`fuelType.${vehicle.fuel_type}`)}</Tag>
+            <Tag style={{ margin: 0 }}>{t(`fuelType.${vehicle.fuel_type}`)}</Tag>
             <span>{isImperial ? formatNumber(litersToGallons(vehicle.tank_capacity), 1) : vehicle.tank_capacity} {fuelUnit}</span>
             {vehicle.license_plate && <span>{vehicle.license_plate}</span>}
           </Space>

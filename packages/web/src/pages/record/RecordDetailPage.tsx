@@ -274,6 +274,26 @@ export default function RecordDetailPage() {
               {record.unit_price != null && (
                 <Descriptions.Item label={t('fuelRecord.pricePerUnit')}>
                   {formatCurrency(record.unit_price, record.currency_code || currency)}/{record.fuel_unit || fuelUnit}
+                  {ratesData?.rates && (() => {
+                    const recordCurrency = record.currency_code || currency;
+                    if (ratesData.base !== recordCurrency) return null;
+                    const tags = getReferenceCurrencies(recordCurrency, user?.reference_currency)
+                      .map((refCode) => {
+                        const refAmount = convertAmount(record.unit_price!, recordCurrency, refCode, ratesData.rates);
+                        if (refAmount == null) return null;
+                        return (
+                          <Tag key={refCode} color="default" style={{ margin: 0 }}>
+                            {t('exchangeRate.approx')} {formatCurrency(refAmount, refCode)}/{record.fuel_unit || fuelUnit}
+                          </Tag>
+                        );
+                      })
+                      .filter(Boolean);
+                    return tags.length > 0 ? (
+                      <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {tags}
+                      </div>
+                    ) : null;
+                  })()}
                 </Descriptions.Item>
               )}
 
