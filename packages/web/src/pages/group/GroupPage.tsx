@@ -65,7 +65,7 @@ import type {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { useAuthStore, FUEL_GRADES } from '@gastrack/shared';
+import { useAuthStore, FUEL_GRADES, formatCurrency } from '@gastrack/shared';
 
 const { Text, Paragraph } = Typography;
 
@@ -1109,15 +1109,15 @@ export default function GroupPage() {
                                 <Col span={12}>
                                   <Text type="secondary" style={{ fontSize: 12 }}>{t('group.avgPrice')}</Text>
                                   <div>
-                                    <Text strong>¥{station.avg_unit_price.toFixed(2)}</Text>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>/L</Text>
+                                    <Text strong>{formatCurrency(station.avg_unit_price, station.currency_code || user?.currency_code || 'CNY')}</Text>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>/{user?.unit_system === 'imperial' ? 'gal' : 'L'}</Text>
                                   </div>
                                 </Col>
                                 <Col span={12}>
                                   <Text type="secondary" style={{ fontSize: 12 }}>{t('group.latestPrice')}</Text>
                                   <div>
-                                    <Text strong>¥{station.latest_unit_price.toFixed(2)}</Text>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>/L </Text>
+                                    <Text strong>{formatCurrency(station.latest_unit_price, station.currency_code || user?.currency_code || 'CNY')}</Text>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>/{user?.unit_system === 'imperial' ? 'gal' : 'L'} </Text>
                                     <Text
                                       type={station.price_trend === 'up' ? 'danger' : station.price_trend === 'down' ? 'success' : 'secondary'}
                                       style={{ fontSize: 12 }}

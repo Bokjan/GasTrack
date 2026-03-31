@@ -90,11 +90,11 @@ GasTrack/
 | 小票 OCR 识别 | 🔲 |
 | 加油站地图（PostGIS） | 🔲 |
 | 无障碍访问（WCAG 2.1 AA） | 🔲 |
-| 汇率参考（只读展示） | 🔲 |
+| ~~汇率参考（只读展示）~~ | ~~✅ 已完成（frankfurter.app + 内存缓存 24h，设置页/仪表盘/统计/记录详情/记录列表全覆盖）~~ |
 
 ## 3. API 路由一览（V1）
 
-> 48 条已注册路由 + 8 条待实现
+> 54 条已注册路由 + 2 条待实现
 
 ```
 # 公开路由
@@ -170,13 +170,16 @@ GET    /api/v1/groups/{id}/overview        # ✅ 群组数据汇总
 PATCH  /api/v1/groups/{id}/members/{uid}   # ✅ 更新成员角色
 DELETE /api/v1/groups/{id}/members/{uid}   # ✅ 移除成员
 
-# 群组扩展（待实现）
-POST   /api/v1/groups/{id}/shared-vehicles        # 🔲 共享车辆到群组
-DELETE /api/v1/groups/{id}/shared-vehicles/{vid}   # 🔲 取消车辆共享
-GET    /api/v1/groups/{id}/shared-vehicles         # 🔲 获取群组共享车辆列表
-GET    /api/v1/groups/{id}/leaderboard             # 🔲 群组油耗排行榜
-GET    /api/v1/groups/{id}/expense-stats           # 🔲 群组费用统计看板
-GET    /api/v1/groups/{id}/stations                # 🔲 加油站推荐共享
+# 群组扩展（✅ 已全部实现）
+POST   /api/v1/groups/{id}/shared-vehicles        # ✅ 共享车辆到群组
+DELETE /api/v1/groups/{id}/shared-vehicles/{vid}   # ✅ 取消车辆共享
+GET    /api/v1/groups/{id}/shared-vehicles         # ✅ 获取群组共享车辆列表
+GET    /api/v1/groups/{id}/leaderboard             # ✅ 群组油耗排行榜
+GET    /api/v1/groups/{id}/expense-stats           # ✅ 群组费用统计看板
+GET    /api/v1/groups/{id}/stations                # ✅ 加油站推荐共享
+
+# 汇率参考
+GET    /api/v1/exchange-rates              # ✅ 汇率查询
 
 # 其他待实现
 POST   /api/v1/upload/image               # 🔲 上传图片 (P1)

@@ -144,15 +144,16 @@ export default function RecordListPage() {
       title: t('fuelRecord.fuelAmount'),
       dataIndex: 'fuel_amount',
       width: 100,
-      render: (v: number) => `${formatNumber(v)} ${fuelUnit}`,
+      render: (v: number, record: FuelRecord) => `${formatNumber(v)} ${record.fuel_unit || fuelUnit}`,
     },
     {
       title: t('fuelRecord.pricePerUnit'),
       dataIndex: 'unit_price',
       width: 100,
-      render: (v: number) => {
-        const tip = v != null ? getRateTooltip(v, `/${fuelUnit}`) : undefined;
-        const text = formatCurrency(v, currency);
+      render: (v: number, record: FuelRecord) => {
+        const unit = record.fuel_unit || fuelUnit;
+        const tip = v != null ? getRateTooltip(v, `/${unit}`) : undefined;
+        const text = formatCurrency(v, record.currency_code || currency);
         return tip ? (
           <Tooltip title={tip}>
             <span style={{ cursor: 'help' }}>{text}</span>
@@ -164,9 +165,9 @@ export default function RecordListPage() {
       title: t('fuelRecord.totalCost'),
       dataIndex: 'total_cost',
       width: 110,
-      render: (v: number) => {
+      render: (v: number, record: FuelRecord) => {
         const tip = v != null ? getRateTooltip(v) : undefined;
-        const text = formatCurrency(v, currency);
+        const text = formatCurrency(v, record.currency_code || currency);
         return tip ? (
           <Tooltip title={tip}>
             <span style={{ cursor: 'help' }}>{text}</span>
@@ -178,14 +179,14 @@ export default function RecordListPage() {
       title: t('fuelRecord.odometer'),
       dataIndex: 'odometer',
       width: 110,
-      render: (v: number) => `${formatNumber(v, 0)} ${distanceUnit}`,
+      render: (v: number, record: FuelRecord) => `${formatNumber(v, 0)} ${record.distance_unit || distanceUnit}`,
     },
     {
       title: t('fuelRecord.tripDistance'),
       dataIndex: 'trip_distance',
       width: 100,
-      render: (v?: number) =>
-        v ? `${formatNumber(v, 1)} ${distanceUnit}` : '-',
+      render: (v: number | undefined, record: FuelRecord) =>
+        v ? `${formatNumber(v, 1)} ${record.distance_unit || distanceUnit}` : '-',
     },
     {
       title: t('fuelRecord.consumption'),
@@ -303,12 +304,12 @@ export default function RecordListPage() {
 
           <div className="card-row">
             <span className="label">{t('fuelRecord.fuelAmount')}</span>
-            <span className="value">{formatNumber(record.fuel_amount)} {fuelUnit}</span>
+            <span className="value">{formatNumber(record.fuel_amount)} {record.fuel_unit || fuelUnit}</span>
           </div>
 
           <div className="card-row">
             <span className="label">{t('fuelRecord.odometer')}</span>
-            <span className="value">{formatNumber(record.odometer, 0)} {distanceUnit}</span>
+            <span className="value">{formatNumber(record.odometer, 0)} {record.distance_unit || distanceUnit}</span>
           </div>
 
           {record.fuel_efficiency != null && record.fuel_efficiency > 0 && (

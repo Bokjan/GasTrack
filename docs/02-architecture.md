@@ -117,9 +117,11 @@
 ### 5.2 单位换算引擎
 ```
 用户输入 → 原始值 + 原始单位存 DB
-         → 展示时按用户偏好换算
+         → API 响应时按用户偏好换算（fuel_amount、odometer、trip_distance、fuel_efficiency、unit_price）
          → 统计时按统一单位计算后再转换
 ```
+
+> **unit_price 换算逻辑**：单价的本质是「货币/容量单位」，当容量单位从 gal→L（或反向）时，单价需反向换算。例：$3.50/gal → $0.92/L（`单价 × ConvertVolume(1, 目标单位, 源单位)`）。kWh 不参与容量换算。
 
 支持的换算：
 

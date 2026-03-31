@@ -962,9 +962,9 @@ CSV 三段式结构：User Profile → Vehicles → Fuel/Charging Records。
 | GET | `/api/v1/groups/{id}/overview` | ✅ | 群组数据汇总 |
 | PATCH | `/api/v1/groups/{id}/members/{uid}` | ✅ | 更新成员角色 |
 | DELETE | `/api/v1/groups/{id}/members/{uid}` | ✅ | 移除成员 |
-| POST | `/api/v1/groups/{id}/shared-vehicles` | ✅ | 共享车辆到群组 (🔲) |
-| DELETE | `/api/v1/groups/{id}/shared-vehicles/{vid}` | ✅ | 取消车辆共享 (🔲) |
-| GET | `/api/v1/groups/{id}/shared-vehicles` | ✅ | 群组共享车辆列表 (🔲) |
-| GET | `/api/v1/groups/{id}/leaderboard` | ✅ | 油耗排行榜 (🔲) |
-| GET | `/api/v1/groups/{id}/expense-stats` | ✅ | 费用统计看板 (🔲) |
-| GET | `/api/v1/groups/{id}/stations` | ✅ | 加油站推荐共享 (🔲) |
+| POST | `/api/v1/groups/{id}/shared-vehicles` | ✅ | 共享车辆到群组 |
+| DELETE | `/api/v1/groups/{id}/shared-vehicles/{vid}` | ✅ | 取消车辆共享 |
+| GET | `/api/v1/groups/{id}/shared-vehicles` | ✅ | 群组共享车辆列表 |
+| GET | `/api/v1/groups/{id}/leaderboard` | ✅ | 油耗排行榜 |
+| GET | `/api/v1/groups/{id}/expense-stats` | ✅ | 费用统计看板 |
+| GET | `/api/v1/groups/{id}/stations` | ✅ | 加油站推荐共享 |

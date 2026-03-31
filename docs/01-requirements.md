@@ -92,7 +92,7 @@ GasTrack 是一款面向全球用户的油耗/电耗记录与分析系统：
 - ✅ 多币种支持：CNY、USD、EUR、JPY、GBP、KRW
 - ✅ 加油表单支持选择燃油单位(L/gal/kWh)、货币、里程单位(km/mi)
 - ✅ 设置页支持用户偏好单位系统(metric/imperial)、能耗单位、货币的配置与保存
-- ✅ 前端根据用户偏好单位自动展示 — 后端 `fuelRecordToResponse` 已按用户偏好做完整转换（fuel_amount L↔gal、odometer km↔mi、trip_distance、fuel_efficiency），Stats API 同样按 isImperial 转换 total_fuel/total_distance；前端直接展示后端返回值 + 对应单位标签；tank_capacity 前端侧使用 `litersToGallons` 工具函数转换
+- ✅ 前端根据用户偏好单位自动展示 — 后端 `fuelRecordToResponse` 已按用户偏好做完整转换（fuel_amount L↔gal、odometer km↔mi、trip_distance、fuel_efficiency、**unit_price** 同步容量单位换算），Stats API 同样按 isImperial 转换 total_fuel/total_distance；前端列表/详情/卡片均使用 record 级别字段（`record.fuel_unit`/`record.distance_unit`/`record.currency_code`）而非全局偏好值，确保混合 kWh/L/gal 场景正确；tank_capacity 前端侧使用 `litersToGallons` 工具函数转换；GroupPage 加油站推荐价格使用 `formatCurrency` + 动态单位（消除硬编码 ¥ 和 /L）
 - ✅ 汇率参考（只读展示，不做实时兑换）(P2) — 后端 `ExchangeRateService`（frankfurter.app + 内存缓存 24h TTL），`GET /api/v1/exchange-rates`；用户可在设置页选择「参考换算币种」（`reference_currency` 字段），未设置时自动推导（USD↔EUR）；展示层：设置页汇率表、仪表盘/统计页总费用 Tooltip 参考换算、记录详情页单价+总费用直接 Tag 展示、记录列表页单价+总费用 Tooltip hover 换算（桌面端表格+移动端卡片）
 
 ### 3.7 深色模式 (P0) — *需求文档新增*

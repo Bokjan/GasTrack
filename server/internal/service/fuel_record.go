@@ -369,10 +369,17 @@ func fuelRecordToResponse(r *model.FuelRecord, prefs userUnitPrefs) dto.FuelReco
 
 	// 加油量转换（从记录原始单位 → 用户偏好单位）
 	fuelAmount := r.FuelAmount
+	unitPrice := r.UnitPrice
 	srcFuelUnit := convert.VolumeUnit(r.FuelUnit)
 	// kWh 不参与容量换算
 	if srcFuelUnit == convert.UnitLiter || srcFuelUnit == convert.UnitGallon {
 		fuelAmount = convert.ConvertVolume(r.FuelAmount, srcFuelUnit, prefs.volumeUnit)
+		// 单价也需同步转换：单价是 "货币/容量单位"，容量单位变了单价也要变
+		// 例：$3.50/gal → ¥0.92/L（单价 × 反向容量比率）
+		if srcFuelUnit != prefs.volumeUnit && unitPrice > 0 {
+			// 1 单位目标 = N 单位源 → 单价(目标) = 单价(源) × N
+			unitPrice = unitPrice * convert.ConvertVolume(1, prefs.volumeUnit, srcFuelUnit)
+		}
 	}
 
 	// 里程 / 行驶距离转换（从记录原始单位 → 用户偏好单位）
@@ -396,7 +403,7 @@ func fuelRecordToResponse(r *model.FuelRecord, prefs userUnitPrefs) dto.FuelReco
 		VehicleID:      r.VehicleID.String(),
 		FuelAmount:     fuelAmount,
 		FuelUnit:       respFuelUnit,
-		UnitPrice:      r.UnitPrice,
+		UnitPrice:      unitPrice,
 		TotalCost:      r.TotalCost,
 		CurrencyCode:   r.CurrencyCode,
 		Odometer:       odometer,

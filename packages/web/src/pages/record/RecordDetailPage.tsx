@@ -421,9 +421,9 @@ export default function RecordDetailPage() {
                     </Space>
                     <div style={{ marginTop: 4, wordBreak: 'break-word' }}>
                       <Text style={{ fontSize: isMobile ? 12 : 14 }}>
-                        {t('recordDetail.thisTime')}: {formatCurrency(insights.unitPrice, currency)}/{fuelUnit}
+                        {t('recordDetail.thisTime')}: {formatCurrency(insights.unitPrice, currency)}/{record.fuel_unit || fuelUnit}
                         {isMobile ? <br /> : ' · '}
-                        {t('recordDetail.historical')}: {formatCurrency(insights.avgUnitPrice, currency)}/{fuelUnit}
+                        {t('recordDetail.historical')}: {formatCurrency(insights.avgUnitPrice, currency)}/{record.fuel_unit || fuelUnit}
                         {' '}
                         <Text style={{ color: diffColor(insights.unitPrice, insights.avgUnitPrice, true) }}>
                           ({diffText(insights.unitPrice, insights.avgUnitPrice)})

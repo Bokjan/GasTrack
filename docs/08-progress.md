@@ -47,7 +47,7 @@
 - **Export** ✅ — CSV 数据导出 (UTF-8 BOM, 流式写入)
 - **Reminder** ✅ — 保养提醒 CRUD, 11 种保养类型, 3 种触发方式, 自动计算下次保养
 - **Notification** ✅ — 通知 CRUD, 未读数, 标记已读, 异常油耗检测 (>30% 偏差), 保养到期检查, 邀请码使用通知
-- **单位换算** ✅ — `pkg/convert/` 引擎, API 按用户偏好自动转换
+- **单位换算** ✅ — `pkg/convert/` 引擎, API 按用户偏好自动转换（含 unit_price 同步容量单位换算）
 - **群组管理** ✅ — Group/GroupMember/SharedVehicle 模型, 19 条 API（基础 CRUD + 邀请码 + 权限管理 + 数据汇总 + 车辆共享 3 条 + 排行榜 + 费用看板 + 加油站推荐）
 
 ### 待实现
@@ -86,10 +86,6 @@
 | 功能 | 优先级 | 说明 |
 |------|--------|------|
 | 记录列表筛选 UI | ⭐ 低 | 后端 API 已支持筛选参数 |
-| 车辆共享 UI | P1 | 共享开关 + 加油表单车辆选择器改造 |
-| 排行榜 Tab | P1 | Segmented 维度切换 + 排行列表 |
-| 费用看板 Tab | P1 | 4 张统计卡片 + 堆叠柱状图 + 饼图 (ECharts) |
-| 加油站 Tab | P1 | 筛选栏 + 站点卡片列表 |
 
 ---
 
@@ -103,10 +99,10 @@
 | 多车对比图表 | 油耗/费用/里程对比 |
 | 文件上传 | 车辆照片 + 头像 (OSS/本地) |
 | ~~家庭群组~~ | ~~✅ 基础已完成：CRUD + 邀请 + 权限 + 数据汇总~~ |
-| 车辆共享标记 | 群组内共享车辆，多人可为同一辆车记录加油 |
-| 群组油耗排行榜 | 四维排行 (油耗/费用/里程/频次)，趣味 PK |
-| 群组费用统计看板 | 全家费用趋势图 + 成员占比饼图 + 环比 |
-| 加油站推荐共享 | 聚合群组成员常去加油站数据 |
+| ~~车辆共享标记~~ | ~~✅ 已完成（全栈：3 API + 权限 + 前端 UI）~~ |
+| ~~群组油耗排行榜~~ | ~~✅ 已完成（全栈：API + 前端排行榜 Tab）~~ |
+| ~~群组费用统计看板~~ | ~~✅ 已完成（全栈：API + 前端费用 Tab）~~ |
+| ~~加油站推荐共享~~ | ~~✅ 已完成（全栈：API + 前端加油站 Tab）~~ |
 | 更多语言 | 韩语/繁中/西/德/法 |
 | 数据导出 PDF | 带图表的可视化报告 |
 
@@ -119,7 +115,7 @@
 | 小票 OCR | 拍照识别加油小票 |
 | 加油站地图 | PostGIS + 位置服务 |
 | 无障碍访问 | WCAG 2.1 AA |
-| 汇率参考 | 只读展示 |
+| ~~汇率参考~~ | ~~✅ 已完成（只读展示，frankfurter.app + 设置页/仪表盘/统计/记录详情/记录列表全覆盖）~~ |
 
 ---
 
@@ -137,6 +133,8 @@
 
 ### 2026-03-31
 
+- ✅ **汇率换算扩展** — 记录详情页单价新增汇率 Tag 展示（带 /单位 后缀）；记录列表页单价+总价 Tooltip hover 换算（桌面端表格+移动端卡片）；引入 `useExchangeRateStore` + `getRateTooltip` 辅助函数
+- 🔧 **单位切换 Bug 全面修复（L↔gal）** — 后端 `fuelRecordToResponse` 新增 `unit_price` 同步容量单位换算（单价 × 反向容量比率），修复偏好切换后单价与 fuel_unit 不一致的问题；前端 RecordListPage 所有列 render 改用 record 级别字段（`record.fuel_unit`/`record.distance_unit`/`record.currency_code`）替代全局 fuelUnit/distanceUnit；RecordDetailPage 智能分析区域改用 `record.fuel_unit`；GroupPage 加油站推荐消除硬编码 ¥ 和 /L（改用 `formatCurrency` + 动态单位）
 - ✅ **家庭群组管理（基础）** — 全栈实现：Group/GroupMember 模型 + CRUD + 邀请码加入 (GF-XXXXXX) + 权限管理 (Owner/Admin/Member) + 数据汇总 Overview API + 前端群组详情页 (3 Tab) + 三语 i18n (~50 翻译键) + 11 条 API
 - ✅ **共享车辆权限全面修复** — FuelRecord/Stats/Reminder/Vehicle 四个 Service 统一 `verifyVehicleAccess` 鉴权模式（先查 owner → 回退 shared），非车主只能编辑/删除自己创建的记录；goroutine 异步任务改用 `context.WithoutCancel` 避免 HTTP 请求结束后 context 被取消
 - 🔧 **Bug 修复** — GroupPage "暂无群组" 提示始终显示（改为条件渲染）；数据汇总表格"群主"翻译错误→"车主"（新增 vehicleOwner 翻译键）；RecordFormPage 车辆名称显示 UUID（加载期间 Select value 置为 undefined）
