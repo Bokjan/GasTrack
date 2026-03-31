@@ -130,6 +130,7 @@
 
 ### 2026-03-31
 
+- 🧹 **包管理清理** — 删除多余的 `package-lock.json`（项目使用 pnpm）；根 `package.json` 移除废弃的 `tsc` 包和冲突的 `typescript ^6.0.2`（子包统一 `^5.4.5`）；`engines.pnpm` 约束 `>=8.0.0` → `>=9.0.0`；`.gitignore` 新增 `package-lock.json` 防止误入
 - 🔧 **群组车辆汇总币种 Bug 修复** — `GetGroupVehicleSummary` SQL 中 `currency_code` 原来取自 `users.currency_code`（用户当前偏好），用户修改默认币种后数据不做换算直接错误展示（如 ¥165,687 JPY → $165,687 USD）；修复为子查询从 `fuel_records` 取该车辆使用最多的实际入账币种，无记录时 fallback 到用户偏好
 - 🗑️ **文档清理** — 移除 `docs/11-group-features-design.md`（757 行，群组扩展功能已全部实现并合入主文档，独立设计文档不再需要）；同步清理 `01-requirements.md` 中的文档引用
 - ✅ **数据导出增强（P0~P2 全量实现）** — 后端 ExportService 从 3 个数据源扩展到 10 个（+开销记录/保养提醒/通知/邀请码/群组关系/共享车辆），handler 实现 CSV/ZIP/JSON 三种格式 + basic/full 两种范围；前端设置页增加范围+格式选择（Radio.Group）；三语 i18n 新增 7 键；API 文档/README 同步更新
