@@ -66,9 +66,9 @@ import type {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { useAuthStore, FUEL_GRADES, formatCurrency, convertFuelEfficiency, convertAmount, litersToGallons, kmToMiles, formatNumber, useExchangeRateStore } from '@gastrack/shared';
+import { useAuthStore, FUEL_GRADES, formatCurrency, convertFuelEfficiency, convertAmount, litersToGallons, kmToMiles, useExchangeRateStore } from '@gastrack/shared';
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 
 export default function GroupPage() {
   const { t } = useTranslation();

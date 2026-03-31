@@ -17,12 +17,11 @@ import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import {
   expenseApi,
-  vehicleApi,
   reminderApi,
   useAuthStore,
   CURRENCIES,
 } from '@gastrack/shared';
-import type { CreateExpenseRequest, Vehicle, Reminder, ExpenseCategory, MaintenanceCategory } from '@gastrack/shared';
+import type { CreateExpenseRequest, Reminder, ExpenseCategory, MaintenanceCategory } from '@gastrack/shared';
 import dayjs from 'dayjs';
 
 const EXPENSE_CATEGORIES: ExpenseCategory[] = [
@@ -47,7 +46,6 @@ export default function ExpenseFormPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [vendorSuggestions, setVendorSuggestions] = useState<string[]>([]);
   const [vendorSearch, setVendorSearch] = useState('');
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -85,11 +83,6 @@ export default function ExpenseFormPage() {
 
   useEffect(() => {
     if (vehicleId) {
-      // 加载车辆信息
-      vehicleApi.getById(vehicleId).then(({ data }) => {
-        setVehicle(data.data);
-      }).catch(() => { /* ignore */ });
-
       // 加载商家建议
       expenseApi.getVendorSuggestions(vehicleId).then(({ data }) => {
         setVendorSuggestions(data.data || []);
