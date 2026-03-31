@@ -247,7 +247,12 @@ func (r *GroupRepository) GetGroupVehicleSummary(ctx context.Context, groupID uu
 			v.user_id AS owner_id,
 			v.vehicle_type,
 			v.fuel_type,
-			u.currency_code,
+			COALESCE(
+				(SELECT fr2.currency_code FROM fuel_records fr2
+				 WHERE fr2.vehicle_id = v.id
+				 GROUP BY fr2.currency_code ORDER BY COUNT(*) DESC LIMIT 1),
+				u.currency_code
+			) AS currency_code,
 			COUNT(fr.id) AS total_records,
 			COALESCE(SUM(fr.total_cost), 0) AS total_cost,
 			COALESCE(SUM(fr.fuel_amount), 0) AS total_fuel,

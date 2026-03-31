@@ -169,8 +169,6 @@ GasTrack 是一款面向全球用户的油耗/电耗记录与分析系统：
 - ✅ 支持 3/6/12 个月数据范围选择（默认 6 个月）
 - ✅ 1 条 API：`GET /groups/{id}/stations?fuel_grade=95&months=6&sort_by=frequency`
 
-> 📄 详细设计文档见 [`11-group-features-design.md`](./11-group-features-design.md)
-
 ### 3.11 通知与提醒 (P2)
 - ✅ 保养提醒（按里程/时间）— 后端 Reminder CRUD + 11 种保养类型（oil_change/tire_rotation/brake_pads 等）+ 三种触发方式（mileage/time/both）+ 自动计算下次保养时间；前端 `/reminders` 页面卡片式管理（创建/编辑/删除/启用禁用）+ 逾期标识
 - ~~🔲 定期加油提醒~~

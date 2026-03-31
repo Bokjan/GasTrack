@@ -6,7 +6,7 @@
 
 ```
 GasTrack/
-├── docs/                        # 设计文档（11 篇）
+├── docs/                        # 设计文档（10 篇）
 ├── server/                      # Go 后端（独立 Go Module）
 │   ├── cmd/server/main.go       # 入口：依赖注入、启动服务
 │   ├── internal/

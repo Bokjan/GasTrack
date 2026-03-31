@@ -217,7 +217,6 @@ jwt:
 | [08-progress.md](docs/08-progress.md) | 开发进度 |
 | [09-local-development.md](docs/09-local-development.md) | 本地开发指南 |
 | [10-deployment.md](docs/10-deployment.md) | 线上部署 |
-| [11-group-features-design.md](docs/11-group-features-design.md) | 群组功能设计 |
 
 ## 📜 License
 
