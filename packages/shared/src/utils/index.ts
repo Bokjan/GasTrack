@@ -194,3 +194,45 @@ export function getReferenceCurrencies(currentCurrency: string, referenceCurrenc
   const all = ['USD', 'EUR', 'CNY', 'JPY', 'GBP', 'KRW'];
   return all.filter((c) => c !== currentCurrency).slice(0, 3);
 }
+
+/**
+ * 将按币种分组的费用（costs_by_currency）按汇率换算后汇总为用户偏好币种的总金额。
+ * 汇率表以用户偏好币种为 base（即 rates 中的值是 "1 base = X target"），
+ * 所以从其他币种换算到 base 需要用 amount / rate。
+ *
+ * @param costsByCurrency  按原始入账币种分组的费用 { "JPY": 162861, "USD": 500 }
+ * @param targetCurrency   用户偏好币种（汇率表的 base）
+ * @param rates            汇率表，key 为目标币种，value 为 "1 base = X target"
+ * @returns 换算后的总金额（以 targetCurrency 计）；如果无法换算某币种则保留原值
+ */
+export function sumConvertedCostsByCurrency(
+  costsByCurrency: Record<string, number> | undefined | null,
+  targetCurrency: string,
+  rates: Record<string, number> | undefined | null,
+): number | null {
+  if (!costsByCurrency || Object.keys(costsByCurrency).length === 0) {
+    return null;
+  }
+
+  let total = 0;
+  for (const [currency, amount] of Object.entries(costsByCurrency)) {
+    if (currency === targetCurrency) {
+      // 同币种，直接累加
+      total += amount;
+    } else if (rates) {
+      // rates 以 targetCurrency 为 base，rates[currency] 表示 "1 targetCurrency = X currency"
+      // 所以从 currency 换算到 targetCurrency: amount / rates[currency]
+      const rate = rates[currency];
+      if (rate != null && rate > 0) {
+        total += amount / rate;
+      } else {
+        // 无汇率数据，无法准确换算
+        return null;
+      }
+    } else {
+      // 无汇率表，无法换算
+      return null;
+    }
+  }
+  return total;
+}

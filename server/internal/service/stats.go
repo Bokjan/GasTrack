@@ -86,6 +86,16 @@ func (s *StatsService) GetVehicleStats(ctx context.Context, vehicleID, userID uu
 		return nil, apperror.ErrInternal("fetching vehicle stats", err)
 	}
 
+	// 获取按币种分组的费用明细
+	costsByCurrency, err := s.recordRepo.GetCostByCurrency(ctx, vehicleID)
+	if err != nil {
+		return nil, apperror.ErrInternal("fetching costs by currency", err)
+	}
+	costMap := make(map[string]float64, len(costsByCurrency))
+	for _, c := range costsByCurrency {
+		costMap[c.CurrencyCode] = c.TotalCost
+	}
+
 	// 根据用户偏好换算油耗单位
 	targetUnit := convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
 	avgEff := convert.ConvertFuelEfficiency(stats.AvgEfficiency, convert.UnitL100km, targetUnit)
@@ -124,6 +134,7 @@ func (s *StatsService) GetVehicleStats(ctx context.Context, vehicleID, userID uu
 		AvgCostPerFill:  avgCostPerFill,
 		CurrencyCode:    user.CurrencyCode,
 		FuelUnit:        user.FuelEfficiencyUnit,
+		CostsByCurrency: costMap,
 	}, nil
 }
 
@@ -143,6 +154,7 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 	var totalCost float64
 	var totalFuel float64
 	var totalDistance float64
+	overallCostsByCurrency := make(map[string]float64)
 	vehicleStats := make([]dto.VehicleStatsResponse, 0, len(vehicles))
 
 	isImperial := user.UnitSystem == "imperial"
@@ -151,6 +163,16 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 		stats, err := s.recordRepo.GetVehicleStats(ctx, v.ID)
 		if err != nil {
 			continue
+		}
+
+		// 获取该车辆的按币种分组费用
+		costsByCurrency, costErr := s.recordRepo.GetCostByCurrency(ctx, v.ID)
+		vehicleCostMap := make(map[string]float64)
+		if costErr == nil {
+			for _, c := range costsByCurrency {
+				vehicleCostMap[c.CurrencyCode] = c.TotalCost
+				overallCostsByCurrency[c.CurrencyCode] += c.TotalCost
+			}
 		}
 
 		totalRecords += stats.TotalRecords
@@ -166,15 +188,16 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 			vDist = convert.ConvertDistance(vDist, convert.UnitKm, convert.UnitMile)
 		}
 		vehicleStats = append(vehicleStats, dto.VehicleStatsResponse{
-			VehicleID:     v.ID.String(),
-			VehicleName:   v.Name,
-			TotalRecords:  stats.TotalRecords,
-			TotalFuel:     vFuel,
-			TotalCost:     stats.TotalCost,
-			TotalDistance:  vDist,
-			AvgEfficiency:  convert.ConvertFuelEfficiency(stats.AvgEfficiency, convert.UnitL100km, targetUnit),
-			CurrencyCode:  user.CurrencyCode,
-			FuelUnit:      user.FuelEfficiencyUnit,
+			VehicleID:       v.ID.String(),
+			VehicleName:     v.Name,
+			TotalRecords:    stats.TotalRecords,
+			TotalFuel:       vFuel,
+			TotalCost:       stats.TotalCost,
+			TotalDistance:   vDist,
+			AvgEfficiency:   convert.ConvertFuelEfficiency(stats.AvgEfficiency, convert.UnitL100km, targetUnit),
+			CurrencyCode:    user.CurrencyCode,
+			FuelUnit:        user.FuelEfficiencyUnit,
+			CostsByCurrency: vehicleCostMap,
 		})
 	}
 
@@ -195,14 +218,15 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 	}
 
 	return &dto.OverviewStatsResponse{
-		TotalVehicles:  int64(len(vehicles)),
-		TotalRecords:   totalRecords,
-		TotalFuel:      overviewFuel,
-		TotalCost:      totalCost,
-		TotalDistance:  overviewDist,
-		AvgConsumption: avgConsumption,
-		CurrencyCode:   user.CurrencyCode,
-		Vehicles:       vehicleStats,
+		TotalVehicles:   int64(len(vehicles)),
+		TotalRecords:    totalRecords,
+		TotalFuel:       overviewFuel,
+		TotalCost:       totalCost,
+		TotalDistance:   overviewDist,
+		AvgConsumption:  avgConsumption,
+		CurrencyCode:    user.CurrencyCode,
+		CostsByCurrency: overallCostsByCurrency,
+		Vehicles:        vehicleStats,
 	}, nil
 }
 

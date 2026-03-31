@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Badge, Popover, List, Button, Typography, Space, Tag, Empty, message } from 'antd';
+import { Badge, Popover, Drawer, List, Button, Typography, Space, Tag, Empty, message } from 'antd';
 import {
   BellOutlined,
   WarningOutlined,
@@ -10,6 +10,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { notificationApi } from '@gastrack/shared';
 import type { Notification } from '@gastrack/shared';
+import { useIsMobile } from '../hooks/useIsMobile';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
@@ -21,6 +22,7 @@ const { Text } = Typography;
 
 export default function NotificationBell() {
   const { t, i18n } = useTranslation();
+  const isMobile = useIsMobile();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -118,7 +120,7 @@ export default function NotificationBell() {
   };
 
   const content = (
-    <div style={{ width: 'min(360px, calc(100vw - 32px))', maxHeight: 440, overflow: 'auto' }}>
+    <div style={{ maxHeight: isMobile ? 'calc(100vh - 120px)' : 440, overflow: 'auto' }}>
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
@@ -194,6 +196,36 @@ export default function NotificationBell() {
     </div>
   );
 
+  const bellIcon = (
+    <Badge count={unreadCount} size="small" offset={[-2, 4]}>
+      <BellOutlined
+        style={{ fontSize: 18, cursor: 'pointer' }}
+        onClick={() => setOpen(true)}
+      />
+    </Badge>
+  );
+
+  // 手机端：使用 Drawer 从顶部滑出，避免 Popover 溢出
+  if (isMobile) {
+    return (
+      <>
+        {bellIcon}
+        <Drawer
+          title={null}
+          placement="top"
+          height="auto"
+          open={open}
+          onClose={() => setOpen(false)}
+          closable
+          styles={{ body: { padding: '12px 16px' } }}
+        >
+          {content}
+        </Drawer>
+      </>
+    );
+  }
+
+  // 桌面端：保持 Popover
   return (
     <Popover
       content={content}
@@ -202,7 +234,6 @@ export default function NotificationBell() {
       onOpenChange={setOpen}
       placement="bottomRight"
       arrow={false}
-      overlayStyle={{ maxWidth: 'calc(100vw - 16px)' }}
     >
       <Badge count={unreadCount} size="small" offset={[-2, 4]}>
         <BellOutlined style={{ fontSize: 18, cursor: 'pointer' }} />

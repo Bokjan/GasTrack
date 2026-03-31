@@ -21,6 +21,7 @@ import {
   isElectricVehicle,
   convertAmount,
   getReferenceCurrency,
+  sumConvertedCostsByCurrency,
 } from '@gastrack/shared';
 import type { OverviewStats, VehicleStats, Vehicle } from '@gastrack/shared';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -60,10 +61,23 @@ export default function DashboardPage() {
   const distanceUnit = isImperial ? 'mi' : 'km';
   const efficiencyUnit = user?.fuel_efficiency_unit || 'L/100km';
 
+  /** 使用 costs_by_currency 按汇率换算后的总费用（用户偏好币种） */
+  const getConvertedCost = (costsByCurrency?: Record<string, number>, fallbackCost?: number): number => {
+    const converted = sumConvertedCostsByCurrency(costsByCurrency, currency, ratesData?.rates);
+    if (converted != null) return converted;
+    // 如果无法换算（缺汇率或无分组数据），回退到原始值
+    return fallbackCost ?? 0;
+  };
+
+  /** 全局概览的换算后总费用 */
+  const overviewConvertedCost = overview
+    ? getConvertedCost(overview.costs_by_currency, overview.total_cost)
+    : 0;
+
   /** 汇率参考换算：总费用 → 另一种参考币种 */
   const refCurrency = getReferenceCurrency(currency, user?.reference_currency);
-  const refTotalCost = overview?.total_cost && ratesData?.rates
-    ? convertAmount(overview.total_cost, currency, refCurrency, ratesData.rates)
+  const refTotalCost = overviewConvertedCost && ratesData?.rates
+    ? convertAmount(overviewConvertedCost, currency, refCurrency, ratesData.rates)
     : null;
 
   /** 根据 vehicle_id 找到对应车辆信息 */
@@ -73,6 +87,7 @@ export default function DashboardPage() {
   /** 渲染单辆车的统计卡片 */
   const renderVehicleStats = (vs: VehicleStats, vehicle?: Vehicle) => {
     const isEv = vehicle ? isElectricVehicle(vehicle.fuel_type) : false;
+    const vehicleConvertedCost = getConvertedCost(vs.costs_by_currency, vs.total_cost);
     return (
       <Row gutter={isMobile ? [8, 8] : [16, 16]}>
         <Col xs={12} sm={6}>
@@ -88,7 +103,7 @@ export default function DashboardPage() {
           <Card loading={statsLoading} size="small">
             <Statistic
               title={t('stats.totalCost')}
-              value={formatCurrency(vs.total_cost, currency)}
+              value={formatCurrency(vehicleConvertedCost, currency)}
               prefix={<DollarOutlined />}
             />
           </Card>
@@ -148,7 +163,7 @@ export default function DashboardPage() {
                     <Card loading={statsLoading} size="small">
                       <Statistic
                         title={t('stats.totalCost')}
-                        value={overview ? formatCurrency(overview.total_cost, currency) : '-'}
+                        value={overview ? formatCurrency(overviewConvertedCost, currency) : '-'}
                         prefix={<DollarOutlined />}
                       />
                     </Card>

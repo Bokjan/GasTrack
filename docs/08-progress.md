@@ -1,6 +1,6 @@
 # GasTrack 需求完成进度
 
-> **更新日期**: 2026-03-31
+> **更新日期**: 2026-04-01
 >
 > **当前阶段**: 第一期 MVP（基本完成）
 
@@ -22,7 +22,7 @@
 | 深色模式 | — | ✅ | ✅ |
 | 移动端响应式适配 | — | ✅ | ✅ |
 | 数据导出 CSV/ZIP/JSON（GDPR） | ✅ | ✅ | ✅ |
-| 隐私政策 + 用户协议 | — | ✅ | ✅ |
+| 隐私政策 + 用户协议 + Footer | — | ✅ | ✅ |
 | 保养提醒（里程/时间） | ✅ | ✅ | ✅ |
 | 异常油耗预警 + 通知系统 | ✅ | ✅ | ✅ |
 | 家庭群组管理（基础） | ✅ | ✅ | ✅ |
@@ -43,14 +43,14 @@
 - **Auth** ✅ — 注册/登录/刷新/登出, Refresh Token Rotation (SELECT FOR UPDATE 原子消费), 邀请码注册制
 - **User** ✅ — 资料 CRUD, 修改密码, 注销账号 (GDPR)
 - **Vehicle** ✅ — CRUD (含电动车 battery_capacity), 默认车辆 (事务原子), 归档
-- **FuelRecord** ✅ — CRUD, 分页, 站名建议, 油耗/电耗自动计算
-- **Stats** ✅ — 车辆统计, 全局总览, 油耗趋势, 按月/年聚合 + 同比
+- **FuelRecord** ✅ — CRUD, 分页, 站名建议, 油耗/电耗自动计算, `GetCostByCurrency` 按币种分组聚合费用
+- **Stats** ✅ — 车辆统计, 全局总览, 油耗趋势, 按月/年聚合 + 同比, `costs_by_currency` 多币种费用明细
 - **Invite** ✅ — 邀请码 CRUD, GT-XXXXXX 格式, 并发安全消费
 - **Export** ✅ — 数据导出 CSV/ZIP/JSON（scope=basic/full，10 个数据源，UTF-8 BOM，ZIP 多文件 + manifest.json）
 - **Reminder** ✅ — 保养提醒 CRUD, 11 种保养类型, 3 种触发方式, 自动计算下次保养
 - **Notification** ✅ — 通知 CRUD, 未读数, 标记已读, 异常油耗检测 (>30% 偏差), 保养到期检查, 邀请码使用通知
 - **单位换算** ✅ — `pkg/convert/` 引擎, API 按用户偏好自动转换（含 unit_price 同步容量单位换算）
-- **群组管理** ✅ — Group/GroupMember/SharedVehicle 模型, 19 条 API（基础 CRUD + 邀请码 + 权限管理 + 数据汇总 + 车辆共享 3 条 + 排行榜 + 费用看板 + 加油站推荐）
+- **群组管理** ✅ — Group/GroupMember/SharedVehicle 模型, 19 条 API（基础 CRUD + 邀请码 + 权限管理 + 数据汇总 + 车辆共享 + 排行榜 + 费用看板 + 加油站推荐）
 - **开销记录** ✅ — ExpenseRecord 模型, CRUD + 列表筛选 + 统计（按币种汇总/分类占比/月度趋势）+ 商家名建议 + 保养联动, 7 条 API
 
 ### 待实现
@@ -68,23 +68,23 @@
 ### 已完成模块
 
 - **基础设施** ✅ — Monorepo (pnpm workspace), Vite 5, React 18 + TS, React Router 6, Ant Design 5
-- **共享包** ✅ — Types (完全对齐后端 DTO), API 层 (Axios + 401 自动刷新), Zustand (auth/vehicle/theme), i18n (3 语), Constants, Utils (formatDateTime 时区感知)
+- **共享包** ✅ — Types (完全对齐后端 DTO), API 层 (Axios + 401 自动刷新), Zustand (auth/vehicle/theme), i18n (3 语), Constants, Utils (formatDateTime 时区感知, `sumConvertedCostsByCurrency` 多币种汇率换算)
 - **页面** ✅:
   - 登录/注册 (邀请码实时校验)
-  - 仪表盘 (按车辆分组统计)
+  - 仪表盘 (按车辆分组统计, 多币种费用汇率换算)
   - 车辆列表/表单 (含电动车适配)
   - 加油记录列表/表单/详情 (三值自动计算, 站点补全, 智能分析)
-  - 统计 (月/年维度 + 同比, ECharts)
+  - 统计 (月/年维度 + 同比, ECharts, 多币种费用汇率换算)
   - 邀请码管理 (Table/卡片, 复制/启停/删除)
   - 保养提醒 (卡片式管理, 逾期标识)
   - 设置 (时区, 外观主题, 语言, 单位, 数据导出 CSV/ZIP/JSON + 范围/格式选择, 账号注销)
   - 隐私政策 / 用户协议
-- **组件** ✅ — MainLayout (Sider/Drawer 自适应), NotificationBell (60s 轮询), ProtectedRoute
-- **群组页面** ✅ — `/groups` 群组列表 + 详情面板 (6 Tab: 群组信息/成员管理/数据汇总+共享车辆/排行榜/费用看板/加油站推荐) + 创建/加入/编辑弹窗 + 100+ 翻译键；全面单位/货币国际化（15+ 处硬编码修复，汇率自动换算 + "经换算"提示组件）
+- **组件** ✅ — MainLayout (Sider/Drawer 自适应 + Footer), NotificationBell (60s 轮询, 手机端 Drawer/桌面端 Popover 双模式), InstallPrompt (底部浮动卡片, design tokens 主题适配), ProtectedRoute
+- **群组页面** ✅ — `/groups` 群组列表 + 详情面板 (6 Tab) + 创建/加入/编辑弹窗；全面单位/货币国际化（汇率自动换算 + "经换算"提示组件）
 - **开销记录页面** ✅ — `/vehicles/{id}/expenses` 开销列表（分页+筛选+统计摘要）+ 创建/编辑表单 + 详情页，10 种开销分类，保养提醒联动
 - **深色模式** ✅ — 三种主题模式, CSS 变量体系, ECharts 暗色适配
 - **响应式** ✅ — useIsMobile Hook, 全站 Table→卡片/Sider→Drawer 适配
-- **PWA** ✅ — vite-plugin-pwa, Web App Manifest, Service Worker (Workbox), 预缓存 + 运行时缓存 (API NetworkFirst / 图片 CacheFirst), 自动更新提示, 安装引导 (Android/Desktop + iOS Safari), GT 品牌图标 (SVG 矢量 + 5 尺寸 PNG 自动生成)
+- **PWA** ✅ — vite-plugin-pwa, Web App Manifest, Service Worker (Workbox), 预缓存 + 运行时缓存, 自动更新提示, 安装引导 (Android/Desktop + iOS Safari), GT 品牌图标
 
 ### 待实现
 
@@ -100,7 +100,6 @@
 
 | 功能 | 说明 |
 |------|------|
-| PWA 支持 | ~~Service Worker + 离线 + 安装到桌面~~ ✅ 已完成 |
 | 多车对比图表 | 油耗/费用/里程对比 |
 | 文件上传 | 车辆照片 + 头像 (OSS/本地) |
 | 更多语言 | 韩语/繁中/西/德/法 |
@@ -130,55 +129,44 @@
 
 > 仅记录功能级别变更摘要，详细实现细节见 Git commit 历史。
 
+### 2026-04-01
+
+- ✅ **全局 Footer 组件** — `MainLayout` 新增 `Layout.Footer`，包含版权信息（动态年份）+ 隐私政策/用户协议站内链接；`theme.useToken()` 适配亮暗主题；响应式 padding；三语 i18n 新增 `footer.*` 3 键
+- ✅ **仪表盘/统计页多币种费用换算 Bug 修复（全栈）** — 后端 Stats API 原直接 `SUM(total_cost)` 不区分币种，多币种用户金额显示错误；修复：Repository 新增 `GetCostByCurrency` 按 `currency_code` 分组聚合；DTO 新增 `costs_by_currency` 字段；前端新增 `sumConvertedCostsByCurrency()` 工具函数按汇率换算后汇总；`DashboardPage` 和 `StatsPage` 费用展示均改用换算后金额
+- 🔧 **通知面板手机端适配** — `NotificationBell` 手机端改用 `Drawer` 顶部滑出替代 `Popover`，解决竖屏溢出；桌面端保持 Popover；内容区 maxHeight 响应式
+- 🎨 **PWA 安装引导 UI 重设计** — `InstallPrompt` 重构为底部浮动卡片，design tokens 适配深色/浅色主题，带 `slideUp`/`slideDown` CSS 动画
+- 🔧 **法律页面滚动修复** — 隐私政策/用户协议页面添加 `scrollTo(0, 0)`，确保从设置页跳转后从顶部开始
+
 ### 2026-03-31
 
-- ✅ **PWA 支持（安装到桌面）** — `vite-plugin-pwa` 集成：Web App Manifest（standalone 模式 + portrait）、Workbox Service Worker（预缓存构建产物 + 运行时缓存：API NetworkFirst 5min / 图片 CacheFirst 30d）、`PWAUpdatePrompt` 组件（新版本通知 + 每小时检查）、`InstallPrompt` 组件（Android/Desktop `beforeinstallprompt` 安装按钮 + iOS Safari 手动添加引导）、三语 i18n 新增 `pwa.*` 8 键
-- 🎨 **品牌升级** — 全新 GasTrack 图标设计：蓝色渐变背景（#0958d9 → #1677ff）+ 白色 GT 字母标志，简洁有力，小尺寸清晰可辨；SVG 矢量源文件 + `@resvg/resvg-js` 自动生成 5 种 PNG 尺寸（512/192/180/32/16），替换旧 Vite 默认图标；`index.html` 完善 favicon/apple-touch-icon/theme-color meta；新增 `scripts/generate-icons.mjs` 图标生成脚本
-- 📝 **名称与描述更新** — 系统定位从"油耗记录与分析"扩展为"车辆能耗与费用管理"，覆盖油耗/电耗/维保开销全场景；更新 6 处：`index.html` title、`package.json` description、`README.md`、三语 i18n `app.title`（zh-CN/en-US/ja-JP）；侧边栏 logo 从 emoji 改为 SVG 图标
-- 🔧 **移动端表单聚焦自动缩放修复** — iOS Safari 点击 input/select 时页面自动放大（Ant Design 默认 14px < 16px 阈值）；viewport 添加 `maximum-scale=1, user-scalable=no`；全局 CSS 新增表单元素 `font-size: 16px !important`（覆盖原生 + Ant Design 组件选择器）；HTML `text-size-adjust: 100%` 防止文字自动调整
-- 🔧 **全栈审计修复（11 项高+中优先级）** — 消除硬编码值、魔数和 i18n 缺失：
-  - **H1**: `group.go` 排行榜 `periodLabel` 从中文日期 `"2006年1月"` 改为 ISO `"2006-01"` 格式，前端按 locale 格式化
-  - **H2**: `notification.go` 三处通知（异常油耗/保养到期/邀请使用）从硬编码英文改为结构化 key+参数，前端按 locale 渲染
-  - **H3**: `SettingsPage.tsx` 汇率表头 `.includes('人民币')` 改为 i18n key `exchangeRate.currencyColumnName`
-  - **H4**: `InviteManagePage.tsx` placeholder `"0 = unlimited"` 改为 i18n key `invite.maxUsesPlaceholder`
-  - **H5**: `RecordListPage.tsx` 移动端卡片 `currency` → `record.currency_code || currency`
-  - **M1**: `fuel_record.go` / `expense_record.go` 魔数 `1.60934` → `convert.MileToKm`
-  - **M2**: 服务层字符串字面量 `"mi"/"L"/"km"` → `convert` 包常量
-  - **M3**: `group.go` 排行榜 `unit` 硬编码 → `convert.UnitL100km` / `convert.UnitKm`
-  - **M4**: `GroupPage.tsx` 11 处 `.toFixed()` → `formatNumber()` 统一精度 + 千分位
-  - **M5**: `CURRENCIES` labels 从 `"¥ CNY"` 改为 i18n key `"currency.CNY"`，三语 JSON 添加对应翻译
-  - **M6**: `convert.go` 魔数 `235.215` 提取为 `L100kmMPGFactor` 常量并在函数体中引用
-  - 补全三语 i18n JSON 新增 keys（`exchangeRate.currencyColumnName`/`invite.maxUsesPlaceholder`/`currency.*`/`notification.*Msg`/`notification.direction*`）
-  - `expense_record.go` 添加缺失的 `convert` 包 import
-- 🔧 **Ant Design 弃用 API 修复**: 全部 5 处 `destroyOnClose` → `destroyOnHidden`（`GroupPage.tsx` ×3、`InviteManagePage.tsx` ×1、`ReminderPage.tsx` ×1）；`RecordListPage.tsx` `overlayInnerStyle` → `styles.body`；`MainLayout.tsx` `bodyStyle`+`headerStyle` → `styles` 对象
-- 🔧 **群组费用看板多币种 Bug 修复（全栈）** — 费用看板 `GetGroupExpenseByMonth`/`GetGroupExpenseByYear` SQL 原按 `(period_label, user_id)` 分组，不同币种的金额被直接 SUM 混合汇总（如 JPY + USD 裸加），前端又将未换算的总额贴上用户偏好币种符号显示；修复：SQL 增加 `fr.currency_code` 到 SELECT 和 GROUP BY；`GroupExpenseRow`/DTO/TypeScript 类型链全部加 `currency_code`；Service 层 `memberTotal` 改为 `CostByCurrency map[string]float64` 按币种分账；前端新增 `sumConvertedCosts()` 辅助函数，从 `by_member` / `member_breakdown` 各项按币种逐笔换算后汇总显示
-- 🔧 **群组加油站价格换算 Bug 修复** — 加油站页面价格原使用 `formatCurrency()`（仅格式化不换算），改为 `<ConvertedCost sourceCurrency={station.currency_code}>` 组件，正确将原始币种换算为用户偏好币种显示
-- 🔧 **费用占比 0.0% Bug 修复** — 费用看板成员费用占比始终显示 `0.0%`；原因：`calculateSummary` 将 `TotalCost` 设为占位 `0`（由前端换算汇总），但 `buildMemberBreakdown` 直接拿 `summary.TotalCost` 做分母计算百分比，除以 0 导致全部为 0；修复：在调用 `buildMemberBreakdown` 前从 `memberTotals` 原始数据重新计算费用总和作为分母
-- 🧹 **包管理清理** — 删除多余的 `package-lock.json`（项目使用 pnpm）；根 `package.json` 移除废弃的 `tsc` 包和冲突的 `typescript ^6.0.2`（子包统一 `^5.4.5`）；`engines.pnpm` 约束 `>=8.0.0` → `>=9.0.0`；`.gitignore` 新增 `package-lock.json` 防止误入
-- 🔧 **群组车辆汇总币种 Bug 修复** — `GetGroupVehicleSummary` SQL 中 `currency_code` 原来取自 `users.currency_code`（用户当前偏好），用户修改默认币种后数据不做换算直接错误展示（如 ¥165,687 JPY → $165,687 USD）；修复为子查询从 `fuel_records` 取该车辆使用最多的实际入账币种，无记录时 fallback 到用户偏好
-- 🗑️ **文档清理** — 移除 `docs/11-group-features-design.md`（757 行，群组扩展功能已全部实现并合入主文档，独立设计文档不再需要）；同步清理 `01-requirements.md` 中的文档引用
-- ✅ **数据导出增强（P0~P2 全量实现）** — 后端 ExportService 从 3 个数据源扩展到 10 个（+开销记录/保养提醒/通知/邀请码/群组关系/共享车辆），handler 实现 CSV/ZIP/JSON 三种格式 + basic/full 两种范围；前端设置页增加范围+格式选择（Radio.Group）；三语 i18n 新增 7 键；API 文档/README 同步更新
-- ✅ **维修保养开销记录模块（全栈）** — 独立车辆开销台账：后端 CRUD + 筛选 + 统计 + 商家建议 + 保养提醒联动（7 API），前端列表/表单/详情页，10 种分类，三语 i18n（~60 键）
-- ✅ **群组页面国际化全面修复** — GroupPage 15+ 处硬编码单位/货币消除，新增 `<ConvertedCost>` 汇率换算组件 + 辅助函数（convertFuel/Distance/Efficiency），所有 Tab 按用户偏好动态转换
+- ✅ **PWA 支持** — `vite-plugin-pwa` 集成：Web App Manifest、Workbox Service Worker（预缓存 + 运行时缓存）、自动更新提示、安装引导（Android/Desktop + iOS Safari）、三语 i18n
+- 🎨 **品牌升级** — GasTrack GT 图标设计（蓝色渐变 + 白色字母），SVG 矢量 + 5 尺寸 PNG 自动生成，替换旧 Vite 默认图标
+- 📝 **名称与描述更新** — 系统定位扩展为"车辆能耗与费用管理"，更新 `index.html`/`package.json`/`README.md`/三语 i18n
+- 🔧 **移动端表单聚焦自动缩放修复** — iOS Safari input 聚焦放大问题，viewport `maximum-scale=1` + 全局表单 `font-size: 16px`
+- 🔧 **全栈审计修复（11 项）** — 消除硬编码值/魔数/i18n 缺失（排行榜日期格式、通知结构化 key、汇率表头、邀请码 placeholder、货币 labels、convert 包常量等）
+- 🔧 **Ant Design 弃用 API 修复** — `destroyOnClose` → `destroyOnHidden`（5 处）、`overlayInnerStyle` → `styles.body`、`bodyStyle`/`headerStyle` → `styles`
+- 🔧 **群组多币种 Bug 修复（3 项）** — 费用看板 SQL 混合汇总、加油站价格未换算、成员费用占比除零；全部修复并新增前端 `sumConvertedCosts()` 辅助函数
+- 🔧 **群组车辆汇总币种 Bug 修复** — `currency_code` 改为从 `fuel_records` 取实际入账币种，避免用户切换偏好后错误展示
+- 🧹 **包管理清理** — 删除多余 `package-lock.json`，移除废弃依赖，`engines.pnpm` → `>=9.0.0`
+- 🗑️ **文档清理** — 移除已完成的群组设计文档（757 行），同步清理引用
+- ✅ **数据导出增强** — 后端从 3 扩展到 10 个数据源，支持 CSV/ZIP/JSON 三种格式 + basic/full 两种范围
+- ✅ **维修保养开销记录模块（全栈）** — 后端 CRUD + 筛选 + 统计 + 保养联动（7 API），前端列表/表单/详情页，10 种分类
+- ✅ **群组页面国际化修复** — 15+ 处硬编码消除，新增 `<ConvertedCost>` 汇率换算组件
 - ✅ **汇率换算扩展** — 记录详情/列表页新增汇率 Tag + Tooltip hover 换算
-- 🔧 **单位切换 Bug 修复** — 后端 unit_price 同步容量单位换算，前端改用 record 级别字段
-- ✅ **群组功能扩展（全栈）** — 车辆共享标记（3 API + 统一 `verifyVehicleAccess`）、排行榜（4 维度 + 时间范围）、费用看板（统计卡片 + 趋势 + 成员占比）、加油站推荐（聚合 + 筛选 + 价格趋势）
-- ✅ **家庭群组管理（全栈）** — Group/GroupMember 模型 + CRUD + 邀请码 + 三级权限 + 数据汇总 + 前端 6 Tab 详情页（11 API）
-- 🔧 **Bug 修复** — GroupPage 条件渲染、翻译错误、RecordFormPage UUID 显示
+- 🔧 **单位切换 Bug 修复** — 后端 unit_price 同步容量单位换算
+- ✅ **群组功能扩展（全栈）** — 车辆共享（3 API）、排行榜（4 维度）、费用看板、加油站推荐
+- ✅ **家庭群组管理（全栈）** — Group/GroupMember 模型 + CRUD + 邀请码 + 三级权限 + 数据汇总（11 API）
 
 ### 2026-03-30
 
-- ✅ **通知与提醒系统** — 保养提醒（11 种类型 + 3 种触发）+ 异常油耗预警（>30% 偏差）+ NotificationBell 组件（60s 轮询 + 标记已读）+ 邀请码使用通知
+- ✅ **通知与提醒系统** — 保养提醒（11 种类型 + 3 种触发）+ 异常油耗预警 + NotificationBell 组件（60s 轮询）+ 邀请码使用通知
 - ✅ **移动端响应式适配** — 全站 useIsMobile Hook，Sider→Drawer、Table→卡片、表单/统计/仪表盘自适应
 - ✅ **邀请码管理** — `/invites` 独立管理页：列表/创建/复制/启停/删除
-- ✅ **邀请注册制** — `invite_only`/`open`/`closed` 三种模式，GT-XXXXXX 格式，SELECT FOR UPDATE 并发安全
-- ✅ **日志系统** — Zap + Lumberjack 轮转（按大小切割 + gzip 压缩）
+- ✅ **邀请注册制** — `invite_only`/`open`/`closed` 三种模式，GT-XXXXXX 格式，并发安全
+- ✅ **日志系统** — Zap + Lumberjack 轮转
 - ✅ **并发安全修复** — Refresh Token Rotation 原子消费、默认车辆设置事务、邮箱 unique violation 409
-
-### 2026-03-30 (earlier)
-
-- ✅ **GDPR 合规** — 账号注销 + CSV 数据导出（流式 UTF-8 BOM）+ 隐私政策/用户协议（三语）
-- ✅ **多币种/单位换算** — 后端 `pkg/convert/` 引擎 + API 自动转换，前端工具函数
+- ✅ **GDPR 合规** — 账号注销 + 数据导出（流式 UTF-8 BOM）+ 隐私政策/用户协议（三语）
+- ✅ **多币种/单位换算** — 后端 `pkg/convert/` 引擎 + API 自动转换
 - ✅ **加油记录详情页** — 基本信息 + 智能分析（油耗评级/对比/利用率），EV 适配
 - ✅ **统计页** — 按月/年维度切换 + 往年同比对比
 - ✅ **深色模式** — Light/Dark/System + CSS 变量 + ECharts 暗色 + Ant Design token
@@ -186,8 +174,8 @@
 ### 2026-03-26
 
 - ✅ **项目初始搭建** — Go 后端骨架 + 前端 Monorepo + Docker PostgreSQL
-- ✅ **核心模块全栈实现** — Auth（JWT + Refresh Token）、User、Vehicle（含电动车）、FuelRecord（站点补全/三值计算）、Stats（趋势/聚合）
-- ✅ **i18n 修复** — 21 项问题修复（硬编码中文/类型不匹配/Ant Design locale 联动等）
+- ✅ **核心模块全栈实现** — Auth（JWT）、User、Vehicle（含电动车）、FuelRecord（三值计算）、Stats（趋势/聚合）
+- ✅ **i18n 修复** — 21 项问题修复
 - ✅ **前后端 API 一致性审查** — 10 项问题修复
-- ✅ **设置页时区** — 90 个 IANA 时区 + 时区感知日期显示（dayjs utc + timezone）
+- ✅ **设置页时区** — 90 个 IANA 时区 + 时区感知日期显示
 - ✅ **电动车全栈支持** — battery_capacity 字段 + 充电记录适配 + 电耗统计

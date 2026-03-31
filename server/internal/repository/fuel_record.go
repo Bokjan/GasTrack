@@ -148,6 +148,28 @@ func (r *FuelRecordRepository) GetVehicleStats(ctx context.Context, vehicleID uu
 	return &result, err
 }
 
+// CostByCurrencyResult 按币种分组的费用统计结果
+type CostByCurrencyResult struct {
+	CurrencyCode string  `json:"currency_code"`
+	TotalCost    float64 `json:"total_cost"`
+}
+
+// GetCostByCurrency 按币种分组统计某车辆的总费用
+func (r *FuelRecordRepository) GetCostByCurrency(ctx context.Context, vehicleID uuid.UUID) ([]CostByCurrencyResult, error) {
+	var results []CostByCurrencyResult
+
+	err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
+		Select(`
+			currency_code,
+			COALESCE(SUM(total_cost), 0) as total_cost
+		`).
+		Where("vehicle_id = ?", vehicleID).
+		Group("currency_code").
+		Scan(&results).Error
+
+	return results, err
+}
+
 // ExpenseByPeriod 按时间段统计费用
 type ExpenseByPeriod struct {
 	Period    string  `json:"period"`

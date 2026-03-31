@@ -771,5 +771,10 @@
     "iosInstallHint": "点击",
     "iosInstallHintSuffix": "然后选择「添加到主屏幕」",
     "addToHomeScreen": "添加到主屏幕"
+  },
+  "footer": {
+    "copyright": "© {{year}} GasTrack 保留所有权利。",
+    "privacyPolicy": "隐私政策",
+    "termsOfService": "用户协议"
   }
 }

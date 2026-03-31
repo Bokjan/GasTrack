@@ -254,6 +254,8 @@ export interface VehicleStats {
   avg_cost_per_fill: number;
   currency_code: string;
   fuel_efficiency_unit: string;
+  /** 按原始入账币种分组的费用明细 */
+  costs_by_currency?: Record<string, number>;
 }
 
 /** 后端 OverviewStatsResponse 字段对齐 */
@@ -265,6 +267,8 @@ export interface OverviewStats {
   total_distance: number;
   avg_consumption: number;
   currency_code: string;
+  /** 按原始入账币种分组的总费用明细 */
+  costs_by_currency?: Record<string, number>;
   vehicles: VehicleStats[];
 }
 

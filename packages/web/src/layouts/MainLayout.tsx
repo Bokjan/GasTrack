@@ -21,7 +21,7 @@ import type { MenuProps } from 'antd';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import NotificationBell from '../components/NotificationBell';
 
-const { Header, Sider, Content } = Layout;
+const { Header, Sider, Content, Footer } = Layout;
 const { useBreakpoint } = Grid;
 
 export default function MainLayout() {
@@ -240,6 +240,39 @@ export default function MainLayout() {
         <Content style={{ margin: 0, overflow: 'auto', paddingBottom: isMobile ? 0 : undefined }}>
           <Outlet />
         </Content>
+
+        <Footer
+          style={{
+            textAlign: 'center',
+            background: token.colorBgContainer,
+            borderTop: `1px solid ${token.colorBorderSecondary}`,
+            padding: isMobile ? '12px 16px' : '16px 24px',
+            fontSize: 13,
+            color: token.colorTextSecondary,
+            lineHeight: 1.8,
+          }}
+        >
+          <div>{t('footer.copyright', { year: new Date().getFullYear() })}</div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 4 }}>
+            <a
+              href="/privacy"
+              style={{ color: token.colorTextSecondary, textDecoration: 'none' }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = token.colorPrimary)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = token.colorTextSecondary)}
+            >
+              {t('footer.privacyPolicy')}
+            </a>
+            <span style={{ color: token.colorTextQuaternary }}>·</span>
+            <a
+              href="/terms"
+              style={{ color: token.colorTextSecondary, textDecoration: 'none' }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = token.colorPrimary)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = token.colorTextSecondary)}
+            >
+              {t('footer.termsOfService')}
+            </a>
+          </div>
+        </Footer>
       </Layout>
     </Layout>
   );

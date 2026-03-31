@@ -20,6 +20,7 @@ import {
   useExchangeRateStore,
   convertAmount,
   getReferenceCurrency,
+  sumConvertedCostsByCurrency,
 } from '@gastrack/shared';
 import type { VehicleStats, PeriodStatsItem, PeriodStatsResponse } from '@gastrack/shared';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -358,7 +359,9 @@ export default function StatsPage() {
           <Col xs={12} sm={6}>
             <Tooltip
               title={stats && ratesData?.rates ? (() => {
-                const ref = convertAmount(stats.total_cost, currency, refCurrency, ratesData.rates);
+                const converted = sumConvertedCostsByCurrency(stats.costs_by_currency, currency, ratesData.rates)
+                  ?? stats.total_cost;
+                const ref = convertAmount(converted, currency, refCurrency, ratesData.rates);
                 return ref != null ? t('exchangeRate.referenceAmount', { amount: formatCurrency(ref, refCurrency) }) : undefined;
               })() : undefined}
             >
@@ -367,7 +370,10 @@ export default function StatsPage() {
                   title={t('stats.totalCost')}
                   value={
                     stats
-                      ? formatCurrency(stats.total_cost, currency)
+                      ? formatCurrency(
+                          sumConvertedCostsByCurrency(stats.costs_by_currency, currency, ratesData?.rates) ?? stats.total_cost,
+                          currency,
+                        )
                       : '-'
                   }
                   prefix={<DollarOutlined />}

@@ -4,31 +4,33 @@ package dto
 
 // VehicleStatsResponse 车辆统计响应
 type VehicleStatsResponse struct {
-	VehicleID       string  `json:"vehicle_id"`
-	VehicleName     string  `json:"vehicle_name"`
-	TotalRecords    int64   `json:"total_records"`        // 总加油次数
-	TotalFuel       float64 `json:"total_fuel"`           // 总加油量(L)
-	TotalCost       float64 `json:"total_cost"`           // 总费用
-	TotalDistance   float64 `json:"total_distance"`       // 总行驶里程(km)
-	AvgEfficiency   float64 `json:"avg_efficiency"`       // 平均油耗(L/100km)
-	BestEfficiency  float64 `json:"best_efficiency"`      // 最佳油耗
-	WorstEfficiency float64 `json:"worst_efficiency"`     // 最差油耗
-	AvgCostPerKm    float64 `json:"avg_cost_per_km"`      // 每公里平均费用
-	AvgCostPerFill  float64 `json:"avg_cost_per_fill"`    // 每次平均费用
-	CurrencyCode    string  `json:"currency_code"`        // 费用币种
-	FuelUnit        string  `json:"fuel_efficiency_unit"` // 用户偏好的油耗单位
+	VehicleID       string             `json:"vehicle_id"`
+	VehicleName     string             `json:"vehicle_name"`
+	TotalRecords    int64              `json:"total_records"`        // 总加油次数
+	TotalFuel       float64            `json:"total_fuel"`           // 总加油量(L)
+	TotalCost       float64            `json:"total_cost"`           // 总费用（原始累加，不做货币转换）
+	TotalDistance   float64            `json:"total_distance"`       // 总行驶里程(km)
+	AvgEfficiency   float64            `json:"avg_efficiency"`       // 平均油耗(L/100km)
+	BestEfficiency  float64            `json:"best_efficiency"`      // 最佳油耗
+	WorstEfficiency float64            `json:"worst_efficiency"`     // 最差油耗
+	AvgCostPerKm    float64            `json:"avg_cost_per_km"`      // 每公里平均费用
+	AvgCostPerFill  float64            `json:"avg_cost_per_fill"`    // 每次平均费用
+	CurrencyCode    string             `json:"currency_code"`        // 用户偏好币种
+	FuelUnit        string             `json:"fuel_efficiency_unit"` // 用户偏好的油耗单位
+	CostsByCurrency map[string]float64 `json:"costs_by_currency"`   // 按原始入账币种分组的费用明细
 }
 
 // OverviewStatsResponse 全局统计总览响应
 type OverviewStatsResponse struct {
-	TotalVehicles  int64                  `json:"total_vehicles"`
-	TotalRecords   int64                  `json:"total_records"`
-	TotalFuel      float64                `json:"total_fuel"`
-	TotalCost      float64                `json:"total_cost"`
-	TotalDistance  float64                `json:"total_distance"`
-	AvgConsumption float64                `json:"avg_consumption"`
-	CurrencyCode   string                 `json:"currency_code"`
-	Vehicles       []VehicleStatsResponse `json:"vehicles"`
+	TotalVehicles   int64                  `json:"total_vehicles"`
+	TotalRecords    int64                  `json:"total_records"`
+	TotalFuel       float64                `json:"total_fuel"`
+	TotalCost       float64                `json:"total_cost"`
+	TotalDistance   float64                `json:"total_distance"`
+	AvgConsumption  float64                `json:"avg_consumption"`
+	CurrencyCode    string                 `json:"currency_code"`
+	CostsByCurrency map[string]float64     `json:"costs_by_currency"` // 按原始入账币种分组的总费用明细
+	Vehicles        []VehicleStatsResponse `json:"vehicles"`
 }
 
 // ExpenseStatsRequest 费用统计请求参数

@@ -766,5 +766,10 @@
     "iosInstallHint": "Tap",
     "iosInstallHintSuffix": "then \"Add to Home Screen\"",
     "addToHomeScreen": "Add to Home Screen"
+  },
+  "footer": {
+    "copyright": "© {{year}} GasTrack. All rights reserved.",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
   }
 }

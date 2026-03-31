@@ -764,5 +764,10 @@
     "iosInstallHint": "タップ",
     "iosInstallHintSuffix": "→「ホーム画面に追加」を選択",
     "addToHomeScreen": "ホーム画面に追加"
+  },
+  "footer": {
+    "copyright": "© {{year}} GasTrack. All rights reserved.",
+    "privacyPolicy": "プライバシーポリシー",
+    "termsOfService": "利用規約"
   }
 }
