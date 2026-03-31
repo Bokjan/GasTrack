@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Typography, Card, Space, Divider } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +9,10 @@ const { Title, Paragraph, Text } = Typography;
 export default function PrivacyPolicyPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const handleBack = () => {
     // 如果有浏览器历史记录（非新标签页打开），则返回上一页；否则导航到首页

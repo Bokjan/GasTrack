@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Typography, Card, Space, Divider } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +9,10 @@ const { Title, Paragraph, Text } = Typography;
 export default function TermsOfServicePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
 
   const handleBack = () => {
     if (window.history.length > 1) {
