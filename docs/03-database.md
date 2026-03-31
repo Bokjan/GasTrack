@@ -13,13 +13,15 @@
 
 ```
 users ──1:N──► vehicles ──1:N──► fuel_records
+  │               │──1:N──► expense_records
   │               │
   │──1:N──► refresh_tokens
   │──1:N──► invite_codes (created_by)
   │──1:N──► reminders (via vehicles)
   │──1:N──► notifications
   │
-  └──N:M──► groups (via group_members, ✅ 已实现)
+  └──N:M──► groups (via group_members)
+                └──► shared_vehicles (group ↔ vehicle)
 ```
 
 ## 3. 核心表结构

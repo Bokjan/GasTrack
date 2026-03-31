@@ -92,13 +92,9 @@ GasTrack 是一款面向全球用户的油耗/电耗记录与分析系统：
 - ✅ 多币种支持：CNY、USD、EUR、JPY、GBP、KRW
 - ✅ 加油表单支持选择燃油单位(L/gal/kWh)、货币、里程单位(km/mi)
 - ✅ 设置页支持用户偏好单位系统(metric/imperial)、能耗单位、货币的配置与保存
-- ✅ 前端根据用户偏好单位自动展示 — 后端 `fuelRecordToResponse` 已按用户偏好做完整转换（fuel_amount L↔gal、odometer km↔mi、trip_distance、fuel_efficiency、**unit_price** 同步容量单位换算），Stats API 同样按 isImperial 转换 total_fuel/total_distance；前端列表/详情/卡片均使用 record 级别字段（`record.fuel_unit`/`record.distance_unit`/`record.currency_code`）而非全局偏好值，确保混合 kWh/L/gal 场景正确；tank_capacity 前端侧使用 `litersToGallons` 工具函数转换；GroupPage 加油站推荐价格使用 `formatCurrency` + 动态单位（消除硬编码 ¥ 和 /L）
-- ✅ 汇率参考（只读展示，不做实时兑换）(P2) — 后端 `ExchangeRateService`（frankfurter.app + 内存缓存 24h TTL），`GET /api/v1/exchange-rates`；用户可在设置页选择「参考换算币种」（`reference_currency` 字段），未设置时自动推导（USD↔EUR）；展示层：设置页汇率表、仪表盘/统计页总费用 Tooltip 参考换算、记录详情页单价+总费用直接 Tag 展示、记录列表页单价+总费用 Tooltip hover 换算（桌面端表格+移动端卡片）
-- ✅ **群组页面货币换算与单位偏好适配** — GroupPage 全面消除硬编码单位和货币符号（15+ 处修复）：
-  - 汇率自动换算：群组聚合费用（总费用/排行榜/趋势表/成员占比）自动按用户偏好币种换算（`useExchangeRateStore` + `formatConvertedCost`），发生换算时显示 `<InfoCircleOutlined>` 图标 + Tooltip "经换算"（三语 i18n）
-  - 油耗单位偏好：所有 `L/100km` 硬编码替换为 `efficiencyUnit`（支持 L/100km / km/L / MPG），使用 `convertFuelEfficiency` 动态转换
-  - 油量/距离单位偏好：所有 `L` / `km` 硬编码替换为 `fuelUnit`（L/gal）/ `distanceUnit`（km/mi），使用 `litersToGallons` / `kmToMiles` 动态转换
-  - 加油站推荐 Tab：价格单位从内联 `user?.unit_system === 'imperial' ? 'gal' : 'L'` 简化为已声明的 `fuelUnit` 变量，货币 fallback 从 `user?.currency_code || 'CNY'` 简化为 `currency` 变量
+- ✅ 前端根据用户偏好单位自动展示 — 后端 `fuelRecordToResponse` 按用户偏好转换（fuel_amount/odometer/trip_distance/fuel_efficiency/unit_price），Stats API 同步转换；前端列表/详情/卡片使用 record 级别字段（`record.fuel_unit`/`record.distance_unit`/`record.currency_code`）；GroupPage 全页面动态单位（`fuelUnit`/`distanceUnit`/`efficiencyUnit`）+ 动态货币（`formatCurrency` + `currency`）
+- ✅ 汇率参考（只读展示）(P2) — 后端 `ExchangeRateService`（frankfurter.app + 内存缓存 24h TTL），`GET /api/v1/exchange-rates`；设置页参考换算币种 + 汇率表，仪表盘/统计/记录详情/记录列表全覆盖
+- ✅ **群组页面货币换算** — 群组费用自动按用户偏好币种换算（`<ConvertedCost>` 组件 + "经换算"Tooltip），油耗/油量/距离单位按 metric/imperial 动态转换
 
 ### 3.7 深色模式 (P0) — *需求文档新增*
 - ✅ 三种主题模式：浅色（Light）、深色（Dark）、跟随系统（System，默认值）

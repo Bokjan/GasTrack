@@ -227,6 +227,7 @@ COMMENT ON COLUMN refresh_tokens.device_info IS '设备信息';
 
 ```
 users ──1:N──► vehicles ──1:N──► fuel_records
+  │               │──1:N──► expense_records
   │               │
   │──1:N──► refresh_tokens
   │──1:N──► invite_codes
@@ -358,7 +359,7 @@ database:
 
 ### 4.3 GORM AutoMigrate
 
-启动后端服务时，GORM 会自动执行 `AutoMigrate`，创建/更新以下 10 张表：
+启动后端服务时，GORM 会自动执行 `AutoMigrate`，创建/更新以下 11 张表：
 
 ```go
 db.AutoMigrate(
@@ -372,6 +373,7 @@ db.AutoMigrate(
     &model.Group{},
     &model.GroupMember{},
     &model.SharedVehicle{},
+    &model.ExpenseRecord{},
 )
 ```
 

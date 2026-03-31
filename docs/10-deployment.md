@@ -1,6 +1,6 @@
 # GasTrack 线上部署指南
 
-> **最后更新**: 2026-03-30
+> **最后更新**: 2026-03-31
 
 使用 Docker Compose 一键部署 GasTrack（PostgreSQL + Go 后端 + Nginx），默认启用 HTTPS。
 

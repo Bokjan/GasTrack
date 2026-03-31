@@ -89,6 +89,8 @@
 | FuelRecordModule | 加油记录 CRUD | VehicleModule |
 | StatsModule | 统计计算、报表生成 | FuelRecordModule |
 | GroupModule | 家庭群组管理 | UserModule, VehicleModule |
+| ExpenseModule | 维修保养开销记录 | VehicleModule |
+| ExchangeRateModule | 汇率查询（frankfurter.app + 缓存） | - |
 | I18nModule | 多语言资源管理 | - |
 | UploadModule | 文件上传（头像/车辆照片） | - |
 | NotificationModule | 通知推送 | UserModule |
