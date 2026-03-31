@@ -130,7 +130,7 @@ GasTrack 是一款面向全球用户的油耗/电耗记录与分析系统：
 - ✅ VehicleFormPage：表单全宽适配
 - ✅ global.css：Card 内边距缩小、Statistic 字号/间距优化
 
-### 3.10 家庭/群组管理 (P1) — *基础已完成，扩展设计中*
+### 3.10 家庭/群组管理 (P1) — *全部完成* ✅
 - ✅ 创建家庭群组 — Group/GroupMember 模型 + Repository/Service/Handler 全链路，邀请码格式 `GF-XXXXXX`
 - ✅ 邀请码邀请成员加入 — 通过群组邀请码加入，`SELECT FOR UPDATE` + 事务并发安全，成员上限检查
 - ✅ 群组内车辆数据汇总查看 — Overview API 聚合所有成员车辆的加油记录（总费用/总油量/平均油耗）
@@ -138,33 +138,33 @@ GasTrack 是一款面向全球用户的油耗/电耗记录与分析系统：
 - ✅ 前端群组管理页面 `/groups` — 群组列表卡片 + 详情面板（群组信息/成员管理/数据汇总 Tabs）+ 创建/加入/编辑弹窗
 - ✅ 三语 i18n 支持（zh-CN/en-US/ja-JP，~50 翻译键）
 - ✅ 邀请码重新生成、退出群组、删除群组（群主）
-- ✅ 11 条 API 路由：群组 CRUD、加入/退出/删除、邀请码重生成、成员角色管理、数据汇总
+- ✅ 19 条 API 路由：群组 CRUD(7) + 成员管理(3) + 数据汇总(1) + 车辆共享(3) + 排行榜(1) + 费用看板(1) + 加油站推荐(1) + 扩展预留(2)
 
-#### 3.10.1 车辆共享标记 (P1) — *部分实现*
-- 🔲 群组内车主可将自己的车标记为"共享"，群组其他成员可为共享车辆记录加油
-- ✅ 新增 `shared_vehicles` 关联表（group_id + vehicle_id 联合唯一约束，数据模型已就绪）
-- 🔲 加油表单车辆选择器支持显示共享车辆（分组：我的车辆 / 共享车辆）
-- ✅ 权限控制：后端 FuelRecord/Stats/Reminder/Vehicle 四个 Service 已全部支持共享车辆访问回退（`verifyVehicleAccess` 统一鉴权），非车主只能编辑/删除自己创建的记录
-- 🔲 3 条 API：共享/取消共享/列表（待实现）
+#### 3.10.1 车辆共享标记 (P1) — *已完成* ✅
+- ✅ 群组内车主可将自己的车标记为"共享"，群组其他成员可为共享车辆记录加油 — 前端 GroupPage 概览表格 Switch 切换共享状态
+- ✅ 新增 `shared_vehicles` 关联表（group_id + vehicle_id 联合唯一约束）
+- ✅ 加油表单车辆选择器支持显示共享车辆（`include_shared=true`，分组：我的车辆 / 共享车辆(来自XX群组)）
+- ✅ 权限控制：后端 FuelRecord/Stats/Reminder/Vehicle 四个 Service 统一 `verifyVehicleAccess` 鉴权（先查 owner → 回退 shared），非车主只能编辑/删除自己创建的记录
+- ✅ 3 条 API：`POST /groups/{id}/shared-vehicles`（共享）、`DELETE /groups/{id}/shared-vehicles/{vid}`（取消共享）、`GET /groups/{id}/shared-vehicles`（列表）
 
-#### 3.10.2 群组油耗排行榜 (P1) — *待实现*
-- 🔲 四维排行：油耗（L/100km，ASC）、费用（DESC）、里程（DESC）、加油频次（DESC）
-- 🔲 时间范围：本月/上月/近3月/今年
-- 🔲 排行按"成员×车辆"粒度，至少 2 条记录才参与排行
-- 🔲 前三名 🥇🥈🥉 标识，自己高亮，显示相比群组平均值的差异百分比
-- 🔲 1 条 API：`GET /groups/{id}/leaderboard?metric=efficiency&period=current_month`
+#### 3.10.2 群组油耗排行榜 (P1) — *已完成* ✅
+- ✅ 四维排行：油耗（L/100km，ASC）、费用（DESC）、里程（DESC）、加油频次（DESC）
+- ✅ 时间范围：本月/上月/近3月/今年
+- ✅ 排行按"成员×车辆"粒度，至少 2 条记录才参与排行（`HAVING COUNT >= 2`）
+- ✅ 前三名 🥇🥈🥉 标识，自己高亮（蓝色背景 + ✦ 徽章），显示相比群组平均值的差异百分比
+- ✅ 1 条 API：`GET /groups/{id}/leaderboard?metric=efficiency&period=current_month`
 
-#### 3.10.3 群组费用统计看板 (P1) — *待实现*
-- 🔲 顶部 4 张统计卡片（总费用/总加油量/总里程/平均油耗）+ 环比变化百分比
-- 🔲 堆叠柱状图：按月/按年维度，按成员分色堆叠，支持同比
-- 🔲 环形饼图：成员费用占比
-- 🔲 1 条 API：`GET /groups/{id}/expense-stats?period=month&year=2026`
+#### 3.10.3 群组费用统计看板 (P1) — *已完成* ✅
+- ✅ 顶部 4 张统计卡片（总费用/总加油量/总里程/平均油耗）+ 环比变化百分比（▲/▼ 百分比标识）
+- ✅ 费用趋势表格：按月/按年维度，含 `by_member` 成员费用分解，支持上年同期对比
+- ✅ 成员费用占比列表（`member_breakdown`，含百分比）
+- ✅ 1 条 API：`GET /groups/{id}/expense-stats?period=month&year=2026`
 
-#### 3.10.4 加油站推荐共享 (P1) — *待实现*
-- 🔲 聚合群组成员加油记录中的加油站数据（站名/平均油价/最新油价/加油次数/常客/价格趋势）
-- 🔲 支持按燃油标号筛选、按频次/油价/日期排序
-- 🔲 默认展示近 6 个月数据
-- 🔲 1 条 API：`GET /groups/{id}/stations?fuel_grade=95&months=6&sort_by=frequency`
+#### 3.10.4 加油站推荐共享 (P1) — *已完成* ✅
+- ✅ 聚合群组成员加油记录中的加油站数据（站名/平均油价/最新油价/加油次数/常客/价格趋势↑↓→/燃油标号）
+- ✅ 支持按燃油标号筛选、按频次/油价/日期排序
+- ✅ 支持 3/6/12 个月数据范围选择（默认 6 个月）
+- ✅ 1 条 API：`GET /groups/{id}/stations?fuel_grade=95&months=6&sort_by=frequency`
 
 > 📄 详细设计文档见 [`11-group-features-design.md`](./11-group-features-design.md)
 

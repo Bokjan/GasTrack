@@ -13,10 +13,10 @@ GasTrack/
 │   │   ├── config/              # 配置加载（Viper）
 │   │   ├── router/router.go     # 路由注册（Go 1.22 ServeMux）
 │   │   ├── middleware/          # 中间件（Auth/Logger/CORS/RateLimit/Recovery）
-│   │   ├── handler/             # HTTP 处理器（auth/user/vehicle/fuel_record/stats/invite/export/reminder/notification）
+│   │   ├── handler/             # HTTP 处理器（auth/user/vehicle/fuel_record/stats/invite/export/reminder/notification/group）
 │   │   ├── service/             # 业务逻辑层
 │   │   ├── repository/          # 数据访问层
-│   │   ├── model/               # 数据库模型（9 个：User/Vehicle/FuelRecord/RefreshToken/InviteCode/Reminder/Notification/Group/GroupMember）
+│   │   ├── model/               # 数据库模型（10 个：User/Vehicle/FuelRecord/RefreshToken/InviteCode/Reminder/Notification/Group/GroupMember/SharedVehicle）
 │   │   ├── dto/                 # 请求/响应结构体
 │   │   ├── database/            # 数据库连接 & AutoMigrate
 │   │   └── pkg/                 # 内部工具（respond/decode/apperror/convert）
@@ -74,10 +74,10 @@ GasTrack/
 | 多车辆对比图表 | 🔲 |
 | 文件上传（车辆照片 + 头像） | 🔲 |
 | ~~家庭群组管理（基础）~~ | ~~✅ 已完成~~ |
-| 车辆共享标记 | 🔨 后端权限已实现 |
-| 群组油耗排行榜 | 🔲 设计完成 |
-| 群组费用统计看板 | 🔲 设计完成 |
-| 加油站推荐共享 | 🔲 设计完成 |
+| ~~车辆共享标记~~ | ~~✅ 已完成（全栈：3 API + 权限 + 前端 UI）~~ |
+| ~~群组油耗排行榜~~ | ~~✅ 已完成（全栈：API + 前端排行榜 Tab）~~ |
+| ~~群组费用统计看板~~ | ~~✅ 已完成（全栈：API + 前端费用 Tab）~~ |
+| ~~加油站推荐共享~~ | ~~✅ 已完成（全栈：API + 前端加油站 Tab）~~ |
 | 更多语言（韩语/繁中/西/德/法） | 🔲 |
 | 数据导出 PDF | 🔲 |
 
