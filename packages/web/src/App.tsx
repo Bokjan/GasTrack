@@ -19,6 +19,8 @@ import ExpenseFormPage from './pages/expense/ExpenseFormPage';
 import ExpenseDetailPage from './pages/expense/ExpenseDetailPage';
 import PrivacyPolicyPage from './pages/legal/PrivacyPolicyPage';
 import TermsOfServicePage from './pages/legal/TermsOfServicePage';
+import PWAUpdatePrompt from './components/PWAUpdatePrompt';
+import InstallPrompt from './components/InstallPrompt';
 import { useEffect } from 'react';
 
 /** 需要认证的路由守卫 */
@@ -45,7 +47,10 @@ export default function App() {
   }, [isAuthenticated, fetchProfile]);
 
   return (
-    <Routes>
+    <>
+      <PWAUpdatePrompt />
+      <InstallPrompt />
+      <Routes>
       {/* 公开路由 */}
       <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
       <Route path="/register" element={<GuestOnly><RegisterPage /></GuestOnly>} />
@@ -84,5 +89,6 @@ export default function App() {
       {/* 404 重定向 */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }

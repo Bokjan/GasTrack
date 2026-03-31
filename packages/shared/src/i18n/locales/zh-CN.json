@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "GasTrack - 油耗记录与分析"
+    "title": "GasTrack - 车辆能耗与费用管理"
   },
   "common": {
     "confirm": "确认",
@@ -759,5 +759,16 @@
       "updatedHint": "已同步更新下次保养基准"
     },
     "completeAndLog": "完成并记账"
+  },
+  "pwa": {
+    "updateAvailable": "发现新版本",
+    "updateDescription": "GasTrack 有新版本可用，刷新页面即可更新。",
+    "refresh": "刷新",
+    "installTitle": "安装 GasTrack",
+    "installDescription": "将 GasTrack 安装到主屏幕，享受更快捷的访问体验。",
+    "installButton": "安装",
+    "iosInstallTitle": "添加到主屏幕",
+    "iosInstallDescription": "点击分享按钮 {shareIcon} 然后选择",
+    "addToHomeScreen": "添加到主屏幕"
   }
 }

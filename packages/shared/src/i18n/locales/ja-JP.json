@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "GasTrack - 燃費記録＆分析"
+    "title": "GasTrack - 車両エネルギー＆コスト管理"
   },
   "common": {
     "confirm": "確認",
@@ -752,5 +752,16 @@
       "updatedHint": "次回メンテナンス基準を更新しました"
     },
     "completeAndLog": "完了して記録"
+  },
+  "pwa": {
+    "updateAvailable": "新しいバージョンがあります",
+    "updateDescription": "GasTrack の新バージョンが利用可能です。更新するにはページを更新してください。",
+    "refresh": "更新",
+    "installTitle": "GasTrack をインストール",
+    "installDescription": "GasTrack をホーム画面に追加して、すばやくアクセスできます。",
+    "installButton": "インストール",
+    "iosInstallTitle": "ホーム画面に追加",
+    "iosInstallDescription": "共有ボタン {shareIcon} をタップして選択",
+    "addToHomeScreen": "ホーム画面に追加"
   }
 }
