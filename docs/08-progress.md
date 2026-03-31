@@ -130,6 +130,7 @@
 
 ### 2026-03-31
 
+- 🔧 **移动端表单聚焦自动缩放修复** — iOS Safari 点击 input/select 时页面自动放大（Ant Design 默认 14px < 16px 阈值）；viewport 添加 `maximum-scale=1, user-scalable=no`；全局 CSS 新增表单元素 `font-size: 16px !important`（覆盖原生 + Ant Design 组件选择器）；HTML `text-size-adjust: 100%` 防止文字自动调整
 - 🔧 **全栈审计修复（11 项高+中优先级）** — 消除硬编码值、魔数和 i18n 缺失：
   - **H1**: `group.go` 排行榜 `periodLabel` 从中文日期 `"2006年1月"` 改为 ISO `"2006-01"` 格式，前端按 locale 格式化
   - **H2**: `notification.go` 三处通知（异常油耗/保养到期/邀请使用）从硬编码英文改为结构化 key+参数，前端按 locale 渲染
