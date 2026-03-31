@@ -46,6 +46,7 @@ import {
   ArrowUpOutlined,
   ArrowDownOutlined,
   MinusOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { groupApi } from '@gastrack/shared/src/api';
@@ -65,7 +66,7 @@ import type {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { useAuthStore, FUEL_GRADES, formatCurrency } from '@gastrack/shared';
+import { useAuthStore, FUEL_GRADES, formatCurrency, convertFuelEfficiency, convertAmount, litersToGallons, kmToMiles, formatNumber, useExchangeRateStore } from '@gastrack/shared';
 
 const { Text, Paragraph } = Typography;
 
@@ -74,6 +75,82 @@ export default function GroupPage() {
   const { user } = useAuthStore();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+
+  // --- 用户偏好派生 ---
+  const currency = user?.currency_code || 'CNY';
+  const isImperial = user?.unit_system === 'imperial';
+  const efficiencyUnit = user?.fuel_efficiency_unit || 'L/100km';
+  const fuelUnit = isImperial ? 'gal' : 'L';
+  const distanceUnit = isImperial ? 'mi' : 'km';
+
+  // --- 汇率 ---
+  const { data: exchangeRateData, fetchRates } = useExchangeRateStore();
+  const rates = exchangeRateData?.rates || {};
+  const rateBase = exchangeRateData?.base || '';
+
+  useEffect(() => {
+    fetchRates(currency);
+  }, [currency, fetchRates]);
+
+  // --- 换算辅助函数 ---
+  /** 将后端返回的费用金额（假定为 CNY 基准）换算为用户偏好币种并格式化 */
+  const formatConvertedCost = (amount: number): { text: string; converted: boolean } => {
+    // 后端聚合数据以 CNY 为基准（大部分群组成员使用 CNY）
+    // 如果用户偏好就是 CNY，直接格式化
+    if (currency === 'CNY') {
+      return { text: formatCurrency(amount, currency), converted: false };
+    }
+    // 尝试换算
+    if (rateBase === currency && rates) {
+      // rates 是以用户币种为基准的汇率表，要把 CNY 换算为用户币种
+      // convertAmount(amount, fromCurrency, toCurrency, rates) 需要 rates 以 fromCurrency 为 base
+      // 这里 rates 以 currency (用户偏好) 为 base，所以我们需要反向计算
+      const cnyRate = rates['CNY'];
+      if (cnyRate && cnyRate > 0) {
+        const converted = amount / cnyRate;
+        return { text: formatCurrency(converted, currency), converted: true };
+      }
+    }
+    // 如果 rateBase 是 CNY
+    if (rateBase === 'CNY' && rates) {
+      const result = convertAmount(amount, 'CNY', currency, rates);
+      if (result !== null) {
+        return { text: formatCurrency(result, currency), converted: true };
+      }
+    }
+    // 无法换算，以 CNY 显示
+    return { text: formatCurrency(amount, 'CNY'), converted: false };
+  };
+
+  /** 将后端的油量 (L) 按用户偏好转换 */
+  const convertFuel = (liters: number): number => {
+    return isImperial ? litersToGallons(liters) : liters;
+  };
+
+  /** 将后端的距离 (km) 按用户偏好转换 */
+  const convertDistance = (km: number): number => {
+    return isImperial ? kmToMiles(km) : km;
+  };
+
+  /** 将后端的油耗 (L/100km) 按用户偏好转换 */
+  const convertEfficiency = (l100km: number): number => {
+    return convertFuelEfficiency(l100km, 'L/100km', efficiencyUnit);
+  };
+
+  /** 带"经换算"提示的金额展示组件 */
+  const ConvertedCost = ({ amount }: { amount: number }) => {
+    const { text, converted } = formatConvertedCost(amount);
+    return (
+      <span>
+        {text}
+        {converted && (
+          <Tooltip title={t('group.converted')}>
+            <InfoCircleOutlined style={{ marginLeft: 4, fontSize: 12, color: '#999', cursor: 'help' }} />
+          </Tooltip>
+        )}
+      </span>
+    );
+  };
 
   const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -655,21 +732,21 @@ export default function GroupPage() {
                             dataIndex: 'total_cost',
                             key: 'total_cost',
                             width: 120,
-                            render: (val: number) => val.toFixed(2),
+                            render: (val: number) => <ConvertedCost amount={val} />,
                           },
                           {
                             title: t('group.totalFuel'),
                             dataIndex: 'total_fuel',
                             key: 'total_fuel',
                             width: 120,
-                            render: (val: number) => `${val.toFixed(2)} L`,
+                            render: (val: number) => `${convertFuel(val).toFixed(2)} ${fuelUnit}`,
                           },
                           {
                             title: t('group.avgEfficiency'),
                             dataIndex: 'avg_efficiency',
                             key: 'avg_efficiency',
                             width: 130,
-                            render: (val: number) => `${val.toFixed(2)} L/100km`,
+                            render: (val: number) => `${convertEfficiency(val).toFixed(2)} ${efficiencyUnit}`,
                           },
                           {
                             title: t('group.shareVehicle'),
@@ -784,7 +861,24 @@ export default function GroupPage() {
                     <div style={{ marginBottom: 12 }}>
                       <Text type="secondary">
                         {t('group.groupAvg')}:{' '}
-                        <Text strong>{leaderboard.group_avg.toFixed(2)}</Text> {leaderboard.unit}
+                        {lbMetric === 'cost' ? (
+                          <Text strong><ConvertedCost amount={leaderboard.group_avg} /></Text>
+                        ) : (
+                          <>
+                            <Text strong>
+                              {lbMetric === 'efficiency'
+                                ? convertEfficiency(leaderboard.group_avg).toFixed(2)
+                                : lbMetric === 'distance'
+                                ? convertDistance(leaderboard.group_avg).toFixed(2)
+                                : leaderboard.group_avg.toFixed(2)}
+                            </Text>{' '}
+                            {lbMetric === 'efficiency'
+                              ? efficiencyUnit
+                              : lbMetric === 'distance'
+                              ? distanceUnit
+                              : leaderboard.unit}
+                          </>
+                        )}
                       </Text>
                     </div>
                   )}
@@ -829,7 +923,24 @@ export default function GroupPage() {
                               }
                               description={
                                 <Space size="large">
-                                  <Text>{item.value.toFixed(2)} {leaderboard.unit}</Text>
+                                  <Text>
+                                    {lbMetric === 'cost' ? (
+                                      <ConvertedCost amount={item.value} />
+                                    ) : (
+                                      <>
+                                        {lbMetric === 'efficiency'
+                                          ? convertEfficiency(item.value).toFixed(2)
+                                          : lbMetric === 'distance'
+                                          ? convertDistance(item.value).toFixed(2)
+                                          : item.value.toFixed(2)}{' '}
+                                        {lbMetric === 'efficiency'
+                                          ? efficiencyUnit
+                                          : lbMetric === 'distance'
+                                          ? distanceUnit
+                                          : leaderboard.unit}
+                                      </>
+                                    )}
+                                  </Text>
                                   <Text type="secondary" style={{ fontSize: 12 }}>
                                     {t('group.recordCount')}: {item.record_count}
                                   </Text>
@@ -904,55 +1015,86 @@ export default function GroupPage() {
                         {[
                           {
                             title: t('group.totalExpense'),
-                            value: expenseStats.summary.total_cost,
+                            value: (() => {
+                              const r = formatConvertedCost(expenseStats.summary.total_cost);
+                              return { raw: expenseStats.summary.total_cost, displayText: r.text, isConverted: r.converted };
+                            })(),
                             change: expenseStats.summary.cost_change_pct,
                             precision: 2,
-                            prefix: '¥',
+                            isCost: true,
                           },
                           {
                             title: t('group.totalFuelAmount'),
-                            value: expenseStats.summary.total_fuel,
+                            value: { raw: convertFuel(expenseStats.summary.total_fuel), displayText: '', isConverted: false },
                             change: expenseStats.summary.fuel_change_pct,
                             precision: 2,
-                            suffix: 'L',
+                            suffix: fuelUnit,
+                            isCost: false,
                           },
                           {
                             title: t('group.totalMileage'),
-                            value: expenseStats.summary.total_distance,
+                            value: { raw: convertDistance(expenseStats.summary.total_distance), displayText: '', isConverted: false },
                             change: expenseStats.summary.distance_change_pct,
                             precision: 0,
-                            suffix: 'km',
+                            suffix: distanceUnit,
+                            isCost: false,
                           },
                           {
                             title: t('group.avgFuelEfficiency'),
-                            value: expenseStats.summary.avg_efficiency,
+                            value: { raw: convertEfficiency(expenseStats.summary.avg_efficiency), displayText: '', isConverted: false },
                             change: expenseStats.summary.efficiency_change_pct,
                             precision: 2,
-                            suffix: 'L/100km',
+                            suffix: efficiencyUnit,
+                            isCost: false,
                           },
                         ].map((card, idx) => (
                           <Col xs={12} sm={6} key={idx}>
                             <Card size="small">
-                              <Statistic
-                                title={card.title}
-                                value={card.value}
-                                precision={card.precision}
-                                prefix={card.prefix}
-                                suffix={
-                                  <span>
-                                    {card.suffix}{' '}
-                                    {card.change !== 0 && (
-                                      <Text
-                                        style={{ fontSize: 12 }}
-                                        type={card.change > 0 ? 'danger' : 'success'}
-                                      >
-                                        {card.change > 0 ? <CaretUpOutlined /> : <CaretDownOutlined />}
-                                        {Math.abs(card.change).toFixed(1)}%
-                                      </Text>
-                                    )}
-                                  </span>
-                                }
-                              />
+                              {card.isCost ? (
+                                <Statistic
+                                  title={card.title}
+                                  formatter={() => (
+                                    <span>
+                                      {card.value.displayText}
+                                      {card.value.isConverted && (
+                                        <Tooltip title={t('group.converted')}>
+                                          <InfoCircleOutlined style={{ marginLeft: 4, fontSize: 12, color: '#999', cursor: 'help' }} />
+                                        </Tooltip>
+                                      )}
+                                      {' '}
+                                      {card.change !== 0 && (
+                                        <Text
+                                          style={{ fontSize: 12 }}
+                                          type={card.change > 0 ? 'danger' : 'success'}
+                                        >
+                                          {card.change > 0 ? <CaretUpOutlined /> : <CaretDownOutlined />}
+                                          {Math.abs(card.change).toFixed(1)}%
+                                        </Text>
+                                      )}
+                                    </span>
+                                  )}
+                                />
+                              ) : (
+                                <Statistic
+                                  title={card.title}
+                                  value={card.value.raw}
+                                  precision={card.precision}
+                                  suffix={
+                                    <span>
+                                      {card.suffix}{' '}
+                                      {card.change !== 0 && (
+                                        <Text
+                                          style={{ fontSize: 12 }}
+                                          type={card.change > 0 ? 'danger' : 'success'}
+                                        >
+                                          {card.change > 0 ? <CaretUpOutlined /> : <CaretDownOutlined />}
+                                          {Math.abs(card.change).toFixed(1)}%
+                                        </Text>
+                                      )}
+                                    </span>
+                                  }
+                                />
+                              )}
                             </Card>
                           </Col>
                         ))}
@@ -980,25 +1122,25 @@ export default function GroupPage() {
                                 title: t('group.totalExpense'),
                                 dataIndex: 'total_cost',
                                 key: 'total_cost',
-                                render: (val: number) => `¥${val.toFixed(2)}`,
+                                render: (val: number) => <ConvertedCost amount={val} />,
                               },
                               {
                                 title: t('group.totalFuelAmount'),
                                 dataIndex: 'total_fuel',
                                 key: 'total_fuel',
-                                render: (val: number) => `${val.toFixed(2)} L`,
+                                render: (val: number) => `${convertFuel(val).toFixed(2)} ${fuelUnit}`,
                               },
                               {
                                 title: t('group.totalMileage'),
                                 dataIndex: 'total_distance',
                                 key: 'total_distance',
-                                render: (val: number) => `${val.toFixed(0)} km`,
+                                render: (val: number) => `${convertDistance(val).toFixed(0)} ${distanceUnit}`,
                               },
                               {
                                 title: t('group.avgFuelEfficiency'),
                                 dataIndex: 'avg_efficiency',
                                 key: 'avg_efficiency',
-                                render: (val: number) => `${val.toFixed(2)} L/100km`,
+                                render: (val: number) => `${convertEfficiency(val).toFixed(2)} ${efficiencyUnit}`,
                               },
                             ]}
                           />
@@ -1017,7 +1159,11 @@ export default function GroupPage() {
                               <List.Item>
                                 <List.Item.Meta
                                   title={item.nickname}
-                                  description={`¥${item.total_cost.toFixed(2)} · ${item.total_fuel.toFixed(2)} L`}
+                                  description={
+                                    <span>
+                                      <ConvertedCost amount={item.total_cost} /> · {convertFuel(item.total_fuel).toFixed(2)} {fuelUnit}
+                                    </span>
+                                  }
                                 />
                                 <div style={{ minWidth: 60, textAlign: 'right' }}>
                                   <Text strong>{item.percentage.toFixed(1)}%</Text>
@@ -1109,15 +1255,15 @@ export default function GroupPage() {
                                 <Col span={12}>
                                   <Text type="secondary" style={{ fontSize: 12 }}>{t('group.avgPrice')}</Text>
                                   <div>
-                                    <Text strong>{formatCurrency(station.avg_unit_price, station.currency_code || user?.currency_code || 'CNY')}</Text>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>/{user?.unit_system === 'imperial' ? 'gal' : 'L'}</Text>
+                                    <Text strong>{formatCurrency(station.avg_unit_price, station.currency_code || currency)}</Text>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>/{fuelUnit}</Text>
                                   </div>
                                 </Col>
                                 <Col span={12}>
                                   <Text type="secondary" style={{ fontSize: 12 }}>{t('group.latestPrice')}</Text>
                                   <div>
-                                    <Text strong>{formatCurrency(station.latest_unit_price, station.currency_code || user?.currency_code || 'CNY')}</Text>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>/{user?.unit_system === 'imperial' ? 'gal' : 'L'} </Text>
+                                    <Text strong>{formatCurrency(station.latest_unit_price, station.currency_code || currency)}</Text>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>/{fuelUnit} </Text>
                                     <Text
                                       type={station.price_trend === 'up' ? 'danger' : station.price_trend === 'down' ? 'success' : 'secondary'}
                                       style={{ fontSize: 12 }}

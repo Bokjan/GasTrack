@@ -13,10 +13,10 @@ GasTrack/
 │   │   ├── config/              # 配置加载（Viper）
 │   │   ├── router/router.go     # 路由注册（Go 1.22 ServeMux）
 │   │   ├── middleware/          # 中间件（Auth/Logger/CORS/RateLimit/Recovery）
-│   │   ├── handler/             # HTTP 处理器（auth/user/vehicle/fuel_record/stats/invite/export/reminder/notification/group）
+│   │   ├── handler/             # HTTP 处理器（auth/user/vehicle/fuel_record/stats/invite/export/reminder/notification/group/expense_record）
 │   │   ├── service/             # 业务逻辑层
 │   │   ├── repository/          # 数据访问层
-│   │   ├── model/               # 数据库模型（10 个：User/Vehicle/FuelRecord/RefreshToken/InviteCode/Reminder/Notification/Group/GroupMember/SharedVehicle）
+│   │   ├── model/               # 数据库模型（11 个：User/Vehicle/FuelRecord/RefreshToken/InviteCode/Reminder/Notification/Group/GroupMember/SharedVehicle/ExpenseRecord）
 │   │   ├── dto/                 # 请求/响应结构体
 │   │   ├── database/            # 数据库连接 & AutoMigrate
 │   │   └── pkg/                 # 内部工具（respond/decode/apperror/convert）
@@ -34,7 +34,7 @@ GasTrack/
 │   └── web/                     # React Web 应用 (@gastrack/web)
 │       └── src/
 │           ├── components/      # 通用组件（NotificationBell 等）
-│           ├── pages/           # auth/dashboard/vehicle/record/stats/invite/reminder/settings/legal/group
+│           ├── pages/           # auth/dashboard/vehicle/record/stats/invite/reminder/settings/legal/group/expense
 │           ├── layouts/         # MainLayout
 │           ├── hooks/           # useIsMobile 等
 │           └── styles/          # global.css
@@ -94,7 +94,7 @@ GasTrack/
 
 ## 3. API 路由一览（V1）
 
-> 54 条已注册路由 + 2 条待实现
+> 61 条已注册路由 + 2 条待实现
 
 ```
 # 公开路由

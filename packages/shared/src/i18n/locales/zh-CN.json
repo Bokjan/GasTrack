@@ -632,7 +632,8 @@
     "noStationData": "记录加油时别忘了填写加油站名哦！",
     "fuelGrades": "燃油标号",
     "viewRecords": "查看记录",
-    "addRecordForShared": "添加记录"
+    "addRecordForShared": "添加记录",
+    "converted": "经换算"
   },
   "exchangeRate": {
     "title": "汇率参考",

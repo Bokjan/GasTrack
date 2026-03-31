@@ -705,3 +705,53 @@ CREATE INDEX idx_shared_vehicles_vehicle ON shared_vehicles(vehicle_id);
 **总计预估**：后端 4 天 + 前端 4.5 天 ≈ **1.5 周**
 
 > 建议先做 ① 车辆共享，因为它涉及数据模型变更和权限改造，是后续功能的基础（共享车辆的记录也会进入排行榜和费用看板统计）。② 和 ③ 可并行开发，④ 最后。
+
+---
+
+## 10. 前端单位/货币国际化改造 ✅
+
+> **完成日期**: 2026-03-31
+>
+> **问题**: GroupPage.tsx 中 15+ 处硬编码单位（`L/100km`、`L`、`km`）和货币符号（`¥`、`prefix: '¥'`），不尊重用户的计量系统偏好（metric/imperial）和币种设置
+
+### 10.1 改造方案
+
+**策略**：纯前端改造，后端不变。后端始终返回 metric 基准数据（L/100km、km、L），前端根据用户偏好转换。
+
+**新增基础设施**（在 GroupPage 组件内）：
+
+| 组件/函数 | 用途 |
+|-----------|------|
+| `useExchangeRateStore` | 获取汇率缓存（30min TTL） |
+| `formatConvertedCost(amount)` | 智能货币换算：CNY→用户偏好币种，返回 `{ text, converted }` |
+| `convertFuel(liters)` | L→gal（imperial）或原值（metric） |
+| `convertDistance(km)` | km→mi（imperial）或原值（metric） |
+| `convertEfficiency(l100km)` | L/100km→km/L / MPG（按 `efficiencyUnit`） |
+| `<ConvertedCost amount={n}>` | 带"经换算"Tooltip 提示的金额展示组件 |
+
+### 10.2 修复清单
+
+| Tab | 位置 | 原硬编码 | 修复后 |
+|-----|------|---------|--------|
+| Overview | total_cost 列 | `val.toFixed(2)` | `<ConvertedCost>` |
+| Overview | total_fuel 列 | `${val} L` | `${convertFuel(val)} ${fuelUnit}` |
+| Overview | avg_efficiency 列 | `${val} L/100km` | `${convertEfficiency(val)} ${efficiencyUnit}` |
+| Leaderboard | group_avg | `leaderboard.unit` | 按 metric 动态转换 |
+| Leaderboard | item.value | `leaderboard.unit` | 按 metric 动态转换 |
+| Expense Stats | 总费用卡片 | `prefix: '¥'` | `<ConvertedCost>` + 换算提示 |
+| Expense Stats | 总油量卡片 | `suffix: 'L'` | `fuelUnit` |
+| Expense Stats | 总里程卡片 | `suffix: 'km'` | `distanceUnit` |
+| Expense Stats | 平均油耗卡片 | `suffix: 'L/100km'` | `efficiencyUnit` |
+| Expense Stats | 趋势表费用列 | `` `¥${val}` `` | `<ConvertedCost>` |
+| Expense Stats | 趋势表油量列 | `${val} L` | `${convertFuel(val)} ${fuelUnit}` |
+| Expense Stats | 趋势表里程列 | `${val} km` | `${convertDistance(val)} ${distanceUnit}` |
+| Expense Stats | 趋势表效率列 | `${val} L/100km` | `${convertEfficiency(val)} ${efficiencyUnit}` |
+| Expense Stats | 成员占比 | `¥...L` | `<ConvertedCost>` + `fuelUnit` |
+| Stations | 均价/最新价 | `user?.unit_system === 'imperial' ? 'gal' : 'L'` | `fuelUnit` |
+| Stations | 货币 fallback | `user?.currency_code \|\| 'CNY'` | `currency` |
+
+### 10.3 新增 i18n 键
+
+| 键名 | zh-CN | en-US | ja-JP |
+|------|-------|-------|-------|
+| `group.converted` | 经换算 | Converted | 換算済み |

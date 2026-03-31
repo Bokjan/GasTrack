@@ -632,7 +632,8 @@
     "noStationData": "Don't forget to fill in the station name when recording refuels!",
     "fuelGrades": "Fuel Grades",
     "viewRecords": "View Records",
-    "addRecordForShared": "Add Record"
+    "addRecordForShared": "Add Record",
+    "converted": "Converted"
   },
   "exchangeRate": {
     "title": "Exchange Rates",

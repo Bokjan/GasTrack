@@ -27,6 +27,7 @@
 | 异常油耗预警 + 通知系统 | ✅ | ✅ | ✅ |
 | 家庭群组管理（基础） | ✅ | ✅ | ✅ |
 | 群组扩展（共享/排行/看板/加油站） | ✅ | ✅ | ✅ |
+| 维修保养等开销记录 | ✅ | ✅ | ✅ |
 
 **图例**: ✅ 完成 | 🔨 进行中 | 🔲 待实现
 
@@ -49,6 +50,7 @@
 - **Notification** ✅ — 通知 CRUD, 未读数, 标记已读, 异常油耗检测 (>30% 偏差), 保养到期检查, 邀请码使用通知
 - **单位换算** ✅ — `pkg/convert/` 引擎, API 按用户偏好自动转换（含 unit_price 同步容量单位换算）
 - **群组管理** ✅ — Group/GroupMember/SharedVehicle 模型, 19 条 API（基础 CRUD + 邀请码 + 权限管理 + 数据汇总 + 车辆共享 3 条 + 排行榜 + 费用看板 + 加油站推荐）
+- **开销记录** ✅ — ExpenseRecord 模型, CRUD + 列表筛选 + 统计（按币种汇总/分类占比/月度趋势）+ 商家名建议 + 保养联动, 7 条 API
 
 ### 待实现
 
@@ -77,7 +79,8 @@
   - 设置 (时区, 外观主题, 语言, 单位, 数据导出, 账号注销)
   - 隐私政策 / 用户协议
 - **组件** ✅ — MainLayout (Sider/Drawer 自适应), NotificationBell (60s 轮询), ProtectedRoute
-- **群组页面** ✅ — `/groups` 群组列表 + 详情面板 (6 Tab: 群组信息/成员管理/数据汇总+共享车辆/排行榜/费用看板/加油站推荐) + 创建/加入/编辑弹窗 + 100+ 翻译键
+- **群组页面** ✅ — `/groups` 群组列表 + 详情面板 (6 Tab: 群组信息/成员管理/数据汇总+共享车辆/排行榜/费用看板/加油站推荐) + 创建/加入/编辑弹窗 + 100+ 翻译键；全面单位/货币国际化（15+ 处硬编码修复，汇率自动换算 + "经换算"提示组件）
+- **开销记录页面** ✅ — `/vehicles/{id}/expenses` 开销列表（分页+筛选+统计摘要）+ 创建/编辑表单 + 详情页，10 种开销分类，保养提醒联动
 - **深色模式** ✅ — 三种主题模式, CSS 变量体系, ECharts 暗色适配
 - **响应式** ✅ — useIsMobile Hook, 全站 Table→卡片/Sider→Drawer 适配
 
@@ -133,6 +136,22 @@
 
 ### 2026-03-31
 
+- ✅ **维修保养等开销记录模块（全栈）** — 独立于燃油记录的车辆开销台账：
+  - 后端：ExpenseRecord 模型 + CRUD + 列表筛选（分类/日期/关键词/金额区间）+ 统计（按币种汇总/分类占比/月度趋势/近30天大额）+ 商家名建议 + 保养提醒联动（完成记账后自动更新 Reminder 的 last_mileage/last_date 并重算 next 值），7 条 API
+  - 前端：ExpenseListPage（分页+筛选+统计摘要）、ExpenseFormPage（分类/金额/商家/里程/提醒关联）、ExpenseDetailPage，侧边栏入口 + 车辆列表快捷入口
+  - 10 种开销分类：maintenance/repair/insurance/parking/toll/car_wash/inspection/parts/fine/other
+  - 共享车辆权限复用（verifyVehicleAccess）
+  - 三语 i18n 支持（~60 翻译键）
+- ✅ **群组页面单位/货币国际化全面修复** — GroupPage 15+ 处硬编码单位和货币符号消除：
+  - 新增 `useExchangeRateStore` 汇率获取 + `formatConvertedCost` 智能换算（CNY→用户偏好币种）
+  - 新增 `<ConvertedCost>` 组件：发生汇率换算时自动显示 `<InfoCircleOutlined>` + Tooltip "经换算"（三语 i18n：经换算/Converted/換算済み）
+  - 新增 `convertFuel` / `convertDistance` / `convertEfficiency` 辅助函数
+  - Overview Tab：total_cost 改用 `ConvertedCost`，total_fuel 改用 `fuelUnit`，avg_efficiency 改用 `efficiencyUnit`
+  - Leaderboard Tab：group_avg 和 item.value 按 metric 类型动态转换（efficiency→`convertEfficiency`，distance→`convertDistance`，cost→`ConvertedCost`）
+  - Expense Stats Tab：4 张统计卡片（`prefix:'¥'`→`ConvertedCost`，`suffix:'L'`→`fuelUnit`，`suffix:'km'`→`distanceUnit`，`suffix:'L/100km'`→`efficiencyUnit`）
+  - 趋势表格：4 列 render 全部改为动态转换
+  - 成员占比：`¥...L` 改为 `ConvertedCost` + `fuelUnit`
+  - 加油站 Tab：内联 `user?.unit_system === 'imperial' ? 'gal' : 'L'` 简化为 `fuelUnit`，`user?.currency_code || 'CNY'` 简化为 `currency`
 - ✅ **汇率换算扩展** — 记录详情页单价新增汇率 Tag 展示（带 /单位 后缀）；记录列表页单价+总价 Tooltip hover 换算（桌面端表格+移动端卡片）；引入 `useExchangeRateStore` + `getRateTooltip` 辅助函数
 - 🔧 **单位切换 Bug 全面修复（L↔gal）** — 后端 `fuelRecordToResponse` 新增 `unit_price` 同步容量单位换算（单价 × 反向容量比率），修复偏好切换后单价与 fuel_unit 不一致的问题；前端 RecordListPage 所有列 render 改用 record 级别字段（`record.fuel_unit`/`record.distance_unit`/`record.currency_code`）替代全局 fuelUnit/distanceUnit；RecordDetailPage 智能分析区域改用 `record.fuel_unit`；GroupPage 加油站推荐消除硬编码 ¥ 和 /L（改用 `formatCurrency` + 动态单位）
 - ✅ **家庭群组管理（基础）** — 全栈实现：Group/GroupMember 模型 + CRUD + 邀请码加入 (GF-XXXXXX) + 权限管理 (Owner/Admin/Member) + 数据汇总 Overview API + 前端群组详情页 (3 Tab) + 三语 i18n (~50 翻译键) + 11 条 API
