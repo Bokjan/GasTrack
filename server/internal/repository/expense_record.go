@@ -87,7 +87,28 @@ func (r *ExpenseRecordRepository) ListByVehicle(
 		query = query.Where("amount <= ?", maxAmount)
 	}
 
-	query.Model(&model.ExpenseRecord{}).Count(&total)
+	// 使用独立查询链执行 COUNT，避免共享 *gorm.DB 状态导致分页查询异常
+	countQuery := r.db.WithContext(ctx).Model(&model.ExpenseRecord{}).Where("vehicle_id = ?", vehicleID)
+	if category != "" {
+		countQuery = countQuery.Where("category = ?", category)
+	}
+	if startDate != nil {
+		countQuery = countQuery.Where("expense_date >= ?", *startDate)
+	}
+	if endDate != nil {
+		countQuery = countQuery.Where("expense_date <= ?", *endDate)
+	}
+	if keyword != "" {
+		like := "%" + keyword + "%"
+		countQuery = countQuery.Where("(title ILIKE ? OR vendor_name ILIKE ? OR note ILIKE ?)", like, like, like)
+	}
+	if minAmount > 0 {
+		countQuery = countQuery.Where("amount >= ?", minAmount)
+	}
+	if maxAmount > 0 {
+		countQuery = countQuery.Where("amount <= ?", maxAmount)
+	}
+	countQuery.Count(&total)
 
 	err := query.Order("expense_date DESC, created_at DESC").
 		Offset((page - 1) * pageSize).

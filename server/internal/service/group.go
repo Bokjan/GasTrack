@@ -383,11 +383,24 @@ func (s *GroupService) GetOverview(ctx context.Context, groupID, userID uuid.UUI
 		return nil, apperror.ErrInternal("fetching group vehicle summary", err)
 	}
 
+	// 批量查询所有车辆 owner 信息（1 次 SQL 替代 N 次）
+	ownerIDSet := make(map[uuid.UUID]struct{})
+	for _, row := range rows {
+		ownerIDSet[row.OwnerID] = struct{}{}
+	}
+	ownerIDs := make([]uuid.UUID, 0, len(ownerIDSet))
+	for id := range ownerIDSet {
+		ownerIDs = append(ownerIDs, id)
+	}
+	ownerMap, err := s.userRepo.GetByIDs(ctx, ownerIDs)
+	if err != nil {
+		return nil, apperror.ErrInternal("batch fetching vehicle owners", err)
+	}
+
 	vehicles := make([]dto.GroupVehicleSummary, 0, len(rows))
 	for _, row := range rows {
 		ownerName := ""
-		owner, oErr := s.userRepo.GetByID(ctx, row.OwnerID)
-		if oErr == nil {
+		if owner, ok := ownerMap[row.OwnerID]; ok {
 			ownerName = owner.Nickname
 		}
 
@@ -424,34 +437,41 @@ func (s *GroupService) buildGroupResponse(ctx context.Context, group *model.Grou
 		return nil, apperror.ErrInternal("counting members", err)
 	}
 
-	// 获取 owner 昵称
-	ownerName := ""
-	owner, oErr := s.userRepo.GetByID(ctx, group.OwnerID)
-	if oErr == nil {
-		ownerName = owner.Nickname
-	}
-
-	// 获取当前用户在此群组的角色
-	myRole := ""
-	member, mErr := s.groupRepo.GetMember(ctx, group.ID, currentUserID)
-	if mErr == nil {
-		myRole = string(member.Role)
-	}
-
-	// 获取成员详情列表
+	// 获取成员列表
 	members, err := s.groupRepo.ListMembers(ctx, group.ID)
 	if err != nil {
 		return nil, apperror.ErrInternal("listing members", err)
 	}
 
+	// 批量查询所有成员的用户信息（1 次 SQL 替代 N 次）
+	userIDs := make([]uuid.UUID, len(members))
+	for i, m := range members {
+		userIDs[i] = m.UserID
+	}
+	userMap, err := s.userRepo.GetByIDs(ctx, userIDs)
+	if err != nil {
+		return nil, apperror.ErrInternal("batch fetching users", err)
+	}
+
+	// 获取 owner 昵称
+	ownerName := ""
+	if owner, ok := userMap[group.OwnerID]; ok {
+		ownerName = owner.Nickname
+	}
+
+	// 获取当前用户在此群组的角色
+	myRole := ""
 	memberDetails := make([]dto.GroupMemberDetail, 0, len(members))
 	for _, m := range members {
-		user, uErr := s.userRepo.GetByID(ctx, m.UserID)
+		if m.UserID == currentUserID {
+			myRole = string(m.Role)
+		}
+
 		nickname := ""
 		email := ""
-		if uErr == nil {
-			nickname = user.Nickname
-			email = user.Email
+		if u, ok := userMap[m.UserID]; ok {
+			nickname = u.Nickname
+			email = u.Email
 		}
 		memberDetails = append(memberDetails, dto.GroupMemberDetail{
 			UserID:   m.UserID.String(),
@@ -606,18 +626,44 @@ func (s *GroupService) ListSharedVehicles(ctx context.Context, groupID, userID u
 		return nil, apperror.ErrInternal("listing shared vehicles", err)
 	}
 
+	if len(svs) == 0 {
+		return []dto.SharedVehicleResponse{}, nil
+	}
+
+	// 批量查询所有共享车辆信息和分享者信息（各 1 次 SQL 替代 N 次）
+	vehicleIDSet := make(map[uuid.UUID]struct{})
+	userIDSet := make(map[uuid.UUID]struct{})
+	for _, sv := range svs {
+		vehicleIDSet[sv.VehicleID] = struct{}{}
+		userIDSet[sv.SharedBy] = struct{}{}
+	}
+	vehicleIDs := make([]uuid.UUID, 0, len(vehicleIDSet))
+	for id := range vehicleIDSet {
+		vehicleIDs = append(vehicleIDs, id)
+	}
+	sharedUserIDs := make([]uuid.UUID, 0, len(userIDSet))
+	for id := range userIDSet {
+		sharedUserIDs = append(sharedUserIDs, id)
+	}
+	vehicleMap, err := s.vehicleRepo.GetByIDs(ctx, vehicleIDs)
+	if err != nil {
+		return nil, apperror.ErrInternal("batch fetching shared vehicles", err)
+	}
+	ownerMap, err := s.userRepo.GetByIDs(ctx, sharedUserIDs)
+	if err != nil {
+		return nil, apperror.ErrInternal("batch fetching shared vehicle owners", err)
+	}
+
 	results := make([]dto.SharedVehicleResponse, 0, len(svs))
 	for _, sv := range svs {
 		vehicleName := ""
-		vehicle, vErr := s.vehicleRepo.GetByID(ctx, sv.VehicleID)
-		if vErr == nil {
-			vehicleName = vehicle.Name
+		if v, ok := vehicleMap[sv.VehicleID]; ok {
+			vehicleName = v.Name
 		}
 
 		ownerName := ""
-		owner, oErr := s.userRepo.GetByID(ctx, sv.SharedBy)
-		if oErr == nil {
-			ownerName = owner.Nickname
+		if u, ok := ownerMap[sv.SharedBy]; ok {
+			ownerName = u.Nickname
 		}
 
 		results = append(results, dto.SharedVehicleResponse{
@@ -710,6 +756,16 @@ func (s *GroupService) GetLeaderboard(ctx context.Context, groupID, userID uuid.
 		unit = ""
 	}
 
+	// 批量查询排行榜所有用户昵称（1 次 SQL 替代 N 次）
+	leaderUserIDs := make([]uuid.UUID, len(rows))
+	for i, row := range rows {
+		leaderUserIDs[i] = row.UserID
+	}
+	leaderUserMap, err := s.userRepo.GetByIDs(ctx, leaderUserIDs)
+	if err != nil {
+		return nil, apperror.ErrInternal("batch fetching leaderboard users", err)
+	}
+
 	rankings := make([]dto.LeaderboardEntry, 0, len(rows))
 	for i, row := range rows {
 		var value float64
@@ -730,8 +786,7 @@ func (s *GroupService) GetLeaderboard(ctx context.Context, groupID, userID uuid.
 		}
 
 		nickname := ""
-		u, uErr := s.userRepo.GetByID(ctx, row.UserID)
-		if uErr == nil {
+		if u, ok := leaderUserMap[row.UserID]; ok {
 			nickname = u.Nickname
 		}
 
@@ -803,12 +858,16 @@ func (s *GroupService) GetExpenseStats(ctx context.Context, groupID, userID uuid
 		}
 	}
 
-	// 构建成员昵称映射
+	// 构建成员昵称映射（批量查询，1 次 SQL 替代 N 次）
 	members, _ := s.groupRepo.ListMembers(ctx, groupID)
-	nicknameMap := make(map[string]string)
+	memberUserIDs := make([]uuid.UUID, len(members))
+	for i, m := range members {
+		memberUserIDs[i] = m.UserID
+	}
+	memberUserMap, _ := s.userRepo.GetByIDs(ctx, memberUserIDs)
+	nicknameMap := make(map[string]string, len(members))
 	for _, m := range members {
-		u, uErr := s.userRepo.GetByID(ctx, m.UserID)
-		if uErr == nil {
+		if u, ok := memberUserMap[m.UserID]; ok {
 			nicknameMap[m.UserID.String()] = u.Nickname
 		}
 	}
@@ -1065,12 +1124,25 @@ func (s *GroupService) GetStationStats(ctx context.Context, groupID, userID uuid
 		return nil, apperror.ErrInternal("fetching station fuel grades", err)
 	}
 
+	// 批量查询所有 visitor 的用户信息（1 次 SQL 替代 N 次）
+	visitorUserIDSet := make(map[uuid.UUID]struct{})
+	for _, v := range visitors {
+		visitorUserIDSet[v.UserID] = struct{}{}
+	}
+	visitorUserIDs := make([]uuid.UUID, 0, len(visitorUserIDSet))
+	for id := range visitorUserIDSet {
+		visitorUserIDs = append(visitorUserIDs, id)
+	}
+	visitorUserMap, err := s.userRepo.GetByIDs(ctx, visitorUserIDs)
+	if err != nil {
+		return nil, apperror.ErrInternal("batch fetching visitor users", err)
+	}
+
 	// 构建常客映射
 	visitorMap := make(map[string][]dto.StationVisitor)
 	for _, v := range visitors {
 		nickname := ""
-		u, uErr := s.userRepo.GetByID(ctx, v.UserID)
-		if uErr == nil {
+		if u, ok := visitorUserMap[v.UserID]; ok {
 			nickname = u.Nickname
 		}
 		visitorMap[v.StationName] = append(visitorMap[v.StationName], dto.StationVisitor{

@@ -52,7 +52,7 @@ func (r *UserRepository) Update(ctx context.Context, user *model.User) error {
 }
 
 // UpdateFields 更新用户指定字段
-func (r *UserRepository) UpdateFields(ctx context.Context, id uuid.UUID, fields map[string]interface{}) error {
+func (r *UserRepository) UpdateFields(ctx context.Context, id uuid.UUID, fields map[string]any) error {
 	return r.db.WithContext(ctx).Model(&model.User{}).Where("id = ?", id).Updates(fields).Error
 }
 
@@ -69,7 +69,28 @@ func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 // ExistsByEmail 检查邮箱是否已注册
 func (r *UserRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
-	var count int64
-	err := r.db.WithContext(ctx).Model(&model.User{}).Where("email = ?", email).Count(&count).Error
-	return count > 0, err
+	var exists bool
+	err := r.db.WithContext(ctx).Raw(
+		"SELECT EXISTS(SELECT 1 FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1)", email,
+	).Scan(&exists).Error
+	return exists, err
+}
+
+// GetByIDs 根据多个 ID 批量查询用户，返回 ID→User 映射
+func (r *UserRepository) GetByIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*model.User, error) {
+	if len(ids) == 0 {
+		return make(map[uuid.UUID]*model.User), nil
+	}
+
+	var users []model.User
+	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[uuid.UUID]*model.User, len(users))
+	for i := range users {
+		result[users[i].ID] = &users[i]
+	}
+	return result, nil
 }

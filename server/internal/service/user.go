@@ -50,7 +50,7 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID uuid.UUID, req *
 	}
 
 	// 应用部分更新（只更新非 nil 字段）
-	fields := make(map[string]interface{})
+	fields := make(map[string]any)
 	if req.Nickname != nil {
 		fields["nickname"] = *req.Nickname
 		user.Nickname = *req.Nickname
@@ -119,7 +119,7 @@ func (s *UserService) ChangePassword(ctx context.Context, userID uuid.UUID, req 
 		return apperror.ErrInternal("hashing new password", err)
 	}
 
-	fields := map[string]interface{}{"password_hash": string(hash)}
+	fields := map[string]any{"password_hash": string(hash)}
 	if err := s.userRepo.UpdateFields(ctx, userID, fields); err != nil {
 		return apperror.ErrInternal("updating password", err)
 	}

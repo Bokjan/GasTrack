@@ -85,9 +85,11 @@ func (r *GroupRepository) Delete(ctx context.Context, id uuid.UUID) error {
 
 // ExistsByInviteCode 检查邀请码是否已存在
 func (r *GroupRepository) ExistsByInviteCode(ctx context.Context, code string) (bool, error) {
-	var count int64
-	err := r.db.WithContext(ctx).Model(&model.Group{}).Where("invite_code = ?", code).Count(&count).Error
-	return count > 0, err
+	var exists bool
+	err := r.db.WithContext(ctx).Raw(
+		"SELECT EXISTS(SELECT 1 FROM groups WHERE invite_code = ? LIMIT 1)", code,
+	).Scan(&exists).Error
+	return exists, err
 }
 
 // --- 群组成员管理 ---
@@ -247,12 +249,7 @@ func (r *GroupRepository) GetGroupVehicleSummary(ctx context.Context, groupID uu
 			v.user_id AS owner_id,
 			v.vehicle_type,
 			v.fuel_type,
-			COALESCE(
-				(SELECT fr2.currency_code FROM fuel_records fr2
-				 WHERE fr2.vehicle_id = v.id
-				 GROUP BY fr2.currency_code ORDER BY COUNT(*) DESC LIMIT 1),
-				u.currency_code
-			) AS currency_code,
+			COALESCE(top_cur.currency_code, u.currency_code) AS currency_code,
 			COUNT(fr.id) AS total_records,
 			COALESCE(SUM(fr.total_cost), 0) AS total_cost,
 			COALESCE(SUM(fr.fuel_amount), 0) AS total_fuel,
@@ -264,8 +261,16 @@ func (r *GroupRepository) GetGroupVehicleSummary(ctx context.Context, groupID uu
 		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
 		JOIN users u ON u.id = v.user_id
 		LEFT JOIN fuel_records fr ON fr.vehicle_id = v.id
+		LEFT JOIN LATERAL (
+			SELECT fr2.currency_code
+			FROM fuel_records fr2
+			WHERE fr2.vehicle_id = v.id
+			GROUP BY fr2.currency_code
+			ORDER BY COUNT(*) DESC
+			LIMIT 1
+		) top_cur ON true
 		WHERE v.deleted_at IS NULL AND v.is_archived = false
-		GROUP BY v.id, v.name, v.user_id, v.vehicle_type, v.fuel_type, u.currency_code
+		GROUP BY v.id, v.name, v.user_id, v.vehicle_type, v.fuel_type, u.currency_code, top_cur.currency_code
 		ORDER BY v.name ASC
 	`, groupID).Scan(&results).Error
 
@@ -314,11 +319,12 @@ func (r *GroupRepository) ListSharedVehiclesByGroup(ctx context.Context, groupID
 
 // ExistsSharedVehicle 检查某车辆是否已在某群组中共享
 func (r *GroupRepository) ExistsSharedVehicle(ctx context.Context, groupID, vehicleID uuid.UUID) (bool, error) {
-	var count int64
-	err := r.db.WithContext(ctx).Model(&model.SharedVehicle{}).
-		Where("group_id = ? AND vehicle_id = ?", groupID, vehicleID).
-		Count(&count).Error
-	return count > 0, err
+	var exists bool
+	err := r.db.WithContext(ctx).Raw(
+		"SELECT EXISTS(SELECT 1 FROM shared_vehicles WHERE group_id = ? AND vehicle_id = ? LIMIT 1)",
+		groupID, vehicleID,
+	).Scan(&exists).Error
+	return exists, err
 }
 
 // GetSharedVehicle 获取共享车辆记录
@@ -346,16 +352,19 @@ func (r *GroupRepository) ListSharedVehiclesForUser(ctx context.Context, userID 
 	var results []SharedVehicleWithGroup
 
 	err := r.db.WithContext(ctx).Raw(`
-		SELECT DISTINCT
+		SELECT 
 			sv.vehicle_id,
 			sv.group_id,
 			g.name AS group_name,
 			sv.shared_by
 		FROM shared_vehicles sv
 		JOIN groups g ON g.id = sv.group_id
-		JOIN group_members gm ON gm.group_id = sv.group_id AND gm.user_id = ?
 		JOIN vehicles v ON v.id = sv.vehicle_id AND v.deleted_at IS NULL AND v.is_archived = false
 		WHERE v.user_id != ?
+		  AND EXISTS (
+			SELECT 1 FROM group_members gm
+			WHERE gm.group_id = sv.group_id AND gm.user_id = ?
+		  )
 		ORDER BY g.name ASC, sv.created_at ASC
 	`, userID, userID).Scan(&results).Error
 
@@ -364,14 +373,17 @@ func (r *GroupRepository) ListSharedVehiclesForUser(ctx context.Context, userID 
 
 // IsVehicleSharedToUser 检查某车辆是否通过群组共享给了某用户
 func (r *GroupRepository) IsVehicleSharedToUser(ctx context.Context, vehicleID, userID uuid.UUID) (bool, error) {
-	var count int64
+	var exists bool
 	err := r.db.WithContext(ctx).Raw(`
-		SELECT COUNT(*)
-		FROM shared_vehicles sv
-		JOIN group_members gm ON gm.group_id = sv.group_id AND gm.user_id = ?
-		WHERE sv.vehicle_id = ?
-	`, userID, vehicleID).Scan(&count).Error
-	return count > 0, err
+		SELECT EXISTS(
+			SELECT 1
+			FROM shared_vehicles sv
+			JOIN group_members gm ON gm.group_id = sv.group_id AND gm.user_id = ?
+			WHERE sv.vehicle_id = ?
+			LIMIT 1
+		)
+	`, userID, vehicleID).Scan(&exists).Error
+	return exists, err
 }
 
 // --- 排行榜 ---
@@ -391,14 +403,15 @@ type LeaderboardRow struct {
 func (r *GroupRepository) GetLeaderboard(ctx context.Context, groupID uuid.UUID, metric string, startDate, endDate time.Time) ([]LeaderboardRow, error) {
 	var results []LeaderboardRow
 
-	orderClause := "avg_efficiency ASC" // 默认油耗排行，越低越好
-	switch metric {
-	case "cost":
-		orderClause = "total_cost DESC"
-	case "distance":
-		orderClause = "total_distance DESC"
-	case "frequency":
-		orderClause = "record_count DESC"
+	// 白名单映射排序列，避免 SQL 注入
+	orderClauses := map[string]string{
+		"cost":      "total_cost DESC",
+		"distance":  "total_distance DESC",
+		"frequency": "record_count DESC",
+	}
+	orderClause, ok := orderClauses[metric]
+	if !ok {
+		orderClause = "avg_efficiency ASC" // 默认油耗排行，越低越好
 	}
 
 	err := r.db.WithContext(ctx).Raw(`
@@ -471,6 +484,9 @@ func (r *GroupRepository) GetGroupExpenseByMonth(ctx context.Context, groupID uu
 func (r *GroupRepository) GetGroupExpenseByYear(ctx context.Context, groupID uuid.UUID) ([]GroupExpenseRow, error) {
 	var results []GroupExpenseRow
 
+	// 限制最近 10 年的数据，避免全表扫描
+	cutoff := time.Now().AddDate(-10, 0, 0)
+
 	err := r.db.WithContext(ctx).Raw(`
 		SELECT 
 			TO_CHAR(fr.refuel_date, 'YYYY') AS period_label,
@@ -484,9 +500,10 @@ func (r *GroupRepository) GetGroupExpenseByYear(ctx context.Context, groupID uui
 		FROM fuel_records fr
 		JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL AND v.is_archived = false
 		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
+		WHERE fr.refuel_date >= ?
 		GROUP BY period_label, gm.user_id, fr.currency_code
 		ORDER BY period_label ASC, gm.user_id ASC
-	`, groupID).Scan(&results).Error
+	`, groupID, cutoff).Scan(&results).Error
 
 	return results, err
 }
@@ -508,12 +525,14 @@ func (r *GroupRepository) GetGroupStationStats(ctx context.Context, groupID uuid
 
 	cutoff := time.Now().AddDate(0, -months, 0)
 
-	orderClause := "visit_count DESC"
-	switch sortBy {
-	case "avg_price":
-		orderClause = "avg_unit_price ASC"
-	case "latest_date":
-		orderClause = "latest_visit DESC"
+	// 白名单映射排序列，避免 SQL 注入
+	orderClauses := map[string]string{
+		"avg_price":   "avg_unit_price ASC",
+		"latest_date": "latest_visit DESC",
+	}
+	orderClause, ok := orderClauses[sortBy]
+	if !ok {
+		orderClause = "visit_count DESC"
 	}
 
 	query := `
@@ -531,7 +550,7 @@ func (r *GroupRepository) GetGroupStationStats(ctx context.Context, groupID uuid
 		  AND fr.unit_price > 0
 		  AND fr.refuel_date >= ?`
 
-	args := []interface{}{groupID, cutoff}
+	args := []any{groupID, cutoff}
 
 	if fuelGrade != "" {
 		query += ` AND fr.fuel_grade = ?`

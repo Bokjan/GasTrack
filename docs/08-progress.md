@@ -131,7 +131,18 @@
 
 ### 2026-04-01
 
-- ✅ **全局 Footer 组件** — `MainLayout` 新增 `Layout.Footer`，包含版权信息（动态年份）+ 隐私政策/用户协议站内链接；`theme.useToken()` 适配亮暗主题；响应式 padding；三语 i18n 新增 `footer.*` 3 键
+- 🔧 **慢查询优化 & 缺失索引补充** — 全面扫描 repository 层 SQL 复杂度，修复 8 个慢查询问题：
+  - **添加 3 个缺失索引** — `group_members(user_id)`（几乎所有群组查询通过 `gm.user_id` JOIN，复合主键无法走前缀索引）、`fuel_records(station_name)`（4 个加油站相关查询无索引）、`shared_vehicles(shared_by)`（按共享人查询无索引）
+  - **重写 `GetGroupVehicleSummary` 关联子查询** — 将 `COALESCE((SELECT ... WHERE fr2.vehicle_id = v.id ...), ...)` 关联子查询改为 `LEFT JOIN LATERAL`，避免对每行车辆执行 O(N×M) 子查询
+  - **`GetGroupExpenseByYear` 添加时间下界** — 原无 WHERE 日期限制导致全量扫描 `fuel_records` 表；新增最近 10 年的 cutoff 过滤
+  - **`IsVehicleSharedToUser` COUNT→EXISTS** — `COUNT(*)` 改为 `SELECT EXISTS(... LIMIT 1)`，找到第一行即短路返回
+  - **`ExistsByInviteCode`/`ExistsSharedVehicle`/`ExistsByEmail`/`ExistsByCode` COUNT→EXISTS** — 同上优化模式，4 处存在性检查全部改为 EXISTS 短路
+  - **`ListSharedVehiclesForUser` DISTINCT→EXISTS** — 将 4 表 JOIN + `SELECT DISTINCT` 改为 `EXISTS` 子查询过滤，减少中间结果集大小
+  - **`GetLeaderboard`/`GetGroupStationStats` SQL 拼接安全化** — `switch` + 字符串拼接 ORDER BY 改为白名单 `map[string]string` 映射模式
+- 🔧 **Server 代码审查：性能优化与 Bug 修复** — 全面 review 后端 67 个 Go 文件，修复以下问题：
+  - **GORM 共享查询状态 Bug（2 处）** — `fuel_record.go` 和 `expense_record.go` 的 `ListByVehicle` 方法中，同一 `*gorm.DB` 链先执行 `Count()` 再执行 `Find()` 导致内部状态污染、查询结果异常；修复为使用独立查询链分别执行 COUNT 和分页查询
+  - **RateLimiter 内存泄漏 Bug** — `ratelimit.go` 中 IP-to-Limiter map 只增不减，长期运行下内存无限增长；修复：引入 `ipLimiter` 结构体追踪 `lastSeen` 时间戳，启动后台 goroutine 每 5 分钟清理 10 分钟无活动的条目
+  - **N+1 数据库查询优化（8 处）** — 消除 `GroupService`（`buildGroupResponse`/`GetOverview`/`GetLeaderboard`/`GetExpenseStats`/`GetStationStats`/`ListSharedVehicles`）、`VehicleService.List`、`StatsService.GetOverview` 中的 N+1 查询；新增 `UserRepository.GetByIDs`、`VehicleRepository.GetByIDs`、`FuelRecordRepository.GetMultiVehicleStats`、`FuelRecordRepository.GetMultiVehicleCostByCurrency` 四个批量查询方法，将循环内逐条 SELECT 替换为 `WHERE ... IN` 批量查询
 - ✅ **仪表盘/统计页多币种费用换算 Bug 修复（全栈）** — 后端 Stats API 原直接 `SUM(total_cost)` 不区分币种，多币种用户金额显示错误；修复：Repository 新增 `GetCostByCurrency` 按 `currency_code` 分组聚合；DTO 新增 `costs_by_currency` 字段；前端新增 `sumConvertedCostsByCurrency()` 工具函数按汇率换算后汇总；`DashboardPage` 和 `StatsPage` 费用展示均改用换算后金额
 - 🔧 **通知面板手机端适配** — `NotificationBell` 手机端改用 `Drawer` 顶部滑出替代 `Popover`，解决竖屏溢出；桌面端保持 Popover；内容区 maxHeight 响应式
 - 🎨 **PWA 安装引导 UI 重设计** — `InstallPrompt` 重构为底部浮动卡片，design tokens 适配深色/浅色主题，带 `slideUp`/`slideDown` CSS 动画

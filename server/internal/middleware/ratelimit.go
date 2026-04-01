@@ -3,16 +3,23 @@ package middleware
 import (
 	"net/http"
 	"sync"
+	"time"
 
 	"golang.org/x/time/rate"
 
 	"gastrack/internal/pkg/respond"
 )
 
-// RateLimiter 基于 IP 的速率限制器
+// ipLimiter 带最后访问时间的限流器
+type ipLimiter struct {
+	limiter  *rate.Limiter
+	lastSeen time.Time
+}
+
+// RateLimiter 基于 IP 的速率限制器（带自动清理过期条目）
 type RateLimiter struct {
 	mu       sync.Mutex
-	limiters map[string]*rate.Limiter
+	limiters map[string]*ipLimiter
 	rate     rate.Limit // 每秒允许的请求数
 	burst    int        // 突发请求上限
 }
@@ -20,10 +27,31 @@ type RateLimiter struct {
 // NewRateLimiter 创建速率限制器
 // r: 每秒允许的请求数, burst: 突发上限
 func NewRateLimiter(r float64, burst int) *RateLimiter {
-	return &RateLimiter{
-		limiters: make(map[string]*rate.Limiter),
+	rl := &RateLimiter{
+		limiters: make(map[string]*ipLimiter),
 		rate:     rate.Limit(r),
 		burst:    burst,
+	}
+
+	// 启动后台 goroutine 定期清理过期 IP 条目，防止内存泄漏
+	go rl.cleanupLoop()
+
+	return rl
+}
+
+// cleanupLoop 每 5 分钟清理 10 分钟未活跃的 IP 限流器
+func (rl *RateLimiter) cleanupLoop() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		rl.mu.Lock()
+		cutoff := time.Now().Add(-10 * time.Minute)
+		for ip, il := range rl.limiters {
+			if il.lastSeen.Before(cutoff) {
+				delete(rl.limiters, ip)
+			}
+		}
+		rl.mu.Unlock()
 	}
 }
 
@@ -32,13 +60,18 @@ func (rl *RateLimiter) getLimiter(ip string) *rate.Limiter {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 
-	limiter, exists := rl.limiters[ip]
+	il, exists := rl.limiters[ip]
 	if !exists {
-		limiter = rate.NewLimiter(rl.rate, rl.burst)
-		rl.limiters[ip] = limiter
+		il = &ipLimiter{
+			limiter:  rate.NewLimiter(rl.rate, rl.burst),
+			lastSeen: time.Now(),
+		}
+		rl.limiters[ip] = il
+	} else {
+		il.lastSeen = time.Now()
 	}
 
-	return limiter
+	return il.limiter
 }
 
 // RateLimit 返回 IP 级别限流中间件

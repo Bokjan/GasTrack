@@ -27,7 +27,7 @@ type FuelRecord struct {
 	// 加油详情
 	IsFullTank  bool    `gorm:"default:true" json:"is_full_tank"`                  // 是否加满
 	FuelGrade   string  `gorm:"size:20" json:"fuel_grade,omitempty"`               // 92/95/98/diesel
-	StationName string  `gorm:"size:200" json:"station_name,omitempty"`            // 加油站
+	StationName string  `gorm:"size:200;index:idx_fuel_records_station" json:"station_name,omitempty"` // 加油站
 	StationLat  float64 `gorm:"type:decimal(10,7)" json:"station_lat,omitempty"`   // 纬度
 	StationLng  float64 `gorm:"type:decimal(10,7)" json:"station_lng,omitempty"`   // 经度
 	Note        string  `gorm:"type:text" json:"note,omitempty"`                   // 备注

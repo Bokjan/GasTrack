@@ -150,6 +150,22 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 		return nil, apperror.ErrInternal("listing vehicles", err)
 	}
 
+	// 批量获取所有车辆的统计数据和按币种费用（2 次 SQL 替代 2N 次）
+	vehicleIDs := make([]uuid.UUID, len(vehicles))
+	for i, v := range vehicles {
+		vehicleIDs[i] = v.ID
+	}
+
+	allStats, err := s.recordRepo.GetMultiVehicleStats(ctx, vehicleIDs)
+	if err != nil {
+		return nil, apperror.ErrInternal("batch fetching vehicle stats", err)
+	}
+
+	allCosts, err := s.recordRepo.GetMultiVehicleCostByCurrency(ctx, vehicleIDs)
+	if err != nil {
+		return nil, apperror.ErrInternal("batch fetching vehicle costs by currency", err)
+	}
+
 	var totalRecords int64
 	var totalCost float64
 	var totalFuel float64
@@ -158,18 +174,18 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 	vehicleStats := make([]dto.VehicleStatsResponse, 0, len(vehicles))
 
 	isImperial := user.UnitSystem == "imperial"
+	targetUnit := convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
 
 	for _, v := range vehicles {
-		stats, err := s.recordRepo.GetVehicleStats(ctx, v.ID)
-		if err != nil {
+		stats, ok := allStats[v.ID]
+		if !ok {
 			continue
 		}
 
-		// 获取该车辆的按币种分组费用
-		costsByCurrency, costErr := s.recordRepo.GetCostByCurrency(ctx, v.ID)
+		// 从批量结果中获取该车辆的按币种分组费用
 		vehicleCostMap := make(map[string]float64)
-		if costErr == nil {
-			for _, c := range costsByCurrency {
+		if costs, costOk := allCosts[v.ID]; costOk {
+			for _, c := range costs {
 				vehicleCostMap[c.CurrencyCode] = c.TotalCost
 				overallCostsByCurrency[c.CurrencyCode] += c.TotalCost
 			}
@@ -180,7 +196,6 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 		totalFuel += stats.TotalFuel
 		totalDistance += stats.TotalDistance
 
-		targetUnit := convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
 		vFuel := stats.TotalFuel
 		vDist := stats.TotalDistance
 		if isImperial {

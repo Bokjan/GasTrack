@@ -88,7 +88,7 @@ func (r *InviteCodeRepository) ConsumeByCode(ctx context.Context, code string, u
 		invite.UseCount++
 		invite.UsedBy = &usedByID
 
-		return tx.Model(&invite).Updates(map[string]interface{}{
+		return tx.Model(&invite).Updates(map[string]any{
 			"use_count": invite.UseCount,
 			"used_by":   usedByID,
 		}).Error
@@ -102,7 +102,9 @@ func (r *InviteCodeRepository) ConsumeByCode(ctx context.Context, code string, u
 
 // ExistsByCode 检查邀请码是否存在
 func (r *InviteCodeRepository) ExistsByCode(ctx context.Context, code string) (bool, error) {
-	var count int64
-	err := r.db.WithContext(ctx).Model(&model.InviteCode{}).Where("code = ?", code).Count(&count).Error
-	return count > 0, err
+	var exists bool
+	err := r.db.WithContext(ctx).Raw(
+		"SELECT EXISTS(SELECT 1 FROM invite_codes WHERE code = ? LIMIT 1)", code,
+	).Scan(&exists).Error
+	return exists, err
 }

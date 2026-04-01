@@ -100,3 +100,22 @@ func (r *VehicleRepository) CountByUser(ctx context.Context, userID uuid.UUID) (
 	err := r.db.WithContext(ctx).Model(&model.Vehicle{}).Where("user_id = ?", userID).Count(&count).Error
 	return count, err
 }
+
+// GetByIDs 根据多个 ID 批量查询车辆，返回 ID→Vehicle 映射
+func (r *VehicleRepository) GetByIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*model.Vehicle, error) {
+	if len(ids) == 0 {
+		return make(map[uuid.UUID]*model.Vehicle), nil
+	}
+
+	var vehicles []model.Vehicle
+	err := r.db.WithContext(ctx).Where("id IN ?", ids).Find(&vehicles).Error
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[uuid.UUID]*model.Vehicle, len(vehicles))
+	for i := range vehicles {
+		result[vehicles[i].ID] = &vehicles[i]
+	}
+	return result, nil
+}

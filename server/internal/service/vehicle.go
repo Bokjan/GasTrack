@@ -86,25 +86,35 @@ func (s *VehicleService) List(ctx context.Context, userID uuid.UUID, includeArch
 			return result, nil
 		}
 
-		// 查询每辆共享车辆的详情
-		seen := make(map[string]bool) // 避免同一车辆在多个群组中重复出现
-		for _, info := range sharedInfos {
-			vid := info.VehicleID.String()
-			if seen[vid] {
+		// 去重并收集所有共享车辆 ID（避免同一车辆在多个群组中重复出现）
+		seen := make(map[uuid.UUID]bool)
+		uniqueVehicleIDs := make([]uuid.UUID, 0, len(sharedInfos))
+		// 保留每辆车的第一个群组信息
+		vehicleGroupMap := make(map[uuid.UUID]*repository.SharedVehicleWithGroup)
+		for i, info := range sharedInfos {
+			if seen[info.VehicleID] {
 				continue
 			}
-			seen[vid] = true
+			seen[info.VehicleID] = true
+			uniqueVehicleIDs = append(uniqueVehicleIDs, info.VehicleID)
+			vehicleGroupMap[info.VehicleID] = &sharedInfos[i]
+		}
 
-			vehicle, err := s.vehicleRepo.GetByID(ctx, info.VehicleID)
-			if err != nil {
-				s.logger.Warn("failed to get shared vehicle", zap.String("vehicle_id", vid), zap.Error(err))
-				continue
+		// 批量查询所有共享车辆详情（1 次 SQL 替代 N 次）
+		if len(uniqueVehicleIDs) > 0 {
+			vehicleMap, batchErr := s.vehicleRepo.GetByIDs(ctx, uniqueVehicleIDs)
+			if batchErr != nil {
+				s.logger.Warn("failed to batch fetch shared vehicles", zap.Error(batchErr))
+			} else {
+				for vid, vehicle := range vehicleMap {
+					resp := vehicleToResponse(vehicle)
+					if groupInfo, ok := vehicleGroupMap[vid]; ok {
+						resp.SharedFromGroupID = groupInfo.GroupID.String()
+						resp.SharedFromGroupName = groupInfo.GroupName
+					}
+					result = append(result, resp)
+				}
 			}
-
-			resp := vehicleToResponse(vehicle)
-			resp.SharedFromGroupID = info.GroupID.String()
-			resp.SharedFromGroupName = info.GroupName
-			result = append(result, resp)
 		}
 	}
 

@@ -50,10 +50,11 @@ func (r *FuelRecordRepository) ListByVehicle(ctx context.Context, vehicleID uuid
 	var records []model.FuelRecord
 	var total int64
 
-	query := r.db.WithContext(ctx).Where("vehicle_id = ?", vehicleID)
-	query.Model(&model.FuelRecord{}).Count(&total)
+	// 使用独立查询链分别执行 COUNT 和分页查询，避免共享 *gorm.DB 状态导致结果异常
+	r.db.WithContext(ctx).Model(&model.FuelRecord{}).Where("vehicle_id = ?", vehicleID).Count(&total)
 
-	err := query.Order("refuel_date DESC").
+	err := r.db.WithContext(ctx).Where("vehicle_id = ?", vehicleID).
+		Order("refuel_date DESC").
 		Offset((page - 1) * pageSize).
 		Limit(pageSize).
 		Find(&records).Error
@@ -261,4 +262,85 @@ func (r *FuelRecordRepository) GetStatsByYear(ctx context.Context, vehicleID uui
 		Order("period ASC").
 		Scan(&results).Error
 	return results, err
+}
+
+// MultiVehicleStatsResult 批量车辆统计结果（按 vehicle_id 分组）
+type MultiVehicleStatsResult struct {
+	VehicleID       uuid.UUID `json:"vehicle_id" gorm:"column:vehicle_id"`
+	TotalRecords    int64     `json:"total_records"`
+	TotalFuel       float64   `json:"total_fuel"`
+	TotalCost       float64   `json:"total_cost"`
+	TotalDistance   float64   `json:"total_distance"`
+	AvgEfficiency   float64   `json:"avg_efficiency"`
+	BestEfficiency  float64   `json:"best_efficiency"`
+	WorstEfficiency float64   `json:"worst_efficiency"`
+}
+
+// GetMultiVehicleStats 批量获取多辆车的汇总统计（1 次 SQL 替代 N 次）
+func (r *FuelRecordRepository) GetMultiVehicleStats(ctx context.Context, vehicleIDs []uuid.UUID) (map[uuid.UUID]*MultiVehicleStatsResult, error) {
+	result := make(map[uuid.UUID]*MultiVehicleStatsResult, len(vehicleIDs))
+	if len(vehicleIDs) == 0 {
+		return result, nil
+	}
+
+	var rows []MultiVehicleStatsResult
+	err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
+		Select(`
+			vehicle_id,
+			COUNT(*) as total_records,
+			COALESCE(SUM(fuel_amount), 0) as total_fuel,
+			COALESCE(SUM(total_cost), 0) as total_cost,
+			COALESCE(SUM(trip_distance), 0) as total_distance,
+			COALESCE(AVG(NULLIF(fuel_efficiency, 0)), 0) as avg_efficiency,
+			COALESCE(MIN(NULLIF(fuel_efficiency, 0)), 0) as best_efficiency,
+			COALESCE(MAX(NULLIF(fuel_efficiency, 0)), 0) as worst_efficiency
+		`).
+		Where("vehicle_id IN ? AND fuel_efficiency > 0", vehicleIDs).
+		Group("vehicle_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range rows {
+		result[rows[i].VehicleID] = &rows[i]
+	}
+	return result, nil
+}
+
+// MultiVehicleCostByCurrencyResult 批量车辆按币种费用结果
+type MultiVehicleCostByCurrencyResult struct {
+	VehicleID    uuid.UUID `json:"vehicle_id" gorm:"column:vehicle_id"`
+	CurrencyCode string   `json:"currency_code"`
+	TotalCost    float64  `json:"total_cost"`
+}
+
+// GetMultiVehicleCostByCurrency 批量获取多辆车按币种分组的费用（1 次 SQL 替代 N 次）
+func (r *FuelRecordRepository) GetMultiVehicleCostByCurrency(ctx context.Context, vehicleIDs []uuid.UUID) (map[uuid.UUID][]CostByCurrencyResult, error) {
+	result := make(map[uuid.UUID][]CostByCurrencyResult, len(vehicleIDs))
+	if len(vehicleIDs) == 0 {
+		return result, nil
+	}
+
+	var rows []MultiVehicleCostByCurrencyResult
+	err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
+		Select(`
+			vehicle_id,
+			currency_code,
+			COALESCE(SUM(total_cost), 0) as total_cost
+		`).
+		Where("vehicle_id IN ?", vehicleIDs).
+		Group("vehicle_id, currency_code").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+
+	for _, row := range rows {
+		result[row.VehicleID] = append(result[row.VehicleID], CostByCurrencyResult{
+			CurrencyCode: row.CurrencyCode,
+			TotalCost:    row.TotalCost,
+		})
+	}
+	return result, nil
 }
