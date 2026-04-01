@@ -22,17 +22,17 @@ import (
 
 // GroupService 群组业务逻辑
 type GroupService struct {
-	groupRepo   *repository.GroupRepository
-	userRepo    *repository.UserRepository
-	vehicleRepo *repository.VehicleRepository
+	groupRepo   repository.GroupRepo
+	userRepo    repository.UserRepo
+	vehicleRepo repository.VehicleRepo
 	logger      *zap.Logger
 }
 
 // NewGroupService 创建 GroupService 实例
 func NewGroupService(
-	groupRepo *repository.GroupRepository,
-	userRepo *repository.UserRepository,
-	vehicleRepo *repository.VehicleRepository,
+	groupRepo repository.GroupRepo,
+	userRepo repository.UserRepo,
+	vehicleRepo repository.VehicleRepo,
 	logger *zap.Logger,
 ) *GroupService {
 	return &GroupService{

@@ -17,17 +17,17 @@ import (
 
 // ReminderService 提醒业务逻辑
 type ReminderService struct {
-	reminderRepo *repository.ReminderRepository
-	vehicleRepo  *repository.VehicleRepository
-	groupRepo    *repository.GroupRepository
+	reminderRepo repository.ReminderRepo
+	vehicleRepo  repository.VehicleRepo
+	groupRepo    repository.GroupRepo
 	logger       *zap.Logger
 }
 
 // NewReminderService 创建 ReminderService 实例
 func NewReminderService(
-	reminderRepo *repository.ReminderRepository,
-	vehicleRepo *repository.VehicleRepository,
-	groupRepo *repository.GroupRepository,
+	reminderRepo repository.ReminderRepo,
+	vehicleRepo repository.VehicleRepo,
+	groupRepo repository.GroupRepo,
 	logger *zap.Logger,
 ) *ReminderService {
 	return &ReminderService{

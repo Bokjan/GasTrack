@@ -19,17 +19,17 @@ const AnomalyThreshold = 0.30
 
 // NotificationService 通知业务逻辑
 type NotificationService struct {
-	notificationRepo *repository.NotificationRepository
-	fuelRecordRepo   *repository.FuelRecordRepository
-	reminderRepo     *repository.ReminderRepository
+	notificationRepo repository.NotificationRepo
+	fuelRecordRepo   repository.FuelRecordRepo
+	reminderRepo     repository.ReminderRepo
 	logger           *zap.Logger
 }
 
 // NewNotificationService 创建 NotificationService 实例
 func NewNotificationService(
-	notificationRepo *repository.NotificationRepository,
-	fuelRecordRepo *repository.FuelRecordRepository,
-	reminderRepo *repository.ReminderRepository,
+	notificationRepo repository.NotificationRepo,
+	fuelRecordRepo repository.FuelRecordRepo,
+	reminderRepo repository.ReminderRepo,
 	logger *zap.Logger,
 ) *NotificationService {
 	return &NotificationService{

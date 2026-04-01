@@ -18,19 +18,19 @@ import (
 
 // ExpenseRecordService 开销记录业务逻辑
 type ExpenseRecordService struct {
-	expenseRepo  *repository.ExpenseRecordRepository
-	vehicleRepo  *repository.VehicleRepository
-	groupRepo    *repository.GroupRepository
-	reminderRepo *repository.ReminderRepository
+	expenseRepo  repository.ExpenseRecordRepo
+	vehicleRepo  repository.VehicleRepo
+	groupRepo    repository.GroupRepo
+	reminderRepo repository.ReminderRepo
 	logger       *zap.Logger
 }
 
 // NewExpenseRecordService 创建 ExpenseRecordService 实例
 func NewExpenseRecordService(
-	expenseRepo *repository.ExpenseRecordRepository,
-	vehicleRepo *repository.VehicleRepository,
-	groupRepo *repository.GroupRepository,
-	reminderRepo *repository.ReminderRepository,
+	expenseRepo repository.ExpenseRecordRepo,
+	vehicleRepo repository.VehicleRepo,
+	groupRepo repository.GroupRepo,
+	reminderRepo repository.ReminderRepo,
 	logger *zap.Logger,
 ) *ExpenseRecordService {
 	return &ExpenseRecordService{

@@ -18,22 +18,22 @@ import (
 
 // FuelRecordService 加油记录业务逻辑
 type FuelRecordService struct {
-	recordRepo          *repository.FuelRecordRepository
-	vehicleRepo         *repository.VehicleRepository
-	userRepo            *repository.UserRepository
-	groupRepo           *repository.GroupRepository
+	recordRepo          repository.FuelRecordRepo
+	vehicleRepo         repository.VehicleRepo
+	userRepo            repository.UserRepo
+	groupRepo           repository.GroupRepo
 	logger              *zap.Logger
-	notificationService *NotificationService
+	notificationService NotificationServicer
 }
 
 // NewFuelRecordService 创建 FuelRecordService 实例
 func NewFuelRecordService(
-	recordRepo *repository.FuelRecordRepository,
-	vehicleRepo *repository.VehicleRepository,
-	userRepo *repository.UserRepository,
-	groupRepo *repository.GroupRepository,
+	recordRepo repository.FuelRecordRepo,
+	vehicleRepo repository.VehicleRepo,
+	userRepo repository.UserRepo,
+	groupRepo repository.GroupRepo,
 	logger *zap.Logger,
-	notificationService *NotificationService,
+	notificationService NotificationServicer,
 ) *FuelRecordService {
 	return &FuelRecordService{
 		recordRepo:          recordRepo,

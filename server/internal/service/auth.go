@@ -27,10 +27,10 @@ import (
 
 // AuthService 认证业务逻辑
 type AuthService struct {
-	userRepo            *repository.UserRepository
-	tokenRepo           *repository.RefreshTokenRepository
-	inviteService       *InviteService
-	notificationService *NotificationService
+	userRepo            repository.UserRepo
+	tokenRepo           repository.RefreshTokenRepo
+	inviteService       InviteServicer
+	notificationService NotificationServicer
 	jwtCfg              *config.JWTConfig
 	registrationMode    string // open / invite_only / closed
 	logger              *zap.Logger
@@ -38,10 +38,10 @@ type AuthService struct {
 
 // NewAuthService 创建 AuthService 实例
 func NewAuthService(
-	userRepo *repository.UserRepository,
-	tokenRepo *repository.RefreshTokenRepository,
-	inviteService *InviteService,
-	notificationService *NotificationService,
+	userRepo repository.UserRepo,
+	tokenRepo repository.RefreshTokenRepo,
+	inviteService InviteServicer,
+	notificationService NotificationServicer,
 	jwtCfg *config.JWTConfig,
 	registrationMode string,
 	logger *zap.Logger,

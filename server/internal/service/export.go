@@ -44,27 +44,27 @@ const (
 
 // ExportService 数据导出业务逻辑
 type ExportService struct {
-	userRepo           *repository.UserRepository
-	vehicleRepo        *repository.VehicleRepository
-	fuelRecordRepo     *repository.FuelRecordRepository
-	expenseRecordRepo  *repository.ExpenseRecordRepository
-	reminderRepo       *repository.ReminderRepository
-	notificationRepo   *repository.NotificationRepository
-	inviteCodeRepo     *repository.InviteCodeRepository
-	groupRepo          *repository.GroupRepository
+	userRepo           repository.UserRepo
+	vehicleRepo        repository.VehicleRepo
+	fuelRecordRepo     repository.FuelRecordRepo
+	expenseRecordRepo  repository.ExpenseRecordRepo
+	reminderRepo       repository.ReminderRepo
+	notificationRepo   repository.NotificationRepo
+	inviteCodeRepo     repository.InviteCodeRepo
+	groupRepo          repository.GroupRepo
 	logger             *zap.Logger
 }
 
 // NewExportService 创建 ExportService 实例
 func NewExportService(
-	userRepo *repository.UserRepository,
-	vehicleRepo *repository.VehicleRepository,
-	fuelRecordRepo *repository.FuelRecordRepository,
-	expenseRecordRepo *repository.ExpenseRecordRepository,
-	reminderRepo *repository.ReminderRepository,
-	notificationRepo *repository.NotificationRepository,
-	inviteCodeRepo *repository.InviteCodeRepository,
-	groupRepo *repository.GroupRepository,
+	userRepo repository.UserRepo,
+	vehicleRepo repository.VehicleRepo,
+	fuelRecordRepo repository.FuelRecordRepo,
+	expenseRecordRepo repository.ExpenseRecordRepo,
+	reminderRepo repository.ReminderRepo,
+	notificationRepo repository.NotificationRepo,
+	inviteCodeRepo repository.InviteCodeRepo,
+	groupRepo repository.GroupRepo,
 	logger *zap.Logger,
 ) *ExportService {
 	return &ExportService{

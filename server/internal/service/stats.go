@@ -17,19 +17,19 @@ import (
 
 // StatsService 统计业务逻辑
 type StatsService struct {
-	recordRepo  *repository.FuelRecordRepository
-	vehicleRepo *repository.VehicleRepository
-	userRepo    *repository.UserRepository
-	groupRepo   *repository.GroupRepository
+	recordRepo  repository.FuelRecordRepo
+	vehicleRepo repository.VehicleRepo
+	userRepo    repository.UserRepo
+	groupRepo   repository.GroupRepo
 	logger      *zap.Logger
 }
 
 // NewStatsService 创建 StatsService 实例
 func NewStatsService(
-	recordRepo *repository.FuelRecordRepository,
-	vehicleRepo *repository.VehicleRepository,
-	userRepo *repository.UserRepository,
-	groupRepo *repository.GroupRepository,
+	recordRepo repository.FuelRecordRepo,
+	vehicleRepo repository.VehicleRepo,
+	userRepo repository.UserRepo,
+	groupRepo repository.GroupRepo,
 	logger *zap.Logger,
 ) *StatsService {
 	return &StatsService{

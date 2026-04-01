@@ -16,12 +16,12 @@ import (
 
 // UserService 用户业务逻辑
 type UserService struct {
-	userRepo *repository.UserRepository
+	userRepo repository.UserRepo
 	logger   *zap.Logger
 }
 
 // NewUserService 创建 UserService 实例
-func NewUserService(userRepo *repository.UserRepository, logger *zap.Logger) *UserService {
+func NewUserService(userRepo repository.UserRepo, logger *zap.Logger) *UserService {
 	return &UserService{userRepo: userRepo, logger: logger}
 }
 

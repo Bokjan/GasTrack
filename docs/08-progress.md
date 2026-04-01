@@ -28,6 +28,7 @@
 | 家庭群组管理（基础） | ✅ | ✅ | ✅ |
 | 群组扩展（共享/排行/看板/加油站） | ✅ | ✅ | ✅ |
 | 维修保养等开销记录 | ✅ | ✅ | ✅ |
+| 后端单元测试 | ✅ | — | ✅ |
 | PWA 支持（安装到桌面/离线缓存） | — | ✅ | ✅ |
 
 **图例**: ✅ 完成 | 🔨 进行中 | 🔲 待实现
@@ -52,6 +53,7 @@
 - **单位换算** ✅ — `pkg/convert/` 引擎, API 按用户偏好自动转换（含 unit_price 同步容量单位换算）
 - **群组管理** ✅ — Group/GroupMember/SharedVehicle 模型, 19 条 API（基础 CRUD + 邀请码 + 权限管理 + 数据汇总 + 车辆共享 + 排行榜 + 费用看板 + 加油站推荐）
 - **开销记录** ✅ — ExpenseRecord 模型, CRUD + 列表筛选 + 统计（按币种汇总/分类占比/月度趋势）+ 商家名建议 + 保养联动, 7 条 API
+- **单元测试** ✅ — 71 个测试用例全部通过：Repository 接口提取（9 接口 ~114 方法）+ Service 接口提取（2 接口）+ go.uber.org/mock 生成 mock + 12 个 Service 全覆盖 + pkg 工具包（convert/apperror）覆盖
 
 ### 待实现
 
@@ -131,6 +133,12 @@
 
 ### 2026-04-01
 
+- ✅ **后端单元测试全面补齐** — 从零开始为 Go server 端补齐完整单元测试体系（71 个测试用例）：
+  - **接口提取** — 新增 `repository/interfaces.go`（9 个 Repository 接口，~114 个方法）和 `service/interfaces.go`（InviteServicer + NotificationServicer 接口）
+  - **依赖注入重构** — 全部 11 个 Service struct 从具体 Repository 指针改为接口类型，支持 mock 测试
+  - **Mock 生成** — 使用 go.uber.org/mock (mockgen) 自动生成 repository/mock/ 和 service/mock/ 两组 mock 实现
+  - **Service 层测试（44 个）** — 覆盖全部 12 个 Service：AuthService（Register/Login/RefreshToken/Logout）、UserService、VehicleService、FuelRecordService、StatsService、InviteService、ExportService、ReminderService、NotificationService（含异常油耗检测/保养提醒触发）、GroupService（CRUD/加入/权限校验）、ExpenseRecordService、ExchangeRateService（httptest 模拟外部 API）
+  - **工具包测试（27 个）** — `pkg/convert`（单位换算函数 + 往返一致性）和 `pkg/apperror`（错误构造 + errors.Is/As 兼容）
 - 🔧 **慢查询优化 & 缺失索引补充** — 全面扫描 repository 层 SQL 复杂度，修复 8 个慢查询问题：
   - **添加 3 个缺失索引** — `group_members(user_id)`（几乎所有群组查询通过 `gm.user_id` JOIN，复合主键无法走前缀索引）、`fuel_records(station_name)`（4 个加油站相关查询无索引）、`shared_vehicles(shared_by)`（按共享人查询无索引）
   - **重写 `GetGroupVehicleSummary` 关联子查询** — 将 `COALESCE((SELECT ... WHERE fr2.vehicle_id = v.id ...), ...)` 关联子查询改为 `LEFT JOIN LATERAL`，避免对每行车辆执行 O(N×M) 子查询

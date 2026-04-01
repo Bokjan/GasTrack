@@ -20,15 +20,15 @@ import (
 
 // InviteService 邀请码业务逻辑
 type InviteService struct {
-	inviteRepo *repository.InviteCodeRepository
-	userRepo   *repository.UserRepository
+	inviteRepo repository.InviteCodeRepo
+	userRepo   repository.UserRepo
 	logger     *zap.Logger
 }
 
 // NewInviteService 创建 InviteService 实例
 func NewInviteService(
-	inviteRepo *repository.InviteCodeRepository,
-	userRepo *repository.UserRepository,
+	inviteRepo repository.InviteCodeRepo,
+	userRepo repository.UserRepo,
 	logger *zap.Logger,
 ) *InviteService {
 	return &InviteService{

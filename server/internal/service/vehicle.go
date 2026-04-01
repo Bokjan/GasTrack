@@ -16,13 +16,13 @@ import (
 
 // VehicleService 车辆业务逻辑
 type VehicleService struct {
-	vehicleRepo *repository.VehicleRepository
-	groupRepo   *repository.GroupRepository
+	vehicleRepo repository.VehicleRepo
+	groupRepo   repository.GroupRepo
 	logger      *zap.Logger
 }
 
 // NewVehicleService 创建 VehicleService 实例
-func NewVehicleService(vehicleRepo *repository.VehicleRepository, groupRepo *repository.GroupRepository, logger *zap.Logger) *VehicleService {
+func NewVehicleService(vehicleRepo repository.VehicleRepo, groupRepo repository.GroupRepo, logger *zap.Logger) *VehicleService {
 	return &VehicleService{vehicleRepo: vehicleRepo, groupRepo: groupRepo, logger: logger}
 }
 
