@@ -82,7 +82,8 @@
     "copyToClipboard": "クリップボードにコピー",
     "maxUsesHint": "0 にすると無制限になります",
     "expiresHint": "空白の場合、デフォルトで 30 日後に期限切れ",
-    "expiresPlaceholder": "有効期限を選択"
+    "expiresPlaceholder": "有効期限を選択",
+    "maxUsesPlaceholder": "0 = 無制限"
   },
   "vehicle": {
     "title": "車両管理",
@@ -525,7 +526,12 @@
     "markAllRead": "すべて既読",
     "anomalyFuel": "燃費異常",
     "maintenanceDue": "メンテナンス期限",
-    "inviteUsed": "招待コード使用"
+    "inviteUsed": "招待コード使用",
+    "anomalyFuelMsg": "今回の給油：{{current}}、過去平均：{{avg}}（{{direction}} {{pct}}%）",
+    "directionHigher": "高め",
+    "directionLower": "低め",
+    "maintenanceDueMsg": "現在の走行距離 {{currentOdo}} が予定メンテナンス距離 {{targetOdo}} に達しました",
+    "inviteUsedMsg": "ユーザー {{nickname}} があなたの招待コード {{code}} を使って登録しました"
   },
   "group": {
     "title": "ファミリーグループ",
@@ -655,6 +661,8 @@
     "referenceCurrency": "参考換算通貨",
     "referenceCurrencyAuto": "自動（デフォルト）",
     "referenceCurrencyHint": "費用の表示に、この通貨での参考換算が併記されます",
+    "currencyColumnName": "名称",
+    "rateColumnTitle": "1 {{base}} =",
     "currencyName": {
       "CNY": "人民元",
       "USD": "米ドル",

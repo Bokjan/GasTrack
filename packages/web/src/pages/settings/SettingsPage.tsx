@@ -33,7 +33,12 @@ export default function SettingsPage() {
   const [exportScope, setExportScope] = useState<'basic' | 'full'>('basic');
   const [exportFormat, setExportFormat] = useState<'csv' | 'zip' | 'json'>('csv');
 
-  const { data: exchangeRateData, isLoading: ratesLoading, fetchRates } = useExchangeRateStore();
+  const {
+    data: exchangeRateData,
+    isLoading: ratesLoading,
+    error: ratesError,
+    fetchRates,
+  } = useExchangeRateStore();
 
   useEffect(() => {
     if (user?.currency_code) {
@@ -351,7 +356,7 @@ export default function SettingsPage() {
                     key: 'name',
                   },
                   {
-                    title: `1 ${exchangeRateData.base} =`,
+                    title: t('exchangeRate.rateColumnTitle', { base: exchangeRateData.base }),
                     dataIndex: 'rate',
                     key: 'rate',
                   },
@@ -367,7 +372,7 @@ export default function SettingsPage() {
               </Text>
             </Space>
           ) : (
-            <Text type="secondary">{t('exchangeRate.noData')}</Text>
+            <Text type="secondary">{ratesError ? t('exchangeRate.fetchError') : t('exchangeRate.noData')}</Text>
           )}
         </Card>
 

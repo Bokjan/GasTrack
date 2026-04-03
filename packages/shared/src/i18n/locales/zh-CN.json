@@ -662,6 +662,7 @@
     "referenceCurrencyAuto": "自动（默认）",
     "referenceCurrencyHint": "费用金额旁会同时显示该币种的参考换算",
     "currencyColumnName": "名称",
+    "rateColumnTitle": "1 {{base}} =",
     "currencyName": {
       "CNY": "人民币",
       "USD": "美元",

@@ -526,7 +526,12 @@
     "markAllRead": "Mark all read",
     "anomalyFuel": "Fuel Anomaly",
     "maintenanceDue": "Maintenance Due",
-    "inviteUsed": "Invite Used"
+    "inviteUsed": "Invite Used",
+    "anomalyFuelMsg": "This refuel: {{current}}, historical average: {{avg}} ({{direction}} {{pct}}%)",
+    "directionHigher": "higher",
+    "directionLower": "lower",
+    "maintenanceDueMsg": "Current odometer {{currentOdo}} has reached the scheduled service mileage {{targetOdo}}",
+    "inviteUsedMsg": "User {{nickname}} registered using your invite code {{code}}"
   },
   "group": {
     "title": "Family Groups",
@@ -657,6 +662,7 @@
     "referenceCurrencyAuto": "Auto (Default)",
     "referenceCurrencyHint": "Cost amounts will show a reference conversion in this currency",
     "currencyColumnName": "Name",
+    "rateColumnTitle": "1 {{base}} =",
     "currencyName": {
       "CNY": "Chinese Yuan",
       "USD": "US Dollar",

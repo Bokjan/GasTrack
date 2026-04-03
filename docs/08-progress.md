@@ -131,6 +131,10 @@
 
 > 仅记录功能级别变更摘要，详细实现细节见 Git commit 历史。
 
+### 2026-04-03
+
+- 🔧 **i18n 漏翻专项修复** — 修复设置页汇率参考卡片 2 处国际化问题（`ja-JP` 缺失 `exchangeRate.currencyColumnName`、汇率数值列标题改为走 i18n key），并补齐三语语言包差异项（`invite.maxUsesPlaceholder`、通知结构化 message/direction keys），同时去掉 `exchangeRateStore` 的英文硬编码兜底，错误态统一由页面翻译文案承接
+
 ### 2026-04-01
 
 - ✅ **后端单元测试全面补齐** — 从零开始为 Go server 端补齐完整单元测试体系（71 个测试用例）：

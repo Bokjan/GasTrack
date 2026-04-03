@@ -48,7 +48,7 @@ export const useExchangeRateStore = create<ExchangeRateState>((set, get) => ({
         lastFetched: Date.now(),
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch exchange rates';
+      const message = err instanceof Error ? err.message : null;
       set({ error: message });
     } finally {
       set({ isLoading: false });
