@@ -1285,6 +1285,51 @@ func (mr *MockExpenseRecordRepoMockRecorder) GetDistinctVendorNames(ctx, userID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDistinctVendorNames", reflect.TypeOf((*MockExpenseRecordRepo)(nil).GetDistinctVendorNames), ctx, userID, vehicleID, limit)
 }
 
+// GetExpenseCostByCurrency mocks base method.
+func (m *MockExpenseRecordRepo) GetExpenseCostByCurrency(ctx context.Context, vehicleID uuid.UUID) ([]repository.ExpenseStatsByCurrency, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExpenseCostByCurrency", ctx, vehicleID)
+	ret0, _ := ret[0].([]repository.ExpenseStatsByCurrency)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExpenseCostByCurrency indicates an expected call of GetExpenseCostByCurrency.
+func (mr *MockExpenseRecordRepoMockRecorder) GetExpenseCostByCurrency(ctx, vehicleID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExpenseCostByCurrency", reflect.TypeOf((*MockExpenseRecordRepo)(nil).GetExpenseCostByCurrency), ctx, vehicleID)
+}
+
+// GetExpenseStatsByMonth mocks base method.
+func (m *MockExpenseRecordRepo) GetExpenseStatsByMonth(ctx context.Context, vehicleID uuid.UUID, year int) ([]repository.ExpensePeriodStatsResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExpenseStatsByMonth", ctx, vehicleID, year)
+	ret0, _ := ret[0].([]repository.ExpensePeriodStatsResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExpenseStatsByMonth indicates an expected call of GetExpenseStatsByMonth.
+func (mr *MockExpenseRecordRepoMockRecorder) GetExpenseStatsByMonth(ctx, vehicleID, year any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExpenseStatsByMonth", reflect.TypeOf((*MockExpenseRecordRepo)(nil).GetExpenseStatsByMonth), ctx, vehicleID, year)
+}
+
+// GetExpenseStatsByYear mocks base method.
+func (m *MockExpenseRecordRepo) GetExpenseStatsByYear(ctx context.Context, vehicleID uuid.UUID) ([]repository.ExpensePeriodStatsResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetExpenseStatsByYear", ctx, vehicleID)
+	ret0, _ := ret[0].([]repository.ExpensePeriodStatsResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetExpenseStatsByYear indicates an expected call of GetExpenseStatsByYear.
+func (mr *MockExpenseRecordRepoMockRecorder) GetExpenseStatsByYear(ctx, vehicleID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetExpenseStatsByYear", reflect.TypeOf((*MockExpenseRecordRepo)(nil).GetExpenseStatsByYear), ctx, vehicleID)
+}
+
 // GetLast30DaysTotal mocks base method.
 func (m *MockExpenseRecordRepo) GetLast30DaysTotal(ctx context.Context, vehicleID uuid.UUID) (float64, string, error) {
 	m.ctrl.T.Helper()

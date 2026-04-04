@@ -39,7 +39,7 @@
 
 ### 已完成模块
 
-- **基础设施** ✅ — Go 1.22 + net/http, Viper 配置, Zap 日志 + Lumberjack 轮转, GORM + PostgreSQL, Docker Compose
+- **基础设施** ✅ — Go 1.23 + net/http, Viper 配置, Zap 日志 + Lumberjack 轮转, GORM + PostgreSQL, Docker Compose
 - **中间件** ✅ — CORS, JWT Auth, 请求日志, Panic Recovery, Rate Limit (100 req/s), 中间件链
 - **Auth** ✅ — 注册/登录/刷新/登出, Refresh Token Rotation (SELECT FOR UPDATE 原子消费), 邀请码注册制
 - **User** ✅ — 资料 CRUD, 修改密码, 注销账号 (GDPR)

@@ -8,7 +8,7 @@
 
 | 工具 | 版本要求 | 用途 |
 |------|---------|------|
-| Go | ≥ 1.22.0 | 后端编译运行 |
+| Go | ≥ 1.23.0 | 后端编译运行 |
 | Node.js | ≥ 18.0.0 | 前端构建 |
 | pnpm | ≥ 8.0.0 | 前端包管理 |
 | Docker | ≥ 24.0 | PostgreSQL 容器 |
@@ -18,7 +18,7 @@
 ### 快速检查
 
 ```bash
-go version          # go1.22.x
+go version          # go1.23.x
 node -v             # v18.x 或更高
 pnpm -v             # 8.x 或更高
 docker --version    # Docker 24.x

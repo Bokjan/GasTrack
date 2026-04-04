@@ -38,7 +38,7 @@
 | 层级 | 技术 |
 |------|------|
 | **前端** | React 18 · TypeScript · Vite 5 · Ant Design 5 · ECharts · Zustand · i18next |
-| **后端** | Go 1.22 · net/http 标准库 · GORM · JWT · Viper · Zap |
+| **后端** | Go 1.23 · net/http 标准库 · GORM · JWT · Viper · Zap |
 | **数据库** | PostgreSQL 16 |
 | **包管理** | pnpm workspace (Monorepo) |
 | **部署** | Docker Compose · Nginx（HTTPS + 反向代理）· Let's Encrypt |
@@ -93,7 +93,7 @@ GasTrack/
 
 - **Node.js** >= 18
 - **pnpm** >= 8
-- **Go** >= 1.22
+- **Go** >= 1.23
 - **Docker** & **Docker Compose**
 
 ### 1. 克隆仓库

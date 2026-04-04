@@ -22,7 +22,8 @@ func newStatsService(t *testing.T) (*StatsService, *mockrepo.MockFuelRecordRepo,
 	vehicleRepo := mockrepo.NewMockVehicleRepo(ctrl)
 	userRepo := mockrepo.NewMockUserRepo(ctrl)
 	groupRepo := mockrepo.NewMockGroupRepo(ctrl)
-	svc := NewStatsService(fuelRepo, vehicleRepo, userRepo, groupRepo, zap.NewNop())
+	expenseRepo := mockrepo.NewMockExpenseRecordRepo(ctrl)
+	svc := NewStatsService(fuelRepo, vehicleRepo, userRepo, groupRepo, expenseRepo, zap.NewNop())
 	return svc, fuelRepo, vehicleRepo, userRepo, groupRepo
 }
 
