@@ -6,8 +6,8 @@ import "time"
 
 // CreateExpenseRequest 创建开销记录请求
 type CreateExpenseRequest struct {
-	Category            string  `json:"category" validate:"required,oneof=maintenance repair insurance parking toll car_wash inspection parts fine other"`
-	MaintenanceCategory string  `json:"maintenance_category" validate:"omitempty,oneof=oil_change tire_rotation brake_pads air_filter transmission coolant spark_plugs battery tire_replace inspection custom"`
+	Category            string  `json:"category" validate:"required,oneof=maintenance repair insurance parking toll car_wash inspection parts fine tax other"`
+	MaintenanceCategory string  `json:"maintenance_category" validate:"omitempty"`
 	Title               string  `json:"title" validate:"required,min=1,max=200"`
 	Amount              float64 `json:"amount" validate:"required,gt=0"`
 	CurrencyCode        string  `json:"currency_code" validate:"required,len=3"`
@@ -21,8 +21,8 @@ type CreateExpenseRequest struct {
 
 // UpdateExpenseRequest 编辑开销记录请求（指针字段实现 partial update）
 type UpdateExpenseRequest struct {
-	Category            *string  `json:"category" validate:"omitempty,oneof=maintenance repair insurance parking toll car_wash inspection parts fine other"`
-	MaintenanceCategory *string  `json:"maintenance_category" validate:"omitempty,oneof=oil_change tire_rotation brake_pads air_filter transmission coolant spark_plugs battery tire_replace inspection custom"`
+	Category            *string  `json:"category" validate:"omitempty,oneof=maintenance repair insurance parking toll car_wash inspection parts fine tax other"`
+	MaintenanceCategory *string  `json:"maintenance_category" validate:"omitempty"`
 	Title               *string  `json:"title" validate:"omitempty,min=1,max=200"`
 	Amount              *float64 `json:"amount" validate:"omitempty,gt=0"`
 	CurrencyCode        *string  `json:"currency_code" validate:"omitempty,len=3"`

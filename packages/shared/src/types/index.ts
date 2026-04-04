@@ -650,7 +650,7 @@ export interface ExchangeRateResponse {
 /** 开销类别 */
 export type ExpenseCategory =
   | 'maintenance' | 'repair' | 'insurance' | 'parking'
-  | 'toll' | 'car_wash' | 'inspection' | 'parts' | 'fine' | 'other';
+  | 'toll' | 'car_wash' | 'inspection' | 'parts' | 'fine' | 'tax' | 'other';
 
 /** 后端 ExpenseResponse 字段对齐 */
 export interface ExpenseRecord {

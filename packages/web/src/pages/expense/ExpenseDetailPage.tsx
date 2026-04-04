@@ -40,6 +40,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   inspection: 'gold',
   parts: 'geekblue',
   fine: 'magenta',
+  tax: 'volcano',
   other: 'default',
 };
 
@@ -158,7 +159,9 @@ export default function ExpenseDetailPage() {
 
           {record.maintenance_category && (
             <Descriptions.Item label={t('expense.maintenanceCategory.label')}>
-              <Tag>{t(`expense.maintenanceCategory.${record.maintenance_category}`)}</Tag>
+              {record.maintenance_category.split(',').filter(Boolean).map((cat) => (
+                <Tag key={cat}>{t(`expense.maintenanceCategory.${cat}`)}</Tag>
+              ))}
             </Descriptions.Item>
           )}
 

@@ -49,7 +49,7 @@ const { RangePicker } = DatePicker;
 
 const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   'maintenance', 'repair', 'insurance', 'parking', 'toll',
-  'car_wash', 'inspection', 'parts', 'fine', 'other',
+  'car_wash', 'inspection', 'parts', 'fine', 'tax', 'other',
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -62,6 +62,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   inspection: 'gold',
   parts: 'geekblue',
   fine: 'magenta',
+  tax: 'volcano',
   other: 'default',
 };
 

@@ -32,6 +32,7 @@ function ThemeRoot() {
   return (
     <ConfigProvider
       locale={antdLocale}
+      getPopupContainer={(node) => node?.parentElement || document.body}
       theme={{
         algorithm: isDark ? theme.darkAlgorithm : theme.defaultAlgorithm,
         token: {

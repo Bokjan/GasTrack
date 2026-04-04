@@ -720,6 +720,7 @@
       "inspection": "Inspection",
       "parts": "Parts",
       "fine": "Fine",
+      "tax": "Tax",
       "other": "Other"
     },
     "maintenanceCategory": {

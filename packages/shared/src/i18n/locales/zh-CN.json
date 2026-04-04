@@ -720,6 +720,7 @@
       "inspection": "年检",
       "parts": "配件",
       "fine": "罚单",
+      "tax": "税金",
       "other": "其他"
     },
     "maintenanceCategory": {

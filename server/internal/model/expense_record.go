@@ -19,6 +19,7 @@ const (
 	ExpenseCategoryInspection  ExpenseCategory = "inspection"  // 年检
 	ExpenseCategoryParts       ExpenseCategory = "parts"       // 配件
 	ExpenseCategoryFine        ExpenseCategory = "fine"        // 罚单
+	ExpenseCategoryTax         ExpenseCategory = "tax"         // 税金
 	ExpenseCategoryOther       ExpenseCategory = "other"       // 其他
 )
 
@@ -31,7 +32,7 @@ type ExpenseRecord struct {
 
 	// 开销基本信息
 	Category            ExpenseCategory     `gorm:"size:20;not null;index:idx_expense_records_vehicle_category" json:"category"`
-	MaintenanceCategory MaintenanceCategory `gorm:"size:30" json:"maintenance_category,omitempty"` // 仅 category=maintenance 时有值
+	MaintenanceCategory MaintenanceCategory `gorm:"size:500" json:"maintenance_category,omitempty"` // 逗号分隔，支持多选
 	Title               string              `gorm:"size:200;not null" json:"title"`
 	Amount              float64             `gorm:"type:decimal(10,2);not null" json:"amount"`
 	CurrencyCode        string              `gorm:"size:3;not null" json:"currency_code"`

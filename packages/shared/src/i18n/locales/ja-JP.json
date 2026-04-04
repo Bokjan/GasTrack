@@ -720,6 +720,7 @@
       "inspection": "車検",
       "parts": "部品",
       "fine": "罰金",
+      "tax": "税金",
       "other": "その他"
     },
     "maintenanceCategory": {

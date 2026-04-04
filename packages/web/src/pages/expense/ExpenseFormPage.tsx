@@ -26,7 +26,7 @@ import dayjs from 'dayjs';
 
 const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   'maintenance', 'repair', 'insurance', 'parking', 'toll',
-  'car_wash', 'inspection', 'parts', 'fine', 'other',
+  'car_wash', 'inspection', 'parts', 'fine', 'tax', 'other',
 ];
 
 const MAINTENANCE_CATEGORIES: MaintenanceCategory[] = [
@@ -110,6 +110,9 @@ export default function ExpenseFormPage() {
           form.setFieldsValue({
             ...record,
             expense_date: dayjs(record.expense_date),
+            maintenance_category: record.maintenance_category
+              ? record.maintenance_category.split(',').filter(Boolean)
+              : undefined,
           });
         })
         .catch(() => message.error(t('common.error')))
@@ -128,9 +131,11 @@ export default function ExpenseFormPage() {
       distance_unit: values.distance_unit || defaultDistanceUnit,
     };
 
-    // 非保养类别清除 maintenance_category
+    // 非保养类别清除 maintenance_category；多选数组转逗号分隔字符串
     if (payload.category !== 'maintenance') {
       payload.maintenance_category = undefined;
+    } else if (Array.isArray(payload.maintenance_category)) {
+      payload.maintenance_category = (payload.maintenance_category as unknown as string[]).join(',') as unknown as typeof payload.maintenance_category;
     }
 
     try {
@@ -208,14 +213,14 @@ export default function ExpenseFormPage() {
             </Select>
           </Form.Item>
 
-          {/* 保养子类别（仅 category=maintenance 时显示） */}
+          {/* 保养子类别（仅 category=maintenance 时显示，支持多选） */}
           {selectedCategory === 'maintenance' && (
             <Form.Item
               name="maintenance_category"
               label={t('expense.maintenanceCategory.label')}
               rules={[{ required: true, message: t('common.required') }]}
             >
-              <Select>
+              <Select mode="multiple">
                 {MAINTENANCE_CATEGORIES.map((cat) => (
                   <Select.Option key={cat} value={cat}>
                     {t(`expense.maintenanceCategory.${cat}`)}

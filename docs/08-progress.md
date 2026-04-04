@@ -136,6 +136,7 @@
 - 🚀 **开销记录入口优化** — 在加油记录页和开销记录页之间新增 `Segmented` Tab 切换器，从任一页面可一键切换到另一页面，解决开销记录入口隐蔽的问题；同时为车辆列表页的钱包图标按钮增加 `Tooltip` 提示
 - 🚀 **统计页三 Tab 改造（加油/开销/综合）** — Stats 页新增三个独立视角：⛽ 加油（原有指标+图表不变）、💸 开销（总额/分类/月度趋势+饼图）、📊 综合（加油+开销堆叠柱状图+合并汇总卡片）；后端新增 `GET /vehicles/:id/expense-period-stats` 接口支持开销按月/年聚合+同比；Dashboard 统计卡片新增开销费用和综合总费用展示
 - 🚀 **Dashboard 开销数据接入** — 后端 `GET /stats/overview` 响应新增 `total_expense_cost` / `expense_costs_by_currency` 字段（VehicleStats 和 OverviewStats 均扩展）；Dashboard 单车卡片从 4 张扩为 6 张（⛽加油费/💸开销/综合总费用/里程/油耗/记录数），多车全局概览从 2 张扩为 4 张
+- 🔧 **开销记录体验优化** — 保养项目改为多选（逗号分隔存储，前端 `Select mode="multiple"`）；新增"税金"(tax) 开销类别（全栈 + 三语）；全局 `ConfigProvider.getPopupContainer` 统一修复手机端 Select/DatePicker 下拉滚动穿透问题
 
 ### 2026-04-03
 
