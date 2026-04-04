@@ -6,7 +6,7 @@
 >
 > **内容类型**: `application/json; charset=utf-8`
 >
-> **更新日期**: 2026-03-31
+> **更新日期**: 2026-04-05
 
 ---
 
@@ -650,6 +650,9 @@ GET /api/v1/stats/overview
     "total_distance": 43000.0,
     "avg_consumption": 8.79,
     "currency_code": "CNY",
+    "costs_by_currency": { "CNY": 29800.50 },
+    "total_expense_cost": 5200.00,
+    "expense_costs_by_currency": { "CNY": 5200.00 },
     "vehicles": [
       {
         "vehicle_id": "...",

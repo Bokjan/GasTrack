@@ -63,7 +63,8 @@ GasTrack 是一款面向全球用户的油耗/电耗记录与分析系统：
 - ✅ 费用趋势图：柱状图展示费用变化
 - ✅ 往年同期对比：按月模式下自动叠加显示去年同期数据（灰色虚线/柱）
 - ✅ 多维度统计卡片：费用、平均油耗/电耗、总里程、加油/充电次数
-- ✅ 仪表盘按车辆维度独立展示统计（多车不混合汇总，油车/电车分别显示）
+- ✅ 仪表盘按车辆维度独立展示统计（多车不混合汇总，油车/电车分别显示）；统计卡片包含加油费用、其他开销、综合总费用
+- ✅ 统计页三 Tab 视角：⛽ 加油（油耗/费用/里程/记录数图表+同比）、💸 开销（月度趋势+分类饼图+同比）、📊 综合（堆叠柱状图+合并汇总）
 - ✅ 前端单位换算展示 — 后端 API 已按用户偏好完成全部换算（油耗、加油量、里程），前端使用 `convertFuelEfficiency` 做 Tooltip 多单位展示 + `litersToGallons` 处理 tank_capacity
 - 🔲 多车辆对比图表 (P1)
 - ✅ 数据导出 CSV/ZIP/JSON — GDPR 数据可携带权，`GET /api/v1/users/me/export?format=csv|zip|json&scope=basic|full`（详见 4.4.2）
@@ -305,7 +306,7 @@ GasTrack 是一款面向全球用户的油耗/电耗记录与分析系统：
 
 ### 7.2 边界约束
 
-- 不修改现有 `fuel_records` 和 `VehicleStatsResponse`，避免污染油耗计算
+- 不修改现有 `fuel_records` 表结构，避免污染油耗计算
 - `receipt_url` 仅字段预留，不在 MVP 中实现上传
-- 开销统计独立输出，不纳入现有 Dashboard 或 StatsPage
+- ✅ 开销统计已集成到 Dashboard（综合费用卡片）和 StatsPage（三 Tab：加油/开销/综合）
 - 多币种记录存原币种，统计按 `totals_by_currency` 分组返回

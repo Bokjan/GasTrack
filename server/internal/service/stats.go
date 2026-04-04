@@ -21,6 +21,7 @@ type StatsService struct {
 	vehicleRepo repository.VehicleRepo
 	userRepo    repository.UserRepo
 	groupRepo   repository.GroupRepo
+	expenseRepo repository.ExpenseRecordRepo
 	logger      *zap.Logger
 }
 
@@ -30,6 +31,7 @@ func NewStatsService(
 	vehicleRepo repository.VehicleRepo,
 	userRepo repository.UserRepo,
 	groupRepo repository.GroupRepo,
+	expenseRepo repository.ExpenseRecordRepo,
 	logger *zap.Logger,
 ) *StatsService {
 	return &StatsService{
@@ -37,6 +39,7 @@ func NewStatsService(
 		vehicleRepo: vehicleRepo,
 		userRepo:    userRepo,
 		groupRepo:   groupRepo,
+		expenseRepo: expenseRepo,
 		logger:      logger,
 	}
 }
@@ -170,7 +173,9 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 	var totalCost float64
 	var totalFuel float64
 	var totalDistance float64
+	var totalExpenseCost float64
 	overallCostsByCurrency := make(map[string]float64)
+	overallExpenseCostsByCurrency := make(map[string]float64)
 	vehicleStats := make([]dto.VehicleStatsResponse, 0, len(vehicles))
 
 	isImperial := user.UnitSystem == "imperial"
@@ -191,6 +196,19 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 			}
 		}
 
+		// 获取该车辆的开销统计
+		vehicleExpenseCostMap := make(map[string]float64)
+		var vehicleExpenseTotal float64
+		expenseCosts, err := s.expenseRepo.GetExpenseCostByCurrency(ctx, v.ID)
+		if err == nil {
+			for _, c := range expenseCosts {
+				vehicleExpenseCostMap[c.CurrencyCode] = c.TotalAmount
+				overallExpenseCostsByCurrency[c.CurrencyCode] += c.TotalAmount
+				vehicleExpenseTotal += c.TotalAmount
+			}
+		}
+		totalExpenseCost += vehicleExpenseTotal
+
 		totalRecords += stats.TotalRecords
 		totalCost += stats.TotalCost
 		totalFuel += stats.TotalFuel
@@ -203,16 +221,18 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 			vDist = convert.ConvertDistance(vDist, convert.UnitKm, convert.UnitMile)
 		}
 		vehicleStats = append(vehicleStats, dto.VehicleStatsResponse{
-			VehicleID:       v.ID.String(),
-			VehicleName:     v.Name,
-			TotalRecords:    stats.TotalRecords,
-			TotalFuel:       vFuel,
-			TotalCost:       stats.TotalCost,
-			TotalDistance:   vDist,
-			AvgEfficiency:   convert.ConvertFuelEfficiency(stats.AvgEfficiency, convert.UnitL100km, targetUnit),
-			CurrencyCode:    user.CurrencyCode,
-			FuelUnit:        user.FuelEfficiencyUnit,
-			CostsByCurrency: vehicleCostMap,
+			VehicleID:              v.ID.String(),
+			VehicleName:            v.Name,
+			TotalRecords:           stats.TotalRecords,
+			TotalFuel:              vFuel,
+			TotalCost:              stats.TotalCost,
+			TotalDistance:           vDist,
+			AvgEfficiency:          convert.ConvertFuelEfficiency(stats.AvgEfficiency, convert.UnitL100km, targetUnit),
+			CurrencyCode:           user.CurrencyCode,
+			FuelUnit:               user.FuelEfficiencyUnit,
+			CostsByCurrency:        vehicleCostMap,
+			TotalExpenseCost:       vehicleExpenseTotal,
+			ExpenseCostsByCurrency: vehicleExpenseCostMap,
 		})
 	}
 
@@ -233,15 +253,17 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 	}
 
 	return &dto.OverviewStatsResponse{
-		TotalVehicles:   int64(len(vehicles)),
-		TotalRecords:    totalRecords,
-		TotalFuel:       overviewFuel,
-		TotalCost:       totalCost,
-		TotalDistance:   overviewDist,
-		AvgConsumption:  avgConsumption,
-		CurrencyCode:    user.CurrencyCode,
-		CostsByCurrency: overallCostsByCurrency,
-		Vehicles:        vehicleStats,
+		TotalVehicles:          int64(len(vehicles)),
+		TotalRecords:           totalRecords,
+		TotalFuel:              overviewFuel,
+		TotalCost:              totalCost,
+		TotalDistance:           overviewDist,
+		AvgConsumption:         avgConsumption,
+		CurrencyCode:           user.CurrencyCode,
+		CostsByCurrency:        overallCostsByCurrency,
+		Vehicles:               vehicleStats,
+		TotalExpenseCost:       totalExpenseCost,
+		ExpenseCostsByCurrency: overallExpenseCostsByCurrency,
 	}, nil
 }
 
@@ -356,5 +378,74 @@ func (s *StatsService) GetPeriodStats(ctx context.Context, vehicleID, userID uui
 		FuelUnit:     user.FuelEfficiencyUnit,
 		Items:        items,
 		PrevItems:    prevItems,
+	}, nil
+}
+
+// GetExpensePeriodStats 获取按时段（月/年）聚合的开销统计数据 + 往年同比
+func (s *StatsService) GetExpensePeriodStats(ctx context.Context, vehicleID, userID uuid.UUID, period string, year int) (*dto.ExpensePeriodStatsResponse, error) {
+	vehicle, err := s.verifyVehicleAccess(ctx, vehicleID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := s.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return nil, apperror.ErrInternal("fetching user", err)
+	}
+
+	convertItems := func(raw []repository.ExpensePeriodStatsResult) []dto.ExpensePeriodStatsItem {
+		items := make([]dto.ExpensePeriodStatsItem, len(raw))
+		for i, r := range raw {
+			items[i] = dto.ExpensePeriodStatsItem{
+				Period:       r.Period,
+				TotalRecords: r.TotalRecords,
+				TotalAmount:  r.TotalAmount,
+			}
+		}
+		return items
+	}
+
+	var items, prevItems []dto.ExpensePeriodStatsItem
+
+	if period == "month" {
+		raw, err := s.expenseRepo.GetExpenseStatsByMonth(ctx, vehicleID, year)
+		if err != nil {
+			return nil, apperror.ErrInternal("fetching monthly expense stats", err)
+		}
+		items = convertItems(raw)
+
+		rawPrev, err := s.expenseRepo.GetExpenseStatsByMonth(ctx, vehicleID, year-1)
+		if err != nil {
+			return nil, apperror.ErrInternal("fetching prev year monthly expense stats", err)
+		}
+		prevItems = convertItems(rawPrev)
+	} else {
+		raw, err := s.expenseRepo.GetExpenseStatsByYear(ctx, vehicleID)
+		if err != nil {
+			return nil, apperror.ErrInternal("fetching yearly expense stats", err)
+		}
+		items = convertItems(raw)
+		prevItems = []dto.ExpensePeriodStatsItem{}
+	}
+
+	// 按币种分组统计
+	costsByCurrency, err := s.expenseRepo.GetExpenseCostByCurrency(ctx, vehicleID)
+	if err != nil {
+		return nil, apperror.ErrInternal("fetching expense costs by currency", err)
+	}
+	costMap := make(map[string]float64, len(costsByCurrency))
+	for _, c := range costsByCurrency {
+		costMap[c.CurrencyCode] = c.TotalAmount
+	}
+
+	return &dto.ExpensePeriodStatsResponse{
+		VehicleID:       vehicleID.String(),
+		VehicleName:     vehicle.Name,
+		Period:          period,
+		Year:            year,
+		CurrencyCode:    user.CurrencyCode,
+		CostsByCurrency: costMap,
+		Items:           items,
+		PrevItems:       prevItems,
 	}, nil
 }

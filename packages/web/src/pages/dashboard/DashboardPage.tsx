@@ -2,11 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Row, Col, Card, Statistic, Button, Empty, Space, List, Tag, Divider, Tooltip } from 'antd';
 import {
-  CarOutlined,
-  FileTextOutlined,
-  DollarOutlined,
-  DashboardOutlined,
-  ThunderboltOutlined,
   PlusOutlined,
   RightOutlined,
 } from '@ant-design/icons';
@@ -74,10 +69,17 @@ export default function DashboardPage() {
     ? getConvertedCost(overview.costs_by_currency, overview.total_cost)
     : 0;
 
-  /** 汇率参考换算：总费用 → 另一种参考币种 */
+  /** 全局概览的换算后开销总额 */
+  const overviewExpenseCost = overview
+    ? getConvertedCost(overview.expense_costs_by_currency, overview.total_expense_cost)
+    : 0;
+
+  const overviewCombinedCost = overviewConvertedCost + overviewExpenseCost;
+
+  /** 汇率参考换算：综合总费用 → 另一种参考币种 */
   const refCurrency = getReferenceCurrency(currency, user?.reference_currency);
-  const refTotalCost = overviewConvertedCost && ratesData?.rates
-    ? convertAmount(overviewConvertedCost, currency, refCurrency, ratesData.rates)
+  const refCombinedCost = overviewCombinedCost && ratesData?.rates
+    ? convertAmount(overviewCombinedCost, currency, refCurrency, ratesData.rates)
     : null;
 
   /** 根据 vehicle_id 找到对应车辆信息 */
@@ -88,41 +90,62 @@ export default function DashboardPage() {
   const renderVehicleStats = (vs: VehicleStats, vehicle?: Vehicle) => {
     const isEv = vehicle ? isElectricVehicle(vehicle.fuel_type) : false;
     const vehicleConvertedCost = getConvertedCost(vs.costs_by_currency, vs.total_cost);
+    const vehicleExpenseCost = getConvertedCost(vs.expense_costs_by_currency, vs.total_expense_cost);
+    const vehicleCombinedCost = vehicleConvertedCost + vehicleExpenseCost;
     return (
       <Row gutter={isMobile ? [8, 8] : [16, 16]}>
-        <Col xs={12} sm={6}>
+        <Col xs={12} sm={6} lg={4}>
           <Card loading={statsLoading} size="small">
             <Statistic
               title={t('stats.totalRecords')}
               value={vs.total_records || 0}
-              prefix={<FileTextOutlined />}
+              prefix={<span>📋</span>}
             />
           </Card>
         </Col>
-        <Col xs={12} sm={6}>
+        <Col xs={12} sm={6} lg={4}>
           <Card loading={statsLoading} size="small">
             <Statistic
-              title={t('stats.totalCost')}
+              title={t('stats.fuelCost')}
               value={formatCurrency(vehicleConvertedCost, currency)}
-              prefix={<DollarOutlined />}
+              prefix={<span>⛽</span>}
             />
           </Card>
         </Col>
-        <Col xs={12} sm={6}>
+        <Col xs={12} sm={6} lg={4}>
+          <Card loading={statsLoading} size="small">
+            <Statistic
+              title={t('stats.expenseCost')}
+              value={formatCurrency(vehicleExpenseCost, currency)}
+              prefix={<span>💸</span>}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6} lg={4}>
+          <Card loading={statsLoading} size="small">
+            <Statistic
+              title={t('stats.combinedCost')}
+              value={formatCurrency(vehicleCombinedCost, currency)}
+              prefix={<span>💰</span>}
+              valueStyle={{ color: 'var(--ant-color-primary)' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6} lg={4}>
           <Card loading={statsLoading} size="small">
             <Statistic
               title={t('stats.totalDistance')}
               value={`${formatNumber(vs.total_distance, 0)} ${distanceUnit}`}
-              prefix={<CarOutlined />}
+              prefix={<span>🛣️</span>}
             />
           </Card>
         </Col>
-        <Col xs={12} sm={6}>
+        <Col xs={12} sm={6} lg={4}>
           <Card loading={statsLoading} size="small">
             <Statistic
               title={isEv ? t('stats.avgEnergyConsumption') : t('stats.avgConsumption')}
               value={vs.avg_efficiency ? `${formatNumber(vs.avg_efficiency)} ${vs.fuel_efficiency_unit || efficiencyUnit}` : '-'}
-              prefix={isEv ? <ThunderboltOutlined /> : <DashboardOutlined />}
+              prefix={isEv ? <span>⚡</span> : <span>📊</span>}
             />
           </Card>
         </Col>
@@ -145,26 +168,45 @@ export default function DashboardPage() {
           {hasMultipleVehicles ? (
             // 多辆车：按车辆分组展示独立统计
             <>
-              {/* 全局概览：仅总车辆数 + 总费用（跨车有意义的指标） */}
+              {/* 全局概览 */}
               <Row gutter={isMobile ? [8, 8] : [16, 16]} style={{ marginBottom: 16 }}>
                 <Col xs={12} sm={6}>
                   <Card loading={statsLoading} size="small">
                     <Statistic
                       title={t('stats.totalRecords')}
                       value={overview?.total_records || 0}
-                      prefix={<FileTextOutlined />}
+                      prefix={<span>📋</span>}
+                    />
+                  </Card>
+                </Col>
+                <Col xs={12} sm={6}>
+                  <Card loading={statsLoading} size="small">
+                    <Statistic
+                      title={t('stats.fuelCost')}
+                      value={overview ? formatCurrency(overviewConvertedCost, currency) : '-'}
+                      prefix={<span>⛽</span>}
+                    />
+                  </Card>
+                </Col>
+                <Col xs={12} sm={6}>
+                  <Card loading={statsLoading} size="small">
+                    <Statistic
+                      title={t('stats.expenseCost')}
+                      value={overview ? formatCurrency(overviewExpenseCost, currency) : '-'}
+                      prefix={<span>💸</span>}
                     />
                   </Card>
                 </Col>
                 <Col xs={12} sm={6}>
                   <Tooltip
-                    title={refTotalCost != null ? t('exchangeRate.referenceAmount', { amount: formatCurrency(refTotalCost, refCurrency) }) : undefined}
+                    title={refCombinedCost != null ? t('exchangeRate.referenceAmount', { amount: formatCurrency(refCombinedCost, refCurrency) }) : undefined}
                   >
                     <Card loading={statsLoading} size="small">
                       <Statistic
-                        title={t('stats.totalCost')}
-                        value={overview ? formatCurrency(overviewConvertedCost, currency) : '-'}
-                        prefix={<DollarOutlined />}
+                        title={t('stats.combinedCost')}
+                        value={overview ? formatCurrency(overviewCombinedCost, currency) : '-'}
+                        prefix={<span>💰</span>}
+                        valueStyle={{ color: 'var(--ant-color-primary)' }}
                       />
                     </Card>
                   </Tooltip>
@@ -219,7 +261,7 @@ export default function DashboardPage() {
       <Card
         title={
           <Space>
-            <CarOutlined />
+            <span>🚗</span>
             <span>{t('nav.vehicles')}</span>
           </Space>
         }

@@ -128,3 +128,35 @@ func (h *StatsHandler) GetPeriodStats(w http.ResponseWriter, r *http.Request) {
 
 	respond.OK(w, result)
 }
+
+// GetExpensePeriodStats 获取按时段聚合的开销统计（月/年）
+// GET /api/v1/vehicles/{id}/expense-period-stats?period=month&year=2026
+func (h *StatsHandler) GetExpensePeriodStats(w http.ResponseWriter, r *http.Request) {
+	userID, ok := middleware.GetUserID(r.Context())
+	if !ok {
+		respond.Unauthorized(w, "missing user identity")
+		return
+	}
+
+	vehicleID, err := decode.PathParamUUID(r, "id")
+	if err != nil {
+		respond.BadRequest(w, err.Error())
+		return
+	}
+
+	period := decode.QueryString(r, "period", "month")
+	if period != "month" && period != "year" {
+		respond.BadRequest(w, "period must be 'month' or 'year'")
+		return
+	}
+
+	year := decode.QueryInt(r, "year", time.Now().Year())
+
+	result, err := h.statsService.GetExpensePeriodStats(r.Context(), vehicleID, userID, period, year)
+	if err != nil {
+		handleAppError(w, h.logger, err)
+		return
+	}
+
+	respond.OK(w, result)
+}

@@ -113,6 +113,9 @@ type ExpenseRecordRepo interface {
 	GetLast30DaysTotal(ctx context.Context, vehicleID uuid.UUID) (float64, string, error)
 	GetTotalRecords(ctx context.Context, vehicleID uuid.UUID) (int64, error)
 	GetDistinctVendorNames(ctx context.Context, userID uuid.UUID, vehicleID *uuid.UUID, limit int) ([]string, error)
+	GetExpenseStatsByMonth(ctx context.Context, vehicleID uuid.UUID, year int) ([]ExpensePeriodStatsResult, error)
+	GetExpenseStatsByYear(ctx context.Context, vehicleID uuid.UUID) ([]ExpensePeriodStatsResult, error)
+	GetExpenseCostByCurrency(ctx context.Context, vehicleID uuid.UUID) ([]ExpenseStatsByCurrency, error)
 }
 
 // RefreshTokenRepo 刷新令牌数据访问接口

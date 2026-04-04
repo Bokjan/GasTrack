@@ -1,6 +1,6 @@
 # GasTrack 项目规划
 
-> **最后更新**: 2026-03-31
+> **最后更新**: 2026-04-05
 
 ## 1. 项目结构
 
@@ -81,7 +81,7 @@ GasTrack/
 
 | 任务 | 状态 |
 |------|------|
-| PWA 支持（离线 + 安装到桌面） | 🔲 |
+| PWA 支持（离线 + 安装到桌面） | ✅ |
 | 多车辆对比图表 | 🔲 |
 | 文件上传（车辆照片 + 头像） | 🔲 |
 | 更多语言（韩语/繁中/西/德/法） | 🔲 |
@@ -151,7 +151,8 @@ GET    /api/v1/vehicles/{id}/stations      # ✅ 站名建议
 GET    /api/v1/vehicles/{id}/stats             # ✅ 车辆统计
 GET    /api/v1/vehicles/{id}/efficiency-trend  # ✅ 油耗趋势
 GET    /api/v1/vehicles/{id}/period-stats      # ✅ 按时段聚合（月/年 + 同比）
-GET    /api/v1/stats/overview                  # ✅ 全局总览
+GET    /api/v1/vehicles/{id}/expense-period-stats # ✅ 开销按时段聚合（月/年 + 同比）
+GET    /api/v1/stats/overview                  # ✅ 全局总览（含开销汇总）
 
 # 保养提醒
 GET    /api/v1/reminders                   # ✅ 提醒列表

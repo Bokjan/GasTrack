@@ -18,6 +18,7 @@ import type {
   OverviewStats,
   FuelEfficiencyTrendResponse,
   PeriodStatsResponse,
+  ExpensePeriodStatsResponse,
   PaginatedResponse,
   RegistrationModeResponse,
   ValidateInviteResponse,
@@ -193,6 +194,13 @@ export const statsApi = {
   periodStats: (vehicleId: string, params: { period: 'month' | 'year'; year?: number }) =>
     apiClient.get<ApiResponse<PeriodStatsResponse>>(
       `/vehicles/${vehicleId}/period-stats`,
+      { params },
+    ),
+
+  /** 后端路由: GET /vehicles/:id/expense-period-stats?period=month&year=2026 */
+  expensePeriodStats: (vehicleId: string, params: { period: 'month' | 'year'; year?: number }) =>
+    apiClient.get<ApiResponse<ExpensePeriodStatsResponse>>(
+      `/vehicles/${vehicleId}/expense-period-stats`,
       { params },
     ),
 };

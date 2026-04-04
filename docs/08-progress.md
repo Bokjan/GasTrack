@@ -1,6 +1,6 @@
 # GasTrack 需求完成进度
 
-> **更新日期**: 2026-04-01
+> **更新日期**: 2026-04-05
 >
 > **当前阶段**: 第一期 MVP（基本完成）
 
@@ -45,7 +45,7 @@
 - **User** ✅ — 资料 CRUD, 修改密码, 注销账号 (GDPR)
 - **Vehicle** ✅ — CRUD (含电动车 battery_capacity), 默认车辆 (事务原子), 归档
 - **FuelRecord** ✅ — CRUD, 分页, 站名建议, 油耗/电耗自动计算, `GetCostByCurrency` 按币种分组聚合费用
-- **Stats** ✅ — 车辆统计, 全局总览, 油耗趋势, 按月/年聚合 + 同比, `costs_by_currency` 多币种费用明细
+- **Stats** ✅ — 车辆统计, 全局总览（含开销汇总）, 油耗趋势, 按月/年聚合 + 同比, `costs_by_currency` 多币种费用明细, 开销按月/年聚合 + 同比 (`expense-period-stats` API)
 - **Invite** ✅ — 邀请码 CRUD, GT-XXXXXX 格式, 并发安全消费
 - **Export** ✅ — 数据导出 CSV/ZIP/JSON（scope=basic/full，10 个数据源，UTF-8 BOM，ZIP 多文件 + manifest.json）
 - **Reminder** ✅ — 保养提醒 CRUD, 11 种保养类型, 3 种触发方式, 自动计算下次保养
@@ -73,10 +73,10 @@
 - **共享包** ✅ — Types (完全对齐后端 DTO), API 层 (Axios + 401 自动刷新), Zustand (auth/vehicle/theme), i18n (3 语), Constants, Utils (formatDateTime 时区感知, `sumConvertedCostsByCurrency` 多币种汇率换算)
 - **页面** ✅:
   - 登录/注册 (邀请码实时校验)
-  - 仪表盘 (按车辆分组统计, 多币种费用汇率换算)
+  - 仪表盘 (按车辆分组统计, 多币种费用汇率换算, 加油费用+开销+综合总费用)
   - 车辆列表/表单 (含电动车适配)
-  - 加油记录列表/表单/详情 (三值自动计算, 站点补全, 智能分析)
-  - 统计 (月/年维度 + 同比, ECharts, 多币种费用汇率换算)
+  - 加油记录列表/表单/详情 (三值自动计算, 站点补全, 智能分析, Segmented Tab 切换开销)
+  - 统计 (三 Tab: ⛽加油/💸开销/📊综合, 月/年维度 + 同比, ECharts, 多币种费用汇率换算)
   - 邀请码管理 (Table/卡片, 复制/启停/删除)
   - 保养提醒 (卡片式管理, 逾期标识)
   - 设置 (时区, 外观主题, 语言, 单位, 数据导出 CSV/ZIP/JSON + 范围/格式选择, 账号注销)
@@ -134,6 +134,8 @@
 ### 2026-04-05
 
 - 🚀 **开销记录入口优化** — 在加油记录页和开销记录页之间新增 `Segmented` Tab 切换器，从任一页面可一键切换到另一页面，解决开销记录入口隐蔽的问题；同时为车辆列表页的钱包图标按钮增加 `Tooltip` 提示
+- 🚀 **统计页三 Tab 改造（加油/开销/综合）** — Stats 页新增三个独立视角：⛽ 加油（原有指标+图表不变）、💸 开销（总额/分类/月度趋势+饼图）、📊 综合（加油+开销堆叠柱状图+合并汇总卡片）；后端新增 `GET /vehicles/:id/expense-period-stats` 接口支持开销按月/年聚合+同比；Dashboard 统计卡片新增开销费用和综合总费用展示
+- 🚀 **Dashboard 开销数据接入** — 后端 `GET /stats/overview` 响应新增 `total_expense_cost` / `expense_costs_by_currency` 字段（VehicleStats 和 OverviewStats 均扩展）；Dashboard 单车卡片从 4 张扩为 6 张（⛽加油费/💸开销/综合总费用/里程/油耗/记录数），多车全局概览从 2 张扩为 4 张
 
 ### 2026-04-03
 

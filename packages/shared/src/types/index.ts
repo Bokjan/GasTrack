@@ -256,6 +256,10 @@ export interface VehicleStats {
   fuel_efficiency_unit: string;
   /** 按原始入账币种分组的费用明细 */
   costs_by_currency?: Record<string, number>;
+  /** 其他开销总额 */
+  total_expense_cost?: number;
+  /** 按原始入账币种分组的开销明细 */
+  expense_costs_by_currency?: Record<string, number>;
 }
 
 /** 后端 OverviewStatsResponse 字段对齐 */
@@ -270,6 +274,10 @@ export interface OverviewStats {
   /** 按原始入账币种分组的总费用明细 */
   costs_by_currency?: Record<string, number>;
   vehicles: VehicleStats[];
+  /** 全局其他开销总额 */
+  total_expense_cost?: number;
+  /** 全局按币种分组的开销明细 */
+  expense_costs_by_currency?: Record<string, number>;
 }
 
 /** 后端 FuelEfficiencyTrendItem 字段对齐 */
@@ -309,6 +317,27 @@ export interface PeriodStatsResponse {
   fuel_efficiency_unit: string;
   items: PeriodStatsItem[];
   prev_items: PeriodStatsItem[];
+}
+
+// ---------- Expense Period Stats ----------
+
+/** 后端 ExpensePeriodStatsItem 字段对齐 */
+export interface ExpensePeriodStatsItem {
+  period: string;
+  total_records: number;
+  total_amount: number;
+}
+
+/** 后端 ExpensePeriodStatsResponse 字段对齐 */
+export interface ExpensePeriodStatsResponse {
+  vehicle_id: string;
+  vehicle_name: string;
+  period: string;
+  year?: number;
+  currency_code: string;
+  costs_by_currency?: Record<string, number>;
+  items: ExpensePeriodStatsItem[];
+  prev_items: ExpensePeriodStatsItem[];
 }
 
 // ---------- Reminder ----------

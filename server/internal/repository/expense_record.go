@@ -251,6 +251,66 @@ func (r *ExpenseRecordRepository) GetTotalRecords(ctx context.Context, vehicleID
 	return total, err
 }
 
+// ExpensePeriodStatsResult 按时段聚合开销统计结果
+type ExpensePeriodStatsResult struct {
+	Period       string  `json:"period"`
+	TotalRecords int     `json:"total_records"`
+	TotalAmount  float64 `json:"total_amount"`
+}
+
+// GetExpenseStatsByMonth 按月聚合某年的开销统计数据
+func (r *ExpenseRecordRepository) GetExpenseStatsByMonth(ctx context.Context, vehicleID uuid.UUID, year int) ([]ExpensePeriodStatsResult, error) {
+	var results []ExpensePeriodStatsResult
+
+	start := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(year+1, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	err := r.db.WithContext(ctx).Model(&model.ExpenseRecord{}).
+		Select(`
+			TO_CHAR(expense_date, 'YYYY-MM') as period,
+			COUNT(*) as total_records,
+			COALESCE(SUM(amount), 0) as total_amount
+		`).
+		Where("vehicle_id = ? AND expense_date >= ? AND expense_date < ?", vehicleID, start, end).
+		Group("period").
+		Order("period ASC").
+		Scan(&results).Error
+	return results, err
+}
+
+// GetExpenseStatsByYear 按年聚合全部年份的开销统计数据
+func (r *ExpenseRecordRepository) GetExpenseStatsByYear(ctx context.Context, vehicleID uuid.UUID) ([]ExpensePeriodStatsResult, error) {
+	var results []ExpensePeriodStatsResult
+
+	err := r.db.WithContext(ctx).Model(&model.ExpenseRecord{}).
+		Select(`
+			TO_CHAR(expense_date, 'YYYY') as period,
+			COUNT(*) as total_records,
+			COALESCE(SUM(amount), 0) as total_amount
+		`).
+		Where("vehicle_id = ?", vehicleID).
+		Group("period").
+		Order("period ASC").
+		Scan(&results).Error
+	return results, err
+}
+
+// GetExpenseCostByCurrency 按币种分组统计某车辆的总开销
+func (r *ExpenseRecordRepository) GetExpenseCostByCurrency(ctx context.Context, vehicleID uuid.UUID) ([]ExpenseStatsByCurrency, error) {
+	var results []ExpenseStatsByCurrency
+	err := r.db.WithContext(ctx).Model(&model.ExpenseRecord{}).
+		Select(`
+			currency_code,
+			COALESCE(SUM(amount), 0) as total_amount,
+			COUNT(*) as record_count
+		`).
+		Where("vehicle_id = ?", vehicleID).
+		Group("currency_code").
+		Order("total_amount DESC").
+		Scan(&results).Error
+	return results, err
+}
+
 // GetDistinctVendorNames 获取某车辆去重的商家名列表（按使用频次降序）
 func (r *ExpenseRecordRepository) GetDistinctVendorNames(ctx context.Context, userID uuid.UUID, vehicleID *uuid.UUID, limit int) ([]string, error) {
 	var names []string

@@ -96,6 +96,7 @@ func New(
 	mux.Handle("GET /api/v1/vehicles/{id}/stats", auth(http.HandlerFunc(statsHandler.GetVehicleStats)))
 	mux.Handle("GET /api/v1/vehicles/{id}/efficiency-trend", auth(http.HandlerFunc(statsHandler.GetEfficiencyTrend)))
 	mux.Handle("GET /api/v1/vehicles/{id}/period-stats", auth(http.HandlerFunc(statsHandler.GetPeriodStats)))
+	mux.Handle("GET /api/v1/vehicles/{id}/expense-period-stats", auth(http.HandlerFunc(statsHandler.GetExpensePeriodStats)))
 	mux.Handle("GET /api/v1/stats/overview", auth(http.HandlerFunc(statsHandler.GetOverview)))
 
 	// 汇率参考

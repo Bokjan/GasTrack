@@ -18,6 +18,9 @@ type VehicleStatsResponse struct {
 	CurrencyCode    string             `json:"currency_code"`        // 用户偏好币种
 	FuelUnit        string             `json:"fuel_efficiency_unit"` // 用户偏好的油耗单位
 	CostsByCurrency map[string]float64 `json:"costs_by_currency"`   // 按原始入账币种分组的费用明细
+	// 开销统计
+	TotalExpenseCost       float64            `json:"total_expense_cost"`        // 其他开销总额
+	ExpenseCostsByCurrency map[string]float64 `json:"expense_costs_by_currency"` // 按原始入账币种分组的开销明细
 }
 
 // OverviewStatsResponse 全局统计总览响应
@@ -31,6 +34,9 @@ type OverviewStatsResponse struct {
 	CurrencyCode    string                 `json:"currency_code"`
 	CostsByCurrency map[string]float64     `json:"costs_by_currency"` // 按原始入账币种分组的总费用明细
 	Vehicles        []VehicleStatsResponse `json:"vehicles"`
+	// 开销统计
+	TotalExpenseCost       float64            `json:"total_expense_cost"`        // 全局其他开销总额
+	ExpenseCostsByCurrency map[string]float64 `json:"expense_costs_by_currency"` // 全局按币种分组的开销明细
 }
 
 // ExpenseStatsRequest 费用统计请求参数
@@ -90,4 +96,25 @@ type FuelEfficiencyTrendResponse struct {
 	VehicleName    string                    `json:"vehicle_name"`
 	EfficiencyUnit string                    `json:"efficiency_unit"` // L/100km / km/L / MPG
 	Items          []FuelEfficiencyTrendItem `json:"items"`
+}
+
+// --- 开销时段统计 ---
+
+// ExpensePeriodStatsItem 开销时段统计单项
+type ExpensePeriodStatsItem struct {
+	Period       string  `json:"period"`        // "2026-01" 或 "2026"
+	TotalRecords int     `json:"total_records"`
+	TotalAmount  float64 `json:"total_amount"`
+}
+
+// ExpensePeriodStatsResponse 开销时段统计响应（含往年同比数据）
+type ExpensePeriodStatsResponse struct {
+	VehicleID       string                   `json:"vehicle_id"`
+	VehicleName     string                   `json:"vehicle_name"`
+	Period          string                   `json:"period"`          // "month" 或 "year"
+	Year            int                      `json:"year,omitempty"`
+	CurrencyCode    string                   `json:"currency_code"`
+	CostsByCurrency map[string]float64       `json:"costs_by_currency"` // 按原始入账币种分组的开销明细
+	Items           []ExpensePeriodStatsItem `json:"items"`
+	PrevItems       []ExpensePeriodStatsItem `json:"prev_items"`
 }
