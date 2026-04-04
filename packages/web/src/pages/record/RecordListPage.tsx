@@ -11,6 +11,7 @@ import {
   Typography,
   Tooltip,
   Pagination,
+  Segmented,
 } from 'antd';
 import {
   PlusOutlined,
@@ -392,6 +393,19 @@ export default function RecordListPage() {
           {isMobile ? '' : t('fuelRecord.addRecord')}
         </Button>
       </div>
+
+      <Segmented
+        value="records"
+        options={[
+          { label: t('fuelRecord.title'), value: 'records', icon: <span>⛽</span> },
+          { label: t('expense.title'), value: 'expenses', icon: <span>💸</span> },
+        ]}
+        onChange={(val) => {
+          if (val === 'expenses') navigate(`/vehicles/${vehicleId}/expenses`, { replace: true });
+        }}
+        block={isMobile}
+        style={{ marginBottom: 16 }}
+      />
 
       {vehicle && (
         <Card size="small" style={{ marginBottom: 16 }}>

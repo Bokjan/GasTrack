@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Button, List, Tag, Space, Popconfirm, message, Empty } from 'antd';
+import { Card, Button, List, Tag, Space, Popconfirm, message, Empty, Tooltip } from 'antd';
 import {
   PlusOutlined,
   EditOutlined,
@@ -84,15 +84,16 @@ export default function VehicleListPage() {
                       if (!vehicle.is_default) handleSetDefault(vehicle.id);
                     }}
                   />,
-                  <Button
-                    key="expenses"
-                    type="text"
-                    icon={<WalletOutlined />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/vehicles/${vehicle.id}/expenses`);
-                    }}
-                  />,
+                  <Tooltip title={t('expense.title')} key="expenses">
+                    <Button
+                      type="text"
+                      icon={<WalletOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/vehicles/${vehicle.id}/expenses`);
+                      }}
+                    />
+                  </Tooltip>,
                   <Button
                     key="edit"
                     type="text"

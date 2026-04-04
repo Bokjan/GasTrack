@@ -131,6 +131,10 @@
 
 > 仅记录功能级别变更摘要，详细实现细节见 Git commit 历史。
 
+### 2026-04-05
+
+- 🚀 **开销记录入口优化** — 在加油记录页和开销记录页之间新增 `Segmented` Tab 切换器，从任一页面可一键切换到另一页面，解决开销记录入口隐蔽的问题；同时为车辆列表页的钱包图标按钮增加 `Tooltip` 提示
+
 ### 2026-04-03
 
 - 🔧 **i18n 漏翻专项修复** — 修复设置页汇率参考卡片 2 处国际化问题（`ja-JP` 缺失 `exchangeRate.currencyColumnName`、汇率数值列标题改为走 i18n key），并补齐三语语言包差异项（`invite.maxUsesPlaceholder`、通知结构化 message/direction keys），同时去掉 `exchangeRateStore` 的英文硬编码兜底，错误态统一由页面翻译文案承接

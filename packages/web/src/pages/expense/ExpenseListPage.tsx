@@ -16,6 +16,7 @@ import {
   Col,
   Statistic,
   DatePicker,
+  Segmented,
 } from 'antd';
 import {
   PlusOutlined,
@@ -351,6 +352,19 @@ export default function ExpenseListPage() {
           </Button>
         </Space>
       </div>
+
+      <Segmented
+        value="expenses"
+        options={[
+          { label: t('fuelRecord.title'), value: 'records', icon: <span>⛽</span> },
+          { label: t('expense.title'), value: 'expenses', icon: <span>💸</span> },
+        ]}
+        onChange={(val) => {
+          if (val === 'records') navigate(`/vehicles/${vehicleId}/records`, { replace: true });
+        }}
+        block={isMobile}
+        style={{ marginBottom: 16 }}
+      />
 
       {/* 统计摘要 */}
       {stats && (
