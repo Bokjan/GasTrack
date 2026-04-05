@@ -137,6 +137,7 @@
 - 🚀 **统计页三 Tab 改造（加油/开销/综合）** — Stats 页新增三个独立视角：⛽ 加油（原有指标+图表不变）、💸 开销（总额/分类/月度趋势+饼图）、📊 综合（加油+开销堆叠柱状图+合并汇总卡片）；后端新增 `GET /vehicles/:id/expense-period-stats` 接口支持开销按月/年聚合+同比；Dashboard 统计卡片新增开销费用和综合总费用展示
 - 🚀 **Dashboard 开销数据接入** — 后端 `GET /stats/overview` 响应新增 `total_expense_cost` / `expense_costs_by_currency` 字段（VehicleStats 和 OverviewStats 均扩展）；Dashboard 单车卡片从 4 张扩为 6 张（⛽加油费/💸开销/综合总费用/里程/油耗/记录数），多车全局概览从 2 张扩为 4 张
 - 🔧 **开销记录体验优化** — 保养项目改为多选（逗号分隔存储，前端 `Select mode="multiple"`）；新增"税金"(tax) 开销类别（全栈 + 三语）；全局 `ConfigProvider.getPopupContainer` 统一修复手机端 Select/DatePicker 下拉滚动穿透问题
+- 🚀 **PWA 更新检测增强** — SW 更新检测间隔从 1 小时缩短至 10 分钟；构建时注入 `__APP_VERSION__` + `__BUILD_TIME__`，设置页底部展示版本号和构建时间；更新通知改为不可关闭（`closable: false`），强制用户刷新到最新版
 
 ### 2026-04-03
 

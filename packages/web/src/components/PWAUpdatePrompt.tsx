@@ -6,22 +6,22 @@ import { useTranslation } from 'react-i18next';
 
 /**
  * PWA 更新提示：当 Service Worker 检测到新版本时，
- * 弹出通知引导用户刷新页面以使用最新版。
+ * 弹出不可关闭的通知，强制用户刷新以使用最新版。
  */
 export default function PWAUpdatePrompt() {
   const { t } = useTranslation();
   const [api, contextHolder] = notification.useNotification();
 
   const {
-    needRefresh: [needRefresh, setNeedRefresh],
+    needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(_swUrl, registration) {
-      // 每小时检查一次更新
+      // 每 10 分钟检查一次更新
       if (registration) {
         setInterval(() => {
           registration.update();
-        }, 60 * 60 * 1000);
+        }, 10 * 60 * 1000);
       }
     },
     onRegisterError(error) {
@@ -31,14 +31,13 @@ export default function PWAUpdatePrompt() {
 
   useEffect(() => {
     if (needRefresh) {
-      api.info({
+      api.warning({
         key: 'pwa-update',
         message: t('pwa.updateAvailable', 'New version available'),
-        description: t('pwa.updateDescription', 'A new version is available. Refresh to update.'),
+        description: t('pwa.updateDescription', 'A new version is available. Please refresh to continue.'),
         btn: (
           <Button
             type="primary"
-            size="small"
             icon={<ReloadOutlined />}
             onClick={() => updateServiceWorker(true)}
           >
@@ -46,10 +45,10 @@ export default function PWAUpdatePrompt() {
           </Button>
         ),
         duration: 0,
-        onClose: () => setNeedRefresh(false),
+        closable: false,
       });
     }
-  }, [needRefresh, api, t, updateServiceWorker, setNeedRefresh]);
+  }, [needRefresh, api, t, updateServiceWorker]);
 
   return <>{contextHolder}</>;
 }

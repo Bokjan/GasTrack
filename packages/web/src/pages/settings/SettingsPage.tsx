@@ -444,6 +444,18 @@ export default function SettingsPage() {
           </Space>
         </Card>
 
+        {/* 版本信息 */}
+        <Card size="small">
+          <Space direction="vertical" size={2}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {t('pwa.version', { version: typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev' })}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {t('pwa.buildTime', { time: typeof __BUILD_TIME__ !== 'undefined' ? new Date(__BUILD_TIME__).toLocaleString() : '-' })}
+            </Text>
+          </Space>
+        </Card>
+
         {/* 注销账号 */}
         <Card>
           <Title level={5} type="danger">{t('settings.deleteAccountWarning')}</Title>

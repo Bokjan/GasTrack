@@ -4,6 +4,12 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'path';
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(
+      `${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.${Math.floor(Date.now() / 1000) % 100000}`
+    ),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     react(),
     VitePWA({

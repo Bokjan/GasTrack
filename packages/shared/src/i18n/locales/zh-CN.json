@@ -781,8 +781,10 @@
   },
   "pwa": {
     "updateAvailable": "发现新版本",
-    "updateDescription": "GasTrack 有新版本可用，刷新页面即可更新。",
+    "updateDescription": "GasTrack 有新版本可用，请刷新页面以继续使用。",
     "refresh": "刷新",
+    "version": "版本：{{version}}",
+    "buildTime": "构建时间：{{time}}",
     "installTitle": "安装 GasTrack",
     "installDescription": "添加到主屏幕，快速访问。",
     "installButton": "安装",

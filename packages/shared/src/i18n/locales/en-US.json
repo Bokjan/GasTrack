@@ -781,8 +781,10 @@
   },
   "pwa": {
     "updateAvailable": "Update Available",
-    "updateDescription": "A new version of GasTrack is available. Refresh to update.",
+    "updateDescription": "A new version of GasTrack is available. Please refresh to continue.",
     "refresh": "Refresh",
+    "version": "Version: {{version}}",
+    "buildTime": "Built: {{time}}",
     "installTitle": "Install GasTrack",
     "installDescription": "Add to home screen for quick access.",
     "installButton": "Install",

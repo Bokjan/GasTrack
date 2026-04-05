@@ -781,8 +781,10 @@
   },
   "pwa": {
     "updateAvailable": "新しいバージョンがあります",
-    "updateDescription": "GasTrack の新バージョンが利用可能です。更新するにはページを更新してください。",
+    "updateDescription": "GasTrack の新バージョンが利用可能です。続行するにはページを更新してください。",
     "refresh": "更新",
+    "version": "バージョン：{{version}}",
+    "buildTime": "ビルド：{{time}}",
     "installTitle": "GasTrack をインストール",
     "installDescription": "ホーム画面に追加してすばやくアクセス。",
     "installButton": "インストール",
