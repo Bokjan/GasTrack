@@ -20,7 +20,9 @@
     "search": "搜索",
     "reset": "重置",
     "all": "全部",
-    "totalItems": "共 {{total}} 条"
+    "totalItems": "共 {{total}} 条",
+    "createdAt": "创建时间",
+    "updatedAt": "更新时间"
   },
   "auth": {
     "login": "登录",

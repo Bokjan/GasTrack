@@ -138,6 +138,8 @@
 - 🚀 **Dashboard 开销数据接入** — 后端 `GET /stats/overview` 响应新增 `total_expense_cost` / `expense_costs_by_currency` 字段（VehicleStats 和 OverviewStats 均扩展）；Dashboard 单车卡片从 4 张扩为 6 张（⛽加油费/💸开销/综合总费用/里程/油耗/记录数），多车全局概览从 2 张扩为 4 张
 - 🔧 **开销记录体验优化** — 保养项目改为多选（逗号分隔存储，前端 `Select mode="multiple"`）；新增"税金"(tax) 开销类别（全栈 + 三语）；全局 `ConfigProvider.getPopupContainer` 统一修复手机端 Select/DatePicker 下拉滚动穿透问题
 - 🚀 **PWA 更新检测增强** — SW 更新检测间隔从 1 小时缩短至 10 分钟；构建时注入 `__APP_VERSION__` + `__BUILD_TIME__`，设置页底部展示版本号和构建时间；更新通知改为不可关闭（`closable: false`），强制用户刷新到最新版
+- 🔧 **i18n 缺失修复** — 补齐三语 `common.createdAt` / `common.updatedAt` 翻译（开销详情页标签显示原始 key）；全量扫描 462 个静态 i18n key 确认无其他缺失
+- 🔧 **Dashboard 统计卡片布局修复** — 单车 6 张卡片从一行 6 张改为一行 3 张（`sm={8}`），避免中等屏幕下"平均油耗"等长文本溢出或被截断
 
 ### 2026-04-03
 

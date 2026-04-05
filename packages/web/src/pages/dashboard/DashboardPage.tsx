@@ -94,7 +94,7 @@ export default function DashboardPage() {
     const vehicleCombinedCost = vehicleConvertedCost + vehicleExpenseCost;
     return (
       <Row gutter={isMobile ? [8, 8] : [16, 16]}>
-        <Col xs={12} sm={6} lg={4}>
+        <Col xs={12} sm={8}>
           <Card loading={statsLoading} size="small">
             <Statistic
               title={t('stats.totalRecords')}
@@ -103,7 +103,7 @@ export default function DashboardPage() {
             />
           </Card>
         </Col>
-        <Col xs={12} sm={6} lg={4}>
+        <Col xs={12} sm={8}>
           <Card loading={statsLoading} size="small">
             <Statistic
               title={t('stats.fuelCost')}
@@ -112,7 +112,7 @@ export default function DashboardPage() {
             />
           </Card>
         </Col>
-        <Col xs={12} sm={6} lg={4}>
+        <Col xs={12} sm={8}>
           <Card loading={statsLoading} size="small">
             <Statistic
               title={t('stats.expenseCost')}
@@ -121,7 +121,7 @@ export default function DashboardPage() {
             />
           </Card>
         </Col>
-        <Col xs={12} sm={6} lg={4}>
+        <Col xs={12} sm={8}>
           <Card loading={statsLoading} size="small">
             <Statistic
               title={t('stats.combinedCost')}
@@ -131,7 +131,7 @@ export default function DashboardPage() {
             />
           </Card>
         </Col>
-        <Col xs={12} sm={6} lg={4}>
+        <Col xs={12} sm={8}>
           <Card loading={statsLoading} size="small">
             <Statistic
               title={t('stats.totalDistance')}
@@ -140,7 +140,7 @@ export default function DashboardPage() {
             />
           </Card>
         </Col>
-        <Col xs={12} sm={6} lg={4}>
+        <Col xs={12} sm={8}>
           <Card loading={statsLoading} size="small">
             <Statistic
               title={isEv ? t('stats.avgEnergyConsumption') : t('stats.avgConsumption')}

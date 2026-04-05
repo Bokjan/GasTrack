@@ -20,7 +20,9 @@
     "search": "検索",
     "reset": "リセット",
     "all": "すべて",
-    "totalItems": "全 {{total}} 件"
+    "totalItems": "全 {{total}} 件",
+    "createdAt": "作成日時",
+    "updatedAt": "更新日時"
   },
   "auth": {
     "login": "ログイン",

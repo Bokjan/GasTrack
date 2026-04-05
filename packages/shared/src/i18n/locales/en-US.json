@@ -20,7 +20,9 @@
     "search": "Search",
     "reset": "Reset",
     "all": "All",
-    "totalItems": "{{total}} items"
+    "totalItems": "{{total}} items",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At"
   },
   "auth": {
     "login": "Login",
