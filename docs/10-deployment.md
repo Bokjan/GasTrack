@@ -46,6 +46,8 @@ sudo usermod -aG docker $USER && newgrp docker
 | `docker-compose.prod.yaml` | 三服务编排 |
 | `.env.production.example` | 环境变量模板 |
 | `scripts/init-ssl.sh` | SSL 证书初始化脚本 |
+| `scripts/backup.sh` | 数据库 + 上传文件备份脚本 |
+| `scripts/restore.sh` | 数据库 + 上传文件恢复脚本 |
 
 ---
 
@@ -140,22 +142,57 @@ docker logs -f gastrack-backend
 docker logs -f gastrack-nginx
 ```
 
-### 6.3 数据库备份
+### 6.3 数据库备份与恢复
+
+项目提供了开箱即用的备份/恢复脚本（`scripts/backup.sh` / `scripts/restore.sh`），
+会同时处理 **数据库** 与 **上传文件**（头像 / 车辆照片 / 加油小票），并自动从
+`.env.production` 读取 `DB_USER` / `DB_NAME` / `DB_PASSWORD`。
+
+**备份：**
 
 ```bash
-# 手动备份
-docker exec gastrack-postgres pg_dump -U gastrack -d gastrack | gzip > backup_$(date +%Y%m%d).sql.gz
+chmod +x scripts/backup.sh
 
-# 恢复
-gunzip -c backup_20260330.sql.gz | docker exec -i gastrack-postgres psql -U gastrack -d gastrack
+# 备份数据库 + 上传文件到 ./backups（默认保留 30 天）
+./scripts/backup.sh
+
+# 自定义输出目录 / 保留天数 / 只备份数据库
+BACKUP_DIR=/opt/gastrack/backups ./scripts/backup.sh
+RETENTION_DAYS=14 ./scripts/backup.sh
+SKIP_UPLOADS=1 ./scripts/backup.sh
 ```
 
-自动备份（crontab）：
+产出文件（带时间戳）：
+
+| 文件 | 说明 |
+|------|------|
+| `gastrack_db_<时间戳>.dump` | 数据库（`pg_dump -Fc` 自定义压缩格式） |
+| `gastrack_uploads_<时间戳>.tar.gz` | 上传文件目录归档 |
+
+**恢复：**
 
 ```bash
-# 每天凌晨 3 点备份，保留 30 天
-(crontab -l 2>/dev/null; echo '0 3 * * * docker exec gastrack-postgres pg_dump -U gastrack -d gastrack | gzip > /opt/gastrack/backups/gastrack_$(date +\%Y\%m\%d).sql.gz && find /opt/gastrack/backups -name "*.sql.gz" -mtime +30 -delete') | crontab -
+chmod +x scripts/restore.sh
+
+# 仅恢复数据库（执行前会二次确认）
+./scripts/restore.sh backups/gastrack_db_20260530_030000.dump
+
+# 同时恢复上传文件
+./scripts/restore.sh backups/gastrack_db_xxx.dump backups/gastrack_uploads_xxx.tar.gz
 ```
+
+> 恢复脚本会用 `pg_restore --clean --if-exists` 覆盖现有数据，因此默认要求输入 `yes` 确认；
+> 自动化场景可加 `FORCE=1` 跳过确认。恢复后建议 `docker restart gastrack-backend`。
+
+**自动备份（crontab）：**
+
+```bash
+# 每天凌晨 3 点备份，保留 30 天（脚本内置清理）
+(crontab -l 2>/dev/null; echo "0 3 * * * cd /opt/gastrack && BACKUP_DIR=/opt/gastrack/backups ./scripts/backup.sh >> /opt/gastrack/backups/backup.log 2>&1") | crontab -
+```
+
+> 也可使用最朴素的一行命令做临时备份：
+> `docker exec gastrack-postgres pg_dump -U gastrack -d gastrack | gzip > backup_$(date +%Y%m%d).sql.gz`
 
 ### 6.4 SSL 证书续期
 

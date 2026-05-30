@@ -413,6 +413,22 @@ docker compose up -d
 
 ### 5.4 备份与恢复
 
+推荐使用项目脚本（同时备份数据库 + 上传文件，自动清理过期备份）：
+
+```bash
+# 备份（输出到 ./backups，默认保留 30 天）
+./scripts/backup.sh
+
+# 恢复（带二次确认）
+./scripts/restore.sh backups/gastrack_db_<时间戳>.dump
+# 连上传文件一起恢复
+./scripts/restore.sh backups/gastrack_db_xxx.dump backups/gastrack_uploads_xxx.tar.gz
+```
+
+> 详见 `docs/10-deployment.md` 第 6.3 节（含 crontab 自动备份配置）。
+
+临时手动备份（不含上传文件）：
+
 ```bash
 # 备份
 docker exec gastrack-postgres pg_dump -U gastrack gastrack > backup.sql
