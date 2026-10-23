@@ -558,21 +558,6 @@ func (mr *MockFuelRecordRepoMockRecorder) GetMultiVehicleStats(ctx, vehicleIDs a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMultiVehicleStats", reflect.TypeOf((*MockFuelRecordRepo)(nil).GetMultiVehicleStats), ctx, vehicleIDs)
 }
 
-// GetPreviousRecord mocks base method.
-func (m *MockFuelRecordRepo) GetPreviousRecord(ctx context.Context, vehicleID uuid.UUID, beforeDate time.Time) (*model.FuelRecord, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPreviousRecord", ctx, vehicleID, beforeDate)
-	ret0, _ := ret[0].(*model.FuelRecord)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetPreviousRecord indicates an expected call of GetPreviousRecord.
-func (mr *MockFuelRecordRepoMockRecorder) GetPreviousRecord(ctx, vehicleID, beforeDate any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPreviousRecord", reflect.TypeOf((*MockFuelRecordRepo)(nil).GetPreviousRecord), ctx, vehicleID, beforeDate)
-}
-
 // GetStatsByMonth mocks base method.
 func (m *MockFuelRecordRepo) GetStatsByMonth(ctx context.Context, vehicleID uuid.UUID, year int) ([]repository.PeriodStatsResult, error) {
 	m.ctrl.T.Helper()
@@ -647,6 +632,21 @@ func (m *MockFuelRecordRepo) ListByVehicle(ctx context.Context, vehicleID uuid.U
 func (mr *MockFuelRecordRepoMockRecorder) ListByVehicle(ctx, vehicleID, page, pageSize any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByVehicle", reflect.TypeOf((*MockFuelRecordRepo)(nil).ListByVehicle), ctx, vehicleID, page, pageSize)
+}
+
+// RecomputeDerived mocks base method.
+func (m *MockFuelRecordRepo) RecomputeDerived(ctx context.Context, vehicleID uuid.UUID, compute func([]model.FuelRecord) []int) ([]model.FuelRecord, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecomputeDerived", ctx, vehicleID, compute)
+	ret0, _ := ret[0].([]model.FuelRecord)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RecomputeDerived indicates an expected call of RecomputeDerived.
+func (mr *MockFuelRecordRepoMockRecorder) RecomputeDerived(ctx, vehicleID, compute any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecomputeDerived", reflect.TypeOf((*MockFuelRecordRepo)(nil).RecomputeDerived), ctx, vehicleID, compute)
 }
 
 // Update mocks base method.
@@ -1570,21 +1570,6 @@ func (m *MockInviteCodeRepo) EXPECT() *MockInviteCodeRepoMockRecorder {
 	return m.recorder
 }
 
-// ConsumeByCode mocks base method.
-func (m *MockInviteCodeRepo) ConsumeByCode(ctx context.Context, code string, usedByID uuid.UUID) (*model.InviteCode, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ConsumeByCode", ctx, code, usedByID)
-	ret0, _ := ret[0].(*model.InviteCode)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ConsumeByCode indicates an expected call of ConsumeByCode.
-func (mr *MockInviteCodeRepoMockRecorder) ConsumeByCode(ctx, code, usedByID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConsumeByCode", reflect.TypeOf((*MockInviteCodeRepo)(nil).ConsumeByCode), ctx, code, usedByID)
-}
-
 // Create mocks base method.
 func (m *MockInviteCodeRepo) Create(ctx context.Context, invite *model.InviteCode) error {
 	m.ctrl.T.Helper()
@@ -1597,6 +1582,21 @@ func (m *MockInviteCodeRepo) Create(ctx context.Context, invite *model.InviteCod
 func (mr *MockInviteCodeRepoMockRecorder) Create(ctx, invite any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockInviteCodeRepo)(nil).Create), ctx, invite)
+}
+
+// CreateUserWithInvite mocks base method.
+func (m *MockInviteCodeRepo) CreateUserWithInvite(ctx context.Context, user *model.User, code string) (*model.InviteCode, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateUserWithInvite", ctx, user, code)
+	ret0, _ := ret[0].(*model.InviteCode)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateUserWithInvite indicates an expected call of CreateUserWithInvite.
+func (mr *MockInviteCodeRepoMockRecorder) CreateUserWithInvite(ctx, user, code any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUserWithInvite", reflect.TypeOf((*MockInviteCodeRepo)(nil).CreateUserWithInvite), ctx, user, code)
 }
 
 // Delete mocks base method.

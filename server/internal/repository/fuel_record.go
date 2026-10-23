@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"gastrack/internal/model"
 )
@@ -51,7 +52,9 @@ func (r *FuelRecordRepository) ListByVehicle(ctx context.Context, vehicleID uuid
 	var total int64
 
 	// 使用独立查询链分别执行 COUNT 和分页查询，避免共享 *gorm.DB 状态导致结果异常
-	r.db.WithContext(ctx).Model(&model.FuelRecord{}).Where("vehicle_id = ?", vehicleID).Count(&total)
+	if err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).Where("vehicle_id = ?", vehicleID).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 
 	err := r.db.WithContext(ctx).Where("vehicle_id = ?", vehicleID).
 		Order("refuel_date DESC").
@@ -62,17 +65,45 @@ func (r *FuelRecordRepository) ListByVehicle(ctx context.Context, vehicleID uuid
 	return records, total, err
 }
 
-// GetPreviousRecord 获取指定车辆在某个日期之前的最后一条记录（用于计算行驶距离）
-func (r *FuelRecordRepository) GetPreviousRecord(ctx context.Context, vehicleID uuid.UUID, beforeDate time.Time) (*model.FuelRecord, error) {
-	var record model.FuelRecord
-	err := r.db.WithContext(ctx).
-		Where("vehicle_id = ? AND refuel_date < ?", vehicleID, beforeDate).
-		Order("refuel_date DESC").
-		First(&record).Error
+// RecomputeDerived 重算某车辆所有记录的派生字段（行驶距离、油耗）。
+// 在事务内锁定车辆行，串行化同一车辆的并发重算；按时间升序加载全部记录交给 compute，
+// compute 原地修改派生字段并返回发生变化的下标，仅这些记录会被写回（不更新 updated_at）。
+// 返回重算后的全部记录（升序）。
+func (r *FuelRecordRepository) RecomputeDerived(ctx context.Context, vehicleID uuid.UUID, compute func(records []model.FuelRecord) []int) ([]model.FuelRecord, error) {
+	var records []model.FuelRecord
+
+	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 锁定车辆行（含已软删除车辆）
+		var lockedIDs []uuid.UUID
+		if err := tx.Unscoped().Model(&model.Vehicle{}).
+			Clauses(clause.Locking{Strength: "UPDATE"}).
+			Where("id = ?", vehicleID).
+			Pluck("id", &lockedIDs).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Where("vehicle_id = ?", vehicleID).
+			Order("refuel_date ASC, created_at ASC, id ASC").
+			Find(&records).Error; err != nil {
+			return err
+		}
+
+		for _, i := range compute(records) {
+			if err := tx.Model(&model.FuelRecord{}).
+				Where("id = ?", records[i].ID).
+				UpdateColumns(map[string]any{
+					"trip_distance":   records[i].TripDistance,
+					"fuel_efficiency": records[i].FuelEfficiency,
+				}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	return &record, nil
+	return records, nil
 }
 
 // Update 更新记录
@@ -120,7 +151,8 @@ func (r *FuelRecordRepository) ListAllByUser(ctx context.Context, userID uuid.UU
 
 // StatsResult 统计查询结果
 type StatsResult struct {
-	TotalRecords    int64   `json:"total_records"`
+	TotalRecords      int64   `json:"total_records"`
+	EfficiencyRecords int64   `json:"efficiency_records"` // 有有效油耗的记录数（满油到满油区间）
 	TotalFuel       float64 `json:"total_fuel"`
 	TotalCost       float64 `json:"total_cost"`
 	TotalDistance   float64 `json:"total_distance"`
@@ -136,14 +168,15 @@ func (r *FuelRecordRepository) GetVehicleStats(ctx context.Context, vehicleID uu
 	err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
 		Select(`
 			COUNT(*) as total_records,
+			COUNT(*) FILTER (WHERE fuel_efficiency > 0) as efficiency_records,
 			COALESCE(SUM(fuel_amount), 0) as total_fuel,
 			COALESCE(SUM(total_cost), 0) as total_cost,
 			COALESCE(SUM(trip_distance), 0) as total_distance,
-			COALESCE(AVG(NULLIF(fuel_efficiency, 0)), 0) as avg_efficiency,
-			COALESCE(MIN(NULLIF(fuel_efficiency, 0)), 0) as best_efficiency,
-			COALESCE(MAX(NULLIF(fuel_efficiency, 0)), 0) as worst_efficiency
+			COALESCE(AVG(fuel_efficiency) FILTER (WHERE fuel_efficiency > 0), 0) as avg_efficiency,
+			COALESCE(MIN(fuel_efficiency) FILTER (WHERE fuel_efficiency > 0), 0) as best_efficiency,
+			COALESCE(MAX(fuel_efficiency) FILTER (WHERE fuel_efficiency > 0), 0) as worst_efficiency
 		`).
-		Where("vehicle_id = ? AND fuel_efficiency > 0", vehicleID).
+		Where("vehicle_id = ?", vehicleID).
 		Scan(&result).Error
 
 	return &result, err
@@ -266,8 +299,9 @@ func (r *FuelRecordRepository) GetStatsByYear(ctx context.Context, vehicleID uui
 
 // MultiVehicleStatsResult 批量车辆统计结果（按 vehicle_id 分组）
 type MultiVehicleStatsResult struct {
-	VehicleID       uuid.UUID `json:"vehicle_id" gorm:"column:vehicle_id"`
-	TotalRecords    int64     `json:"total_records"`
+	VehicleID         uuid.UUID `json:"vehicle_id" gorm:"column:vehicle_id"`
+	TotalRecords      int64     `json:"total_records"`
+	EfficiencyRecords int64     `json:"efficiency_records"`
 	TotalFuel       float64   `json:"total_fuel"`
 	TotalCost       float64   `json:"total_cost"`
 	TotalDistance   float64   `json:"total_distance"`
@@ -288,14 +322,15 @@ func (r *FuelRecordRepository) GetMultiVehicleStats(ctx context.Context, vehicle
 		Select(`
 			vehicle_id,
 			COUNT(*) as total_records,
+			COUNT(*) FILTER (WHERE fuel_efficiency > 0) as efficiency_records,
 			COALESCE(SUM(fuel_amount), 0) as total_fuel,
 			COALESCE(SUM(total_cost), 0) as total_cost,
 			COALESCE(SUM(trip_distance), 0) as total_distance,
-			COALESCE(AVG(NULLIF(fuel_efficiency, 0)), 0) as avg_efficiency,
-			COALESCE(MIN(NULLIF(fuel_efficiency, 0)), 0) as best_efficiency,
-			COALESCE(MAX(NULLIF(fuel_efficiency, 0)), 0) as worst_efficiency
+			COALESCE(AVG(fuel_efficiency) FILTER (WHERE fuel_efficiency > 0), 0) as avg_efficiency,
+			COALESCE(MIN(fuel_efficiency) FILTER (WHERE fuel_efficiency > 0), 0) as best_efficiency,
+			COALESCE(MAX(fuel_efficiency) FILTER (WHERE fuel_efficiency > 0), 0) as worst_efficiency
 		`).
-		Where("vehicle_id IN ? AND fuel_efficiency > 0", vehicleIDs).
+		Where("vehicle_id IN ?", vehicleIDs).
 		Group("vehicle_id").
 		Scan(&rows).Error
 	if err != nil {

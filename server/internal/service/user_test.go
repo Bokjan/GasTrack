@@ -17,13 +17,20 @@ import (
 	"gastrack/internal/model"
 	"gastrack/internal/pkg/apperror"
 	mockrepo "gastrack/internal/repository/mock"
+	mocksvc "gastrack/internal/service/mock"
 )
 
 func newUserService(t *testing.T) (*UserService, *mockrepo.MockUserRepo) {
+	svc, mockRepo, _ := newUserServiceWithTokens(t)
+	return svc, mockRepo
+}
+
+func newUserServiceWithTokens(t *testing.T) (*UserService, *mockrepo.MockUserRepo, *mocksvc.MockTokenIssuer) {
 	ctrl := gomock.NewController(t)
 	mockRepo := mockrepo.NewMockUserRepo(ctrl)
-	svc := NewUserService(mockRepo, zap.NewNop())
-	return svc, mockRepo
+	tokens := mocksvc.NewMockTokenIssuer(ctrl)
+	svc := NewUserService(mockRepo, tokens, zap.NewNop())
+	return svc, mockRepo, tokens
 }
 
 func TestUserService_GetProfile(t *testing.T) {
@@ -113,35 +120,40 @@ func TestUserService_UpdateProfile(t *testing.T) {
 }
 
 func TestUserService_ChangePassword(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		svc, mockRepo := newUserService(t)
+	t.Run("success revokes old tokens and issues new pair", func(t *testing.T) {
+		svc, mockRepo, tokens := newUserServiceWithTokens(t)
 		uid := uuid.New()
-		hash, _ := bcrypt.GenerateFromPassword([]byte("oldpass123"), 12)
+		hash, _ := bcrypt.GenerateFromPassword([]byte("oldpass123"), 4)
 		user := &model.User{
 			BaseModel:    model.BaseModel{ID: uid},
 			PasswordHash: string(hash),
 		}
 		mockRepo.EXPECT().GetByID(gomock.Any(), uid).Return(user, nil)
 		mockRepo.EXPECT().UpdateFields(gomock.Any(), uid, gomock.Any()).Return(nil)
+		gomock.InOrder(
+			tokens.EXPECT().RevokeAllTokens(gomock.Any(), uid).Return(nil),
+			tokens.EXPECT().IssueTokenPair(gomock.Any(), user).Return(&dto.AuthResponse{AccessToken: "new"}, nil),
+		)
 
-		err := svc.ChangePassword(context.Background(), uid, &dto.ChangePasswordRequest{
+		resp, err := svc.ChangePassword(context.Background(), uid, &dto.ChangePasswordRequest{
 			OldPassword: "oldpass123",
 			NewPassword: "newpass456",
 		})
 		assert.NoError(t, err)
+		assert.Equal(t, "new", resp.AccessToken)
 	})
 
 	t.Run("wrong old password", func(t *testing.T) {
 		svc, mockRepo := newUserService(t)
 		uid := uuid.New()
-		hash, _ := bcrypt.GenerateFromPassword([]byte("oldpass123"), 12)
+		hash, _ := bcrypt.GenerateFromPassword([]byte("oldpass123"), 4)
 		user := &model.User{
 			BaseModel:    model.BaseModel{ID: uid},
 			PasswordHash: string(hash),
 		}
 		mockRepo.EXPECT().GetByID(gomock.Any(), uid).Return(user, nil)
 
-		err := svc.ChangePassword(context.Background(), uid, &dto.ChangePasswordRequest{
+		_, err := svc.ChangePassword(context.Background(), uid, &dto.ChangePasswordRequest{
 			OldPassword: "wrongpass",
 			NewPassword: "newpass456",
 		})
@@ -151,10 +163,11 @@ func TestUserService_ChangePassword(t *testing.T) {
 }
 
 func TestUserService_DeleteAccount(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		svc, mockRepo := newUserService(t)
+	t.Run("success revokes tokens", func(t *testing.T) {
+		svc, mockRepo, tokens := newUserServiceWithTokens(t)
 		uid := uuid.New()
 		mockRepo.EXPECT().Delete(gomock.Any(), uid).Return(nil)
+		tokens.EXPECT().RevokeAllTokens(gomock.Any(), uid).Return(nil)
 
 		err := svc.DeleteAccount(context.Background(), uid)
 		assert.NoError(t, err)

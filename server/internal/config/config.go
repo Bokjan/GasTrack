@@ -42,6 +42,8 @@ type ServerConfig struct {
 	WriteTimeout    time.Duration `mapstructure:"write_timeout"`
 	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout"`
 	CORSOrigins     []string      `mapstructure:"cors_origins"`
+	// TrustedProxies 可信反向代理网段；仅当请求来自这些地址时才采信 X-Real-IP / X-Forwarded-For
+	TrustedProxies []string `mapstructure:"trusted_proxies"`
 }
 
 // DatabaseConfig 数据库连接配置
@@ -135,7 +137,27 @@ func Load(configPath string) (*Config, error) {
 		return nil, fmt.Errorf("unmarshaling config: %w", err)
 	}
 
+	if err := cfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid config: %w", err)
+	}
+
 	return &cfg, nil
+}
+
+// minJWTSecretLen HS256 密钥最小长度（字节）
+const minJWTSecretLen = 32
+
+// Validate 校验关键安全配置，不满足时拒绝启动
+func (c *Config) Validate() error {
+	if len(c.JWT.Secret) < minJWTSecretLen {
+		return fmt.Errorf("jwt.secret must be at least %d bytes (generate one with: openssl rand -hex 32)", minJWTSecretLen)
+	}
+	return nil
+}
+
+// UsesSampleJWTSecret 是否仍在使用示例配置中的 JWT 密钥（仅适用于本地开发）
+func (c *Config) UsesSampleJWTSecret() bool {
+	return strings.HasPrefix(c.JWT.Secret, "change-me")
 }
 
 // setDefaults 设置配置默认值
@@ -147,6 +169,9 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("server.write_timeout", 15*time.Second)
 	v.SetDefault("server.shutdown_timeout", 10*time.Second)
 	v.SetDefault("server.cors_origins", []string{"http://localhost:3000", "http://localhost:5173"})
+	v.SetDefault("server.trusted_proxies", []string{
+		"127.0.0.0/8", "::1/128", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7",
+	})
 
 	// 数据库
 	v.SetDefault("database.host", "localhost")
@@ -197,7 +222,8 @@ func bindEnvKeys(v *viper.Viper) {
 		"server.host", "server.port", "server.cors_origins",
 		"database.host", "database.port", "database.user",
 		"database.password", "database.dbname", "database.sslmode",
-		"jwt.secret",
+		"jwt.secret", "jwt.issuer",
+		"server.trusted_proxies",
 		"log.level", "log.format", "log.file_path",
 		"registration.mode",
 	}

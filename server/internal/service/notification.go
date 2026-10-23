@@ -92,8 +92,8 @@ func (s *NotificationService) Delete(ctx context.Context, id, userID uuid.UUID) 
 func (s *NotificationService) CheckFuelAnomaly(ctx context.Context, userID, vehicleID uuid.UUID, recordID uuid.UUID, currentEfficiency float64) {
 	// 获取车辆统计数据
 	stats, err := s.fuelRecordRepo.GetVehicleStats(ctx, vehicleID)
-	if err != nil || stats.TotalRecords < 3 {
-		// 至少 3 条记录才能做有意义的异常检测
+	if err != nil || stats.EfficiencyRecords < 3 {
+		// 至少 3 条有油耗的记录才能做有意义的异常检测
 		return
 	}
 

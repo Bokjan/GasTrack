@@ -29,18 +29,23 @@ func New(
 	groupHandler *handler.GroupHandler,
 	exchangeRateHandler *handler.ExchangeRateHandler,
 	expenseRecordHandler *handler.ExpenseRecordHandler,
-) http.Handler {
+) (http.Handler, error) {
 	mux := http.NewServeMux()
 
 	// --- 公开路由（无需认证）---
 
+	// 登录/注册单独严格限流（防暴力破解）：每 IP 每分钟 10 次，突发 10
+	credentialLimit := middleware.RateLimit(10.0/60, 10)
+	// 邀请码校验（前端输入防抖后调用）：每 IP 每 2 秒 1 次，突发 20，限制邀请码枚举
+	inviteLimit := middleware.RateLimit(0.5, 20)
+
 	// 认证
-	mux.HandleFunc("POST /api/v1/auth/register", authHandler.Register)
-	mux.HandleFunc("POST /api/v1/auth/login", authHandler.Login)
+	mux.Handle("POST /api/v1/auth/register", credentialLimit(http.HandlerFunc(authHandler.Register)))
+	mux.Handle("POST /api/v1/auth/login", credentialLimit(http.HandlerFunc(authHandler.Login)))
 	mux.HandleFunc("POST /api/v1/auth/refresh", authHandler.RefreshToken)
 
 	// 邀请码验证（公开，注册前实时校验）
-	mux.HandleFunc("GET /api/v1/invites/{code}", inviteHandler.Validate)
+	mux.Handle("GET /api/v1/invites/{code}", inviteLimit(http.HandlerFunc(inviteHandler.Validate)))
 
 	// 健康检查
 	mux.HandleFunc("GET /api/v1/health", func(w http.ResponseWriter, r *http.Request) {
@@ -57,7 +62,7 @@ func New(
 	})
 
 	// --- 需要认证的路由 ---
-	auth := middleware.Auth(cfg.JWT.Secret)
+	auth := middleware.Auth(cfg.JWT.Secret, cfg.JWT.Issuer)
 
 	// 登出（需要认证）
 	mux.Handle("POST /api/v1/auth/logout", auth(http.HandlerFunc(authHandler.Logout)))
@@ -154,13 +159,19 @@ func New(
 		MaxAge:         "86400",
 	}
 
-	// 中间件链：Recovery → Logger → CORS → RateLimit → 路由
+	ipResolver, err := middleware.NewClientIPResolver(cfg.Server.TrustedProxies)
+	if err != nil {
+		return nil, err
+	}
+
+	// 中间件链：Recovery → RealIP → Logger → CORS → RateLimit → 路由
 	global := middleware.Chain(
 		middleware.Recovery(logger),
+		middleware.RealIP(ipResolver),
 		middleware.Logger(logger),
 		middleware.CORS(corsConfig),
 		middleware.RateLimit(100, 200), // 每秒 100 请求，突发 200
 	)
 
-	return global(mux)
+	return global(mux), nil
 }

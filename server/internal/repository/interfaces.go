@@ -46,7 +46,7 @@ type FuelRecordRepo interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*model.FuelRecord, error)
 	GetByIDAndVehicle(ctx context.Context, id, vehicleID uuid.UUID) (*model.FuelRecord, error)
 	ListByVehicle(ctx context.Context, vehicleID uuid.UUID, page, pageSize int) ([]model.FuelRecord, int64, error)
-	GetPreviousRecord(ctx context.Context, vehicleID uuid.UUID, beforeDate time.Time) (*model.FuelRecord, error)
+	RecomputeDerived(ctx context.Context, vehicleID uuid.UUID, compute func(records []model.FuelRecord) []int) ([]model.FuelRecord, error)
 	Update(ctx context.Context, record *model.FuelRecord) error
 	Delete(ctx context.Context, id, vehicleID uuid.UUID) error
 	GetDistinctStationNames(ctx context.Context, userID uuid.UUID, vehicleID *uuid.UUID, limit int) ([]string, error)
@@ -136,7 +136,7 @@ type InviteCodeRepo interface {
 	ListByCreator(ctx context.Context, creatorID uuid.UUID) ([]model.InviteCode, error)
 	Update(ctx context.Context, invite *model.InviteCode) error
 	Delete(ctx context.Context, id uuid.UUID) error
-	ConsumeByCode(ctx context.Context, code string, usedByID uuid.UUID) (*model.InviteCode, error)
+	CreateUserWithInvite(ctx context.Context, user *model.User, code string) (*model.InviteCode, error)
 	ExistsByCode(ctx context.Context, code string) (bool, error)
 }
 

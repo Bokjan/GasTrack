@@ -71,10 +71,14 @@ func (r *GroupRepository) Update(ctx context.Context, group *model.Group) error 
 	return r.db.WithContext(ctx).Save(group).Error
 }
 
-// Delete 删除群组（硬删除，级联删除成员关系）
+// Delete 删除群组（硬删除，级联删除成员关系与共享车辆关联）
 func (r *GroupRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// 先删除成员关系
+		// 先删除共享车辆关联
+		if err := tx.Unscoped().Where("group_id = ?", id).Delete(&model.SharedVehicle{}).Error; err != nil {
+			return err
+		}
+		// 再删除成员关系
 		if err := tx.Where("group_id = ?", id).Delete(&model.GroupMember{}).Error; err != nil {
 			return err
 		}
@@ -129,11 +133,17 @@ func (r *GroupRepository) UpdateMemberRole(ctx context.Context, groupID, userID 
 		Update("role", role).Error
 }
 
-// RemoveMember 移除群组成员
+// RemoveMember 移除群组成员（退出或被移除），同时撤销该成员在此群组中共享的车辆
 func (r *GroupRepository) RemoveMember(ctx context.Context, groupID, userID uuid.UUID) error {
-	return r.db.WithContext(ctx).
-		Where("group_id = ? AND user_id = ?", groupID, userID).
-		Delete(&model.GroupMember{}).Error
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Unscoped().
+			Where("group_id = ? AND shared_by = ?", groupID, userID).
+			Delete(&model.SharedVehicle{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("group_id = ? AND user_id = ?", groupID, userID).
+			Delete(&model.GroupMember{}).Error
+	})
 }
 
 // CountMembers 统计群组成员数量
@@ -260,11 +270,11 @@ func (r *GroupRepository) GetGroupVehicleSummary(ctx context.Context, groupID uu
 		FROM vehicles v
 		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
 		JOIN users u ON u.id = v.user_id
-		LEFT JOIN fuel_records fr ON fr.vehicle_id = v.id
+		LEFT JOIN fuel_records fr ON fr.vehicle_id = v.id AND fr.deleted_at IS NULL
 		LEFT JOIN LATERAL (
 			SELECT fr2.currency_code
 			FROM fuel_records fr2
-			WHERE fr2.vehicle_id = v.id
+			WHERE fr2.vehicle_id = v.id AND fr2.deleted_at IS NULL
 			GROUP BY fr2.currency_code
 			ORDER BY COUNT(*) DESC
 			LIMIT 1
@@ -296,13 +306,28 @@ func (e *groupError) Error() string {
 // --- 车辆共享 ---
 
 // CreateSharedVehicle 创建共享车辆关联
+// 旧版本取消共享为软删除，残留行会触发 (group_id, vehicle_id) 唯一索引冲突，故先清理同一对的残留行
 func (r *GroupRepository) CreateSharedVehicle(ctx context.Context, sv *model.SharedVehicle) error {
-	return r.db.WithContext(ctx).Create(sv).Error
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Unscoped().
+			Where("group_id = ? AND vehicle_id = ? AND deleted_at IS NOT NULL", sv.GroupID, sv.VehicleID).
+			Delete(&model.SharedVehicle{}).Error; err != nil {
+			return err
+		}
+		return tx.Create(sv).Error
+	})
 }
 
-// DeleteSharedVehicle 删除共享车辆关联
+// sharerIsMemberSQL 共享发起人仍是群组成员（兼容旧版本成员离开后未撤销的共享记录）
+const sharerIsMemberSQL = `EXISTS (
+	SELECT 1 FROM group_members sgm
+	WHERE sgm.group_id = shared_vehicles.group_id AND sgm.user_id = shared_vehicles.shared_by
+)`
+
+// DeleteSharedVehicle 删除共享车辆关联（硬删除：共享关系无需保留历史，
+// 软删除会使唯一索引阻止再次共享，且容易被手写 SQL 遗漏过滤）
 func (r *GroupRepository) DeleteSharedVehicle(ctx context.Context, groupID, vehicleID uuid.UUID) error {
-	return r.db.WithContext(ctx).
+	return r.db.WithContext(ctx).Unscoped().
 		Where("group_id = ? AND vehicle_id = ?", groupID, vehicleID).
 		Delete(&model.SharedVehicle{}).Error
 }
@@ -312,6 +337,7 @@ func (r *GroupRepository) ListSharedVehiclesByGroup(ctx context.Context, groupID
 	var svs []model.SharedVehicle
 	err := r.db.WithContext(ctx).
 		Where("group_id = ?", groupID).
+		Where(sharerIsMemberSQL).
 		Order("created_at ASC").
 		Find(&svs).Error
 	return svs, err
@@ -321,7 +347,7 @@ func (r *GroupRepository) ListSharedVehiclesByGroup(ctx context.Context, groupID
 func (r *GroupRepository) ExistsSharedVehicle(ctx context.Context, groupID, vehicleID uuid.UUID) (bool, error) {
 	var exists bool
 	err := r.db.WithContext(ctx).Raw(
-		"SELECT EXISTS(SELECT 1 FROM shared_vehicles WHERE group_id = ? AND vehicle_id = ? LIMIT 1)",
+		"SELECT EXISTS(SELECT 1 FROM shared_vehicles WHERE group_id = ? AND vehicle_id = ? AND deleted_at IS NULL LIMIT 1)",
 		groupID, vehicleID,
 	).Scan(&exists).Error
 	return exists, err
@@ -358,9 +384,11 @@ func (r *GroupRepository) ListSharedVehiclesForUser(ctx context.Context, userID 
 			g.name AS group_name,
 			sv.shared_by
 		FROM shared_vehicles sv
-		JOIN groups g ON g.id = sv.group_id
+		JOIN groups g ON g.id = sv.group_id AND g.deleted_at IS NULL
 		JOIN vehicles v ON v.id = sv.vehicle_id AND v.deleted_at IS NULL AND v.is_archived = false
-		WHERE v.user_id != ?
+		JOIN group_members sgm ON sgm.group_id = sv.group_id AND sgm.user_id = sv.shared_by
+		WHERE sv.deleted_at IS NULL
+		  AND v.user_id != ?
 		  AND EXISTS (
 			SELECT 1 FROM group_members gm
 			WHERE gm.group_id = sv.group_id AND gm.user_id = ?
@@ -379,7 +407,10 @@ func (r *GroupRepository) IsVehicleSharedToUser(ctx context.Context, vehicleID, 
 			SELECT 1
 			FROM shared_vehicles sv
 			JOIN group_members gm ON gm.group_id = sv.group_id AND gm.user_id = ?
-			WHERE sv.vehicle_id = ?
+			JOIN group_members sgm ON sgm.group_id = sv.group_id AND sgm.user_id = sv.shared_by
+			JOIN groups g ON g.id = sv.group_id AND g.deleted_at IS NULL
+			JOIN vehicles v ON v.id = sv.vehicle_id AND v.deleted_at IS NULL
+			WHERE sv.vehicle_id = ? AND sv.deleted_at IS NULL
 			LIMIT 1
 		)
 	`, userID, vehicleID).Scan(&exists).Error
@@ -425,7 +456,7 @@ func (r *GroupRepository) GetLeaderboard(ctx context.Context, groupID uuid.UUID,
 			COALESCE(SUM(fr.trip_distance), 0) AS total_distance
 		FROM vehicles v
 		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
-		JOIN fuel_records fr ON fr.vehicle_id = v.id
+		JOIN fuel_records fr ON fr.vehicle_id = v.id AND fr.deleted_at IS NULL
 		WHERE v.deleted_at IS NULL 
 		  AND v.is_archived = false
 		  AND fr.refuel_date >= ?
@@ -472,7 +503,7 @@ func (r *GroupRepository) GetGroupExpenseByMonth(ctx context.Context, groupID uu
 		FROM fuel_records fr
 		JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL AND v.is_archived = false
 		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
-		WHERE fr.refuel_date >= ? AND fr.refuel_date < ?
+		WHERE fr.deleted_at IS NULL AND fr.refuel_date >= ? AND fr.refuel_date < ?
 		GROUP BY period_label, gm.user_id, fr.currency_code
 		ORDER BY period_label ASC, gm.user_id ASC
 	`, groupID, startDate, endDate).Scan(&results).Error
@@ -500,7 +531,7 @@ func (r *GroupRepository) GetGroupExpenseByYear(ctx context.Context, groupID uui
 		FROM fuel_records fr
 		JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL AND v.is_archived = false
 		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
-		WHERE fr.refuel_date >= ?
+		WHERE fr.deleted_at IS NULL AND fr.refuel_date >= ?
 		GROUP BY period_label, gm.user_id, fr.currency_code
 		ORDER BY period_label ASC, gm.user_id ASC
 	`, groupID, cutoff).Scan(&results).Error
@@ -545,7 +576,8 @@ func (r *GroupRepository) GetGroupStationStats(ctx context.Context, groupID uuid
 		FROM fuel_records fr
 		JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL
 		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
-		WHERE fr.station_name IS NOT NULL 
+		WHERE fr.deleted_at IS NULL
+		  AND fr.station_name IS NOT NULL 
 		  AND fr.station_name != ''
 		  AND fr.unit_price > 0
 		  AND fr.refuel_date >= ?`
@@ -589,7 +621,7 @@ func (r *GroupRepository) GetStationVisitors(ctx context.Context, groupID uuid.U
 		FROM fuel_records fr
 		JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL
 		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
-		WHERE fr.station_name IN ?
+		WHERE fr.deleted_at IS NULL AND fr.station_name IN ?
 		  AND fr.refuel_date >= ?
 		GROUP BY fr.station_name, v.user_id
 		ORDER BY fr.station_name ASC, count DESC
@@ -623,7 +655,7 @@ func (r *GroupRepository) GetStationLatestPrices(ctx context.Context, groupID uu
 			FROM fuel_records fr
 			JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL
 			JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
-			WHERE fr.station_name IN ?
+			WHERE fr.deleted_at IS NULL AND fr.station_name IN ?
 			  AND fr.refuel_date >= ?
 			  AND fr.unit_price > 0
 		) sub
@@ -654,7 +686,7 @@ func (r *GroupRepository) GetStationFuelGrades(ctx context.Context, groupID uuid
 		FROM fuel_records fr
 		JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL
 		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
-		WHERE fr.station_name IN ?
+		WHERE fr.deleted_at IS NULL AND fr.station_name IN ?
 		  AND fr.refuel_date >= ?
 		  AND fr.fuel_grade IS NOT NULL
 		  AND fr.fuel_grade != ''

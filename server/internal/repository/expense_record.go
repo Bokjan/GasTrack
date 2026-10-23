@@ -108,7 +108,9 @@ func (r *ExpenseRecordRepository) ListByVehicle(
 	if maxAmount > 0 {
 		countQuery = countQuery.Where("amount <= ?", maxAmount)
 	}
-	countQuery.Count(&total)
+	if err := countQuery.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
 
 	err := query.Order("expense_date DESC, created_at DESC").
 		Offset((page - 1) * pageSize).

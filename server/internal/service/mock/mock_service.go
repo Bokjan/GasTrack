@@ -58,6 +58,21 @@ func (mr *MockInviteServicerMockRecorder) Create(ctx, creatorID, req any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockInviteServicer)(nil).Create), ctx, creatorID, req)
 }
 
+// CreateUserWithInvite mocks base method.
+func (m *MockInviteServicer) CreateUserWithInvite(ctx context.Context, user *model.User, code string) (*model.InviteCode, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateUserWithInvite", ctx, user, code)
+	ret0, _ := ret[0].(*model.InviteCode)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateUserWithInvite indicates an expected call of CreateUserWithInvite.
+func (mr *MockInviteServicerMockRecorder) CreateUserWithInvite(ctx, user, code any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateUserWithInvite", reflect.TypeOf((*MockInviteServicer)(nil).CreateUserWithInvite), ctx, user, code)
+}
+
 // Delete mocks base method.
 func (m *MockInviteServicer) Delete(ctx context.Context, id, userID uuid.UUID) error {
 	m.ctrl.T.Helper()
@@ -115,21 +130,6 @@ func (m *MockInviteServicer) Update(ctx context.Context, id, userID uuid.UUID, r
 func (mr *MockInviteServicerMockRecorder) Update(ctx, id, userID, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockInviteServicer)(nil).Update), ctx, id, userID, req)
-}
-
-// ValidateAndConsumeInviteCode mocks base method.
-func (m *MockInviteServicer) ValidateAndConsumeInviteCode(ctx context.Context, code string, userID uuid.UUID) (*model.InviteCode, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateAndConsumeInviteCode", ctx, code, userID)
-	ret0, _ := ret[0].(*model.InviteCode)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ValidateAndConsumeInviteCode indicates an expected call of ValidateAndConsumeInviteCode.
-func (mr *MockInviteServicerMockRecorder) ValidateAndConsumeInviteCode(ctx, code, userID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateAndConsumeInviteCode", reflect.TypeOf((*MockInviteServicer)(nil).ValidateAndConsumeInviteCode), ctx, code, userID)
 }
 
 // MockNotificationServicer is a mock of NotificationServicer interface.
@@ -262,4 +262,57 @@ func (m *MockNotificationServicer) UnreadCount(ctx context.Context, userID uuid.
 func (mr *MockNotificationServicerMockRecorder) UnreadCount(ctx, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnreadCount", reflect.TypeOf((*MockNotificationServicer)(nil).UnreadCount), ctx, userID)
+}
+
+// MockTokenIssuer is a mock of TokenIssuer interface.
+type MockTokenIssuer struct {
+	ctrl     *gomock.Controller
+	recorder *MockTokenIssuerMockRecorder
+	isgomock struct{}
+}
+
+// MockTokenIssuerMockRecorder is the mock recorder for MockTokenIssuer.
+type MockTokenIssuerMockRecorder struct {
+	mock *MockTokenIssuer
+}
+
+// NewMockTokenIssuer creates a new mock instance.
+func NewMockTokenIssuer(ctrl *gomock.Controller) *MockTokenIssuer {
+	mock := &MockTokenIssuer{ctrl: ctrl}
+	mock.recorder = &MockTokenIssuerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockTokenIssuer) EXPECT() *MockTokenIssuerMockRecorder {
+	return m.recorder
+}
+
+// IssueTokenPair mocks base method.
+func (m *MockTokenIssuer) IssueTokenPair(ctx context.Context, user *model.User) (*dto.AuthResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IssueTokenPair", ctx, user)
+	ret0, _ := ret[0].(*dto.AuthResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IssueTokenPair indicates an expected call of IssueTokenPair.
+func (mr *MockTokenIssuerMockRecorder) IssueTokenPair(ctx, user any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IssueTokenPair", reflect.TypeOf((*MockTokenIssuer)(nil).IssueTokenPair), ctx, user)
+}
+
+// RevokeAllTokens mocks base method.
+func (m *MockTokenIssuer) RevokeAllTokens(ctx context.Context, userID uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevokeAllTokens", ctx, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RevokeAllTokens indicates an expected call of RevokeAllTokens.
+func (mr *MockTokenIssuerMockRecorder) RevokeAllTokens(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevokeAllTokens", reflect.TypeOf((*MockTokenIssuer)(nil).RevokeAllTokens), ctx, userID)
 }

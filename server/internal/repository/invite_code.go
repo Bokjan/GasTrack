@@ -2,7 +2,7 @@ package repository
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -66,31 +66,41 @@ func (r *InviteCodeRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Unscoped().Where("id = ?", id).Delete(&model.InviteCode{}).Error
 }
 
-// ConsumeByCode 原子性消费邀请码（SELECT FOR UPDATE + UPDATE use_count）
-// 返回消费后的邀请码，如果邀请码无效则返回错误
-func (r *InviteCodeRepository) ConsumeByCode(ctx context.Context, code string, usedByID uuid.UUID) (*model.InviteCode, error) {
+// ErrInviteInvalid 邀请码不存在、已停用、已过期或已用尽
+var ErrInviteInvalid = errors.New("invite code is invalid")
+
+// CreateUserWithInvite 在同一事务中锁定并校验邀请码、创建用户、消费邀请码。
+// 任一步骤失败整体回滚，保证"无有效邀请码则不会产生用户"。
+// 邀请码无效时返回 ErrInviteInvalid。
+func (r *InviteCodeRepository) CreateUserWithInvite(ctx context.Context, user *model.User, code string) (*model.InviteCode, error) {
 	var invite model.InviteCode
 
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		// SELECT FOR UPDATE 锁定行
+		// SELECT FOR UPDATE 锁定行，防止并发超额使用
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 			Where("code = ?", code).
 			First(&invite).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrInviteInvalid
+			}
 			return err
 		}
 
-		// 校验有效性
 		if !invite.IsValid() {
-			return fmt.Errorf("invite code is not valid")
+			return ErrInviteInvalid
+		}
+
+		if err := tx.Create(user).Error; err != nil {
+			return err
 		}
 
 		// 更新使用计数和使用者
 		invite.UseCount++
-		invite.UsedBy = &usedByID
+		invite.UsedBy = &user.ID
 
 		return tx.Model(&invite).Updates(map[string]any{
 			"use_count": invite.UseCount,
-			"used_by":   usedByID,
+			"used_by":   user.ID,
 		}).Error
 	})
 

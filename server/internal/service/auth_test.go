@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -92,15 +93,21 @@ func TestAuthService_Register(t *testing.T) {
 	t.Run("invite_only mode with valid code", func(t *testing.T) {
 		svc, userRepo, tokenRepo, inviteSvc, notifSvc := newAuthService(t, "invite_only")
 		creatorID := uuid.New()
+		notified := make(chan struct{})
 
 		userRepo.EXPECT().ExistsByEmail(gomock.Any(), "invited@example.com").Return(false, nil)
-		userRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
-		inviteSvc.EXPECT().ValidateAndConsumeInviteCode(gomock.Any(), "GT-ABC123", gomock.Any()).Return(&model.InviteCode{
+		// 用户必须通过邀请码事务创建，而不是直接 Create
+		inviteSvc.EXPECT().CreateUserWithInvite(gomock.Any(), gomock.Any(), "GT-ABC123").Return(&model.InviteCode{
 			BaseModel: model.BaseModel{ID: uuid.New()},
 			Code:      "GT-ABC123",
 			CreatedBy: creatorID,
 		}, nil)
-		notifSvc.EXPECT().NotifyInviteUsed(gomock.Any(), creatorID, "GT-ABC123", "Invited").Return()
+		notifSvc.EXPECT().NotifyInviteUsed(gomock.Any(), creatorID, "GT-ABC123", "Invited").
+			Do(func(ctx context.Context, _ uuid.UUID, _, _ string) {
+				// 异步通知不应继承请求的取消信号
+				assert.Nil(t, ctx.Done())
+				close(notified)
+			})
 		tokenRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 
 		resp, err := svc.Register(context.Background(), &dto.RegisterRequest{
@@ -111,8 +118,53 @@ func TestAuthService_Register(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.NotNil(t, resp)
-		// Give goroutine time to execute
-		time.Sleep(10 * time.Millisecond)
+		select {
+		case <-notified:
+		case <-time.After(time.Second):
+			t.Fatal("invite notification not sent")
+		}
+	})
+
+	t.Run("invite_only mode with invalid code creates no user", func(t *testing.T) {
+		svc, userRepo, _, inviteSvc, _ := newAuthService(t, "invite_only")
+
+		userRepo.EXPECT().ExistsByEmail(gomock.Any(), "x@example.com").Return(false, nil)
+		inviteSvc.EXPECT().CreateUserWithInvite(gomock.Any(), gomock.Any(), "bogus").
+			Return(nil, apperror.ErrBadRequest("invite.invalid", "invite code is invalid or expired"))
+		// 不允许出现 userRepo.Create / tokenRepo.Create 调用（gomock 会因意外调用而失败）
+
+		_, err := svc.Register(context.Background(), &dto.RegisterRequest{
+			Email:      "x@example.com",
+			Password:   "password123",
+			Nickname:   "X",
+			InviteCode: "bogus",
+		})
+		assert.Equal(t, 400, err.(*apperror.AppError).Code)
+	})
+
+	t.Run("duplicate email on insert maps to conflict", func(t *testing.T) {
+		svc, userRepo, _, _, _ := newAuthService(t, "open")
+
+		userRepo.EXPECT().ExistsByEmail(gomock.Any(), "race@example.com").Return(false, nil)
+		userRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(gorm.ErrDuplicatedKey)
+
+		_, err := svc.Register(context.Background(), &dto.RegisterRequest{
+			Email:    "race@example.com",
+			Password: "password123",
+			Nickname: "Race",
+		})
+		assert.Equal(t, 409, err.(*apperror.AppError).Code)
+	})
+
+	t.Run("password longer than 72 bytes rejected", func(t *testing.T) {
+		svc, _, _, _, _ := newAuthService(t, "open")
+
+		_, err := svc.Register(context.Background(), &dto.RegisterRequest{
+			Email:    "long@example.com",
+			Password: strings.Repeat("密", 25), // 25 字符、75 字节
+			Nickname: "Long",
+		})
+		assert.Equal(t, 400, err.(*apperror.AppError).Code)
 	})
 
 	t.Run("email already exists", func(t *testing.T) {
@@ -218,6 +270,29 @@ func TestAuthService_RefreshToken(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.NotEmpty(t, resp.AccessToken)
+	})
+
+	t.Run("deleted user is unauthorized", func(t *testing.T) {
+		svc, userRepo, tokenRepo, _, _ := newAuthService(t, "open")
+		uid := uuid.New()
+		tokenRepo.EXPECT().ConsumeByTokenHash(gomock.Any(), gomock.Any()).Return(&model.RefreshToken{UserID: uid}, nil)
+		userRepo.EXPECT().GetByID(gomock.Any(), uid).Return(nil, gorm.ErrRecordNotFound)
+
+		_, err := svc.RefreshToken(context.Background(), &dto.RefreshTokenRequest{RefreshToken: "t"})
+		assert.Equal(t, 401, err.(*apperror.AppError).Code)
+	})
+
+	t.Run("suspended user cannot refresh", func(t *testing.T) {
+		svc, userRepo, tokenRepo, _, _ := newAuthService(t, "open")
+		uid := uuid.New()
+		tokenRepo.EXPECT().ConsumeByTokenHash(gomock.Any(), gomock.Any()).Return(&model.RefreshToken{UserID: uid}, nil)
+		userRepo.EXPECT().GetByID(gomock.Any(), uid).Return(&model.User{
+			BaseModel: model.BaseModel{ID: uid},
+			Status:    "suspended",
+		}, nil)
+
+		_, err := svc.RefreshToken(context.Background(), &dto.RefreshTokenRequest{RefreshToken: "t"})
+		assert.Equal(t, 403, err.(*apperror.AppError).Code)
 	})
 
 	t.Run("invalid token", func(t *testing.T) {

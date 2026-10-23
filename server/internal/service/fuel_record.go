@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -48,7 +49,8 @@ func NewFuelRecordService(
 // Create 创建加油记录
 func (s *FuelRecordService) Create(ctx context.Context, userID, vehicleID uuid.UUID, req *dto.CreateFuelRecordRequest) (*dto.FuelRecordResponse, error) {
 	// 验证车辆访问权限
-	if _, err := s.verifyVehicleAccess(ctx, vehicleID, userID); err != nil {
+	vehicle, _, err := s.verifyVehicleAccess(ctx, vehicleID, userID)
+	if err != nil {
 		return nil, err
 	}
 
@@ -87,26 +89,26 @@ func (s *FuelRecordService) Create(ctx context.Context, userID, vehicleID uuid.U
 		RefuelDate:   refuelDate,
 	}
 
-	// 计算行驶距离和油耗（基于上一条记录）
-	s.calculateEfficiency(ctx, record)
-
 	if err := s.recordRepo.Create(ctx, record); err != nil {
 		return nil, apperror.ErrInternal("creating fuel record", err)
 	}
 
-	// 异步检查：异常油耗预警 & 保养里程提醒
+	// 新记录可能插入到历史中间，重算整车的行驶距离与油耗
+	s.recomputeDerived(ctx, vehicleID, record)
+
+	// 异步检查：异常油耗预警 & 保养里程提醒（通知发给车主）
 	// 注意：使用 context.WithoutCancel 避免 HTTP 请求结束后 context 被取消导致异步操作失败
 	if s.notificationService != nil {
 		asyncCtx := context.WithoutCancel(ctx)
 		if record.FuelEfficiency > 0 {
-			go s.notificationService.CheckFuelAnomaly(asyncCtx, userID, vehicleID, record.ID, record.FuelEfficiency)
+			go s.notificationService.CheckFuelAnomaly(asyncCtx, vehicle.UserID, vehicleID, record.ID, record.FuelEfficiency)
 		}
 		// 将里程转为 km 后检查保养提醒
 		odometerKm := record.Odometer
 		if convert.DistanceUnit(record.DistanceUnit) == convert.UnitMile {
 			odometerKm = record.Odometer * convert.MileToKm
 		}
-		go s.notificationService.CheckMaintenanceReminders(asyncCtx, userID, vehicleID, odometerKm)
+		go s.notificationService.CheckMaintenanceReminders(asyncCtx, vehicle.UserID, vehicleID, odometerKm)
 	}
 
 	prefs := s.getUserUnits(ctx, userID)
@@ -117,7 +119,7 @@ func (s *FuelRecordService) Create(ctx context.Context, userID, vehicleID uuid.U
 // List 获取车辆的加油记录列表（分页）
 func (s *FuelRecordService) List(ctx context.Context, userID, vehicleID uuid.UUID, page, pageSize int) ([]dto.FuelRecordResponse, int64, error) {
 	// 验证车辆访问权限
-	if _, err := s.verifyVehicleAccess(ctx, vehicleID, userID); err != nil {
+	if _, _, err := s.verifyVehicleAccess(ctx, vehicleID, userID); err != nil {
 		return nil, 0, err
 	}
 
@@ -135,32 +137,39 @@ func (s *FuelRecordService) List(ctx context.Context, userID, vehicleID uuid.UUI
 }
 
 // verifyVehicleAccess 验证用户对车辆的访问权限（所有权或共享访问）
-// 返回 true 表示用户是车主
-func (s *FuelRecordService) verifyVehicleAccess(ctx context.Context, vehicleID, userID uuid.UUID) (isOwner bool, err error) {
-	_, err = s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
+// 返回车辆信息；isOwner 为 true 表示用户是车主
+func (s *FuelRecordService) verifyVehicleAccess(ctx context.Context, vehicleID, userID uuid.UUID) (vehicle *model.Vehicle, isOwner bool, err error) {
+	vehicle, err = s.vehicleRepo.GetByIDAndUser(ctx, vehicleID, userID)
 	if err == nil {
-		return true, nil
+		return vehicle, true, nil
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return false, apperror.ErrInternal("verifying vehicle ownership", err)
+		return nil, false, apperror.ErrInternal("verifying vehicle ownership", err)
 	}
 	// 不是自己的车辆，检查是否为共享车辆
 	if s.groupRepo != nil {
 		shared, sharedErr := s.groupRepo.IsVehicleSharedToUser(ctx, vehicleID, userID)
 		if sharedErr != nil {
-			return false, apperror.ErrInternal("checking shared vehicle access", sharedErr)
+			return nil, false, apperror.ErrInternal("checking shared vehicle access", sharedErr)
 		}
 		if shared {
-			return false, nil
+			vehicle, err = s.vehicleRepo.GetByID(ctx, vehicleID)
+			if err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return nil, false, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
+				}
+				return nil, false, apperror.ErrInternal("fetching shared vehicle", err)
+			}
+			return vehicle, false, nil
 		}
 	}
-	return false, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
+	return nil, false, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
 }
 
 // GetByID 获取加油记录详情
 func (s *FuelRecordService) GetByID(ctx context.Context, recordID, vehicleID, userID uuid.UUID) (*dto.FuelRecordResponse, error) {
 	// 验证车辆访问权限
-	if _, err := s.verifyVehicleAccess(ctx, vehicleID, userID); err != nil {
+	if _, _, err := s.verifyVehicleAccess(ctx, vehicleID, userID); err != nil {
 		return nil, err
 	}
 
@@ -180,7 +189,7 @@ func (s *FuelRecordService) GetByID(ctx context.Context, recordID, vehicleID, us
 // Update 更新加油记录
 func (s *FuelRecordService) Update(ctx context.Context, recordID, vehicleID, userID uuid.UUID, req *dto.UpdateFuelRecordRequest) (*dto.FuelRecordResponse, error) {
 	// 验证车辆访问权限
-	isOwner, err := s.verifyVehicleAccess(ctx, vehicleID, userID)
+	_, isOwner, err := s.verifyVehicleAccess(ctx, vehicleID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -246,12 +255,12 @@ func (s *FuelRecordService) Update(ctx context.Context, recordID, vehicleID, use
 		record.RefuelDate = refuelDate
 	}
 
-	// 重新计算油耗
-	s.calculateEfficiency(ctx, record)
-
 	if err := s.recordRepo.Update(ctx, record); err != nil {
 		return nil, apperror.ErrInternal("updating fuel record", err)
 	}
+
+	// 里程、油量、日期、是否加满的变化都会影响前后记录，重算整车
+	s.recomputeDerived(ctx, vehicleID, record)
 
 	prefs := s.getUserUnits(ctx, userID)
 	resp := fuelRecordToResponse(record, prefs)
@@ -261,7 +270,7 @@ func (s *FuelRecordService) Update(ctx context.Context, recordID, vehicleID, use
 // Delete 删除加油记录
 func (s *FuelRecordService) Delete(ctx context.Context, recordID, vehicleID, userID uuid.UUID) error {
 	// 验证车辆访问权限
-	isOwner, err := s.verifyVehicleAccess(ctx, vehicleID, userID)
+	_, isOwner, err := s.verifyVehicleAccess(ctx, vehicleID, userID)
 	if err != nil {
 		return err
 	}
@@ -283,13 +292,16 @@ func (s *FuelRecordService) Delete(ctx context.Context, recordID, vehicleID, use
 	if err := s.recordRepo.Delete(ctx, recordID, vehicleID); err != nil {
 		return apperror.ErrInternal("deleting fuel record", err)
 	}
+
+	// 删除后下一条记录的行驶距离、下一次满油的油耗都需要重算
+	s.recomputeDerived(ctx, vehicleID, nil)
 	return nil
 }
 
 // GetStationSuggestions 获取加油站/充电站名称建议列表
 func (s *FuelRecordService) GetStationSuggestions(ctx context.Context, userID, vehicleID uuid.UUID) ([]string, error) {
 	// 验证车辆访问权限
-	if _, err := s.verifyVehicleAccess(ctx, vehicleID, userID); err != nil {
+	if _, _, err := s.verifyVehicleAccess(ctx, vehicleID, userID); err != nil {
 		return nil, err
 	}
 
@@ -332,31 +344,70 @@ func (s *FuelRecordService) getUserUnits(ctx context.Context, userID uuid.UUID) 
 	return prefs
 }
 
-// calculateEfficiency 计算行驶距离和油耗
-// 基于上一条满油记录的里程差来计算
-func (s *FuelRecordService) calculateEfficiency(ctx context.Context, record *model.FuelRecord) {
-	// 查找上一条记录
-	prev, err := s.recordRepo.GetPreviousRecord(ctx, record.VehicleID, record.RefuelDate)
+// recomputeDerived 重算车辆全部记录的派生字段，并把 target（如有）的结果回填到调用方持有的对象上。
+// 记录本身已保存成功，重算失败只记录日志：派生值会在该车下一次增删改时被修正。
+func (s *FuelRecordService) recomputeDerived(ctx context.Context, vehicleID uuid.UUID, target *model.FuelRecord) {
+	records, err := s.recordRepo.RecomputeDerived(ctx, vehicleID, computeDerivedFields)
 	if err != nil {
-		// 第一条记录，无法计算
+		s.logger.Error("failed to recompute fuel record derived fields",
+			zap.String("vehicle_id", vehicleID.String()),
+			zap.Error(err),
+		)
 		return
 	}
-
-	// 计算行驶距离（先统一转为公制）
-	_, currKm := convert.NormalizeToMetric(0, convert.VolumeUnit(record.FuelUnit), record.Odometer, convert.DistanceUnit(record.DistanceUnit))
-	_, prevKm := convert.NormalizeToMetric(0, convert.VolumeUnit(prev.FuelUnit), prev.Odometer, convert.DistanceUnit(prev.DistanceUnit))
-
-	tripDistance := currKm - prevKm
-	if tripDistance <= 0 {
+	if target == nil {
 		return
 	}
-	record.TripDistance = tripDistance
-
-	// 如果是加满油，计算油耗（L/100km 作为基准存储单位）
-	if record.IsFullTank {
-		liters, _ := convert.NormalizeToMetric(record.FuelAmount, convert.VolumeUnit(record.FuelUnit), 0, convert.UnitKm)
-		record.FuelEfficiency = convert.CalcL100km(liters, tripDistance)
+	for i := range records {
+		if records[i].ID == target.ID {
+			target.TripDistance = records[i].TripDistance
+			target.FuelEfficiency = records[i].FuelEfficiency
+			return
+		}
 	}
+}
+
+// computeDerivedFields 按时间升序计算每条记录的派生字段，返回发生变化的记录下标。
+//   - 行驶距离：与上一条记录（不论是否加满）的里程差，统一为 km
+//   - 油耗：满油到满油法。当前记录加满时，取上一次加满以来（不含上次加满本身）所有加油量之和，
+//     除以两次加满之间的里程差，得到 L/100km（电车为 kWh/100km）；未加满或无上一次加满时为 0
+func computeDerivedFields(records []model.FuelRecord) []int {
+	var changed []int
+	lastFullKm := -1.0 // 上一次加满时的里程（km），-1 表示尚未出现加满记录
+	fuelSinceFull := 0.0
+
+	for i := range records {
+		r := &records[i]
+		liters, km := convert.NormalizeToMetric(r.FuelAmount, convert.VolumeUnit(r.FuelUnit), r.Odometer, convert.DistanceUnit(r.DistanceUnit))
+
+		tripDistance := 0.0
+		if i > 0 {
+			prev := records[i-1]
+			_, prevKm := convert.NormalizeToMetric(0, convert.VolumeUnit(prev.FuelUnit), prev.Odometer, convert.DistanceUnit(prev.DistanceUnit))
+			if d := km - prevKm; d > 0 {
+				tripDistance = math.Round(d*10) / 10
+			}
+		}
+
+		efficiency := 0.0
+		fuelSinceFull += liters
+		if r.IsFullTank {
+			if lastFullKm >= 0 {
+				if dist := km - lastFullKm; dist > 0 {
+					efficiency = convert.CalcL100km(fuelSinceFull, dist)
+				}
+			}
+			lastFullKm = km
+			fuelSinceFull = 0
+		}
+
+		if math.Abs(r.TripDistance-tripDistance) > 1e-6 || math.Abs(r.FuelEfficiency-efficiency) > 1e-6 {
+			r.TripDistance = tripDistance
+			r.FuelEfficiency = efficiency
+			changed = append(changed, i)
+		}
+	}
+	return changed
 }
 
 // fuelRecordToResponse 将 model 转为 DTO，按用户偏好转换所有单位
@@ -387,7 +438,7 @@ func fuelRecordToResponse(r *model.FuelRecord, prefs userUnitPrefs) dto.FuelReco
 	odometer := convert.ConvertDistance(r.Odometer, srcDistUnit, prefs.distanceUnit)
 	tripDistance := r.TripDistance
 	if tripDistance > 0 {
-		// TripDistance 在 calculateEfficiency 中已统一转为 km 存储
+		// TripDistance 在 computeDerivedFields 中已统一转为 km 存储
 		tripDistance = convert.ConvertDistance(tripDistance, convert.UnitKm, prefs.distanceUnit)
 	}
 

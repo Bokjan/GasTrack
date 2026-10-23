@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -75,19 +76,14 @@ func (rl *RateLimiter) getLimiter(ip string) *rate.Limiter {
 }
 
 // RateLimit 返回 IP 级别限流中间件
+// 客户端 IP 由 RealIP 中间件解析（仅信任可信代理转发的头）；IPv6 按 /64 前缀聚合，
+// 防止攻击者轮换同一前缀下的地址绕过限流或撑大内存。
 func RateLimit(requestsPerSecond float64, burst int) Middleware {
 	rl := NewRateLimiter(requestsPerSecond, burst)
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ip := r.RemoteAddr
-
-			// 检查 X-Forwarded-For（如果经过反向代理）
-			if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
-				ip = forwarded
-			}
-
-			limiter := rl.getLimiter(ip)
+			limiter := rl.getLimiter(rateLimitKey(GetClientIP(r)))
 			if !limiter.Allow() {
 				respond.Error(w, http.StatusTooManyRequests, 4290, "rate limit exceeded")
 				return
@@ -96,4 +92,16 @@ func RateLimit(requestsPerSecond float64, burst int) Middleware {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// rateLimitKey 将 IP 归一化为限流 key：IPv4 取完整地址，IPv6 取 /64 前缀
+func rateLimitKey(ip string) string {
+	parsed := net.ParseIP(ip)
+	if parsed == nil {
+		return ip
+	}
+	if parsed.To4() != nil {
+		return parsed.String()
+	}
+	return parsed.Mask(net.CIDRMask(64, 128)).String() + "/64"
 }

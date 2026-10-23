@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 	"crypto/rand"
-	"fmt"
+	"errors"
 	"math/big"
 	"strings"
 	"time"
@@ -88,9 +88,9 @@ func (s *InviteService) Create(ctx context.Context, creatorID uuid.UUID, req *dt
 
 // GetByCode 查询邀请码详情（公开验证）
 func (s *InviteService) GetByCode(ctx context.Context, code string) (*dto.ValidateInviteResponse, error) {
-	invite, err := s.inviteRepo.GetByCode(ctx, code)
+	invite, err := s.inviteRepo.GetByCode(ctx, NormalizeInviteCode(code))
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return &dto.ValidateInviteResponse{Valid: false}, nil
 		}
 		return nil, apperror.ErrInternal("finding invite code", err)
@@ -127,7 +127,7 @@ func (s *InviteService) List(ctx context.Context, userID uuid.UUID) ([]dto.Invit
 func (s *InviteService) Update(ctx context.Context, id, userID uuid.UUID, req *dto.UpdateInviteRequest) (*dto.InviteCodeResponse, error) {
 	invite, err := s.inviteRepo.GetByID(ctx, id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, apperror.ErrNotFound("invite.not_found", "invite code not found")
 		}
 		return nil, apperror.ErrInternal("finding invite code", err)
@@ -156,7 +156,7 @@ func (s *InviteService) Update(ctx context.Context, id, userID uuid.UUID, req *d
 func (s *InviteService) Delete(ctx context.Context, id, userID uuid.UUID) error {
 	invite, err := s.inviteRepo.GetByID(ctx, id)
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return apperror.ErrNotFound("invite.not_found", "invite code not found")
 		}
 		return apperror.ErrInternal("finding invite code", err)
@@ -209,19 +209,21 @@ func generateInviteCode() string {
 	return sb.String()
 }
 
-// ValidateAndConsumeInviteCode 验证并消费邀请码（注册流程使用）
+// CreateUserWithInvite 校验并消费邀请码，同时在同一事务中创建用户（注册流程使用）
+// 邀请码无效时返回 400 AppError；其他数据库错误原样返回，由调用方处理（如邮箱唯一冲突）。
 // 返回消费后的邀请码模型（含 CreatedBy 等信息）
-func (s *InviteService) ValidateAndConsumeInviteCode(ctx context.Context, code string, userID uuid.UUID) (*model.InviteCode, error) {
-	invite, err := s.inviteRepo.ConsumeByCode(ctx, code, userID)
+func (s *InviteService) CreateUserWithInvite(ctx context.Context, user *model.User, code string) (*model.InviteCode, error) {
+	invite, err := s.inviteRepo.CreateUserWithInvite(ctx, user, NormalizeInviteCode(code))
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, apperror.ErrBadRequest("invite.invalid", "invite code not found")
-		}
-		// ConsumeByCode 内部会检查 IsValid()，失败时返回自定义错误
-		if err.Error() == "invite code is not valid" {
+		if errors.Is(err, repository.ErrInviteInvalid) {
 			return nil, apperror.ErrBadRequest("invite.invalid", "invite code is invalid or expired")
 		}
-		return nil, apperror.ErrInternal(fmt.Sprintf("consuming invite code: %v", err), err)
+		return nil, err
 	}
 	return invite, nil
+}
+
+// NormalizeInviteCode 去除首尾空白并转为大写（邀请码字符集均为大写）
+func NormalizeInviteCode(code string) string {
+	return strings.ToUpper(strings.TrimSpace(code))
 }

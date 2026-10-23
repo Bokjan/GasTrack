@@ -9,7 +9,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -24,6 +23,9 @@ import (
 	"gastrack/internal/pkg/apperror"
 	"gastrack/internal/repository"
 )
+
+// maxPasswordBytes bcrypt 支持的最大密码字节数
+const maxPasswordBytes = 72
 
 // AuthService 认证业务逻辑
 type AuthService struct {
@@ -76,6 +78,11 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		}
 	}
 
+	// bcrypt 只处理前 72 字节，超长会报错；validator 的 max=72 按字符计，多字节字符需额外校验
+	if len(req.Password) > maxPasswordBytes {
+		return nil, apperror.ErrBadRequest("auth.password_too_long", "password must be at most 72 bytes")
+	}
+
 	// 2. 检查邮箱是否已注册
 	exists, err := s.userRepo.ExistsByEmail(ctx, req.Email)
 	if err != nil {
@@ -111,7 +118,21 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		Status:             "active",
 	}
 
-	if err := s.userRepo.Create(ctx, user); err != nil {
+	// 5. 创建用户；携带邀请码时，校验 + 建用户 + 消费邀请码在同一事务内完成
+	var invite *model.InviteCode
+	if req.InviteCode != "" {
+		if s.inviteService == nil {
+			return nil, apperror.ErrInternal("invite service not configured", nil)
+		}
+		invite, err = s.inviteService.CreateUserWithInvite(ctx, user, req.InviteCode)
+	} else {
+		err = s.userRepo.Create(ctx, user)
+	}
+	if err != nil {
+		var appErr *apperror.AppError
+		if errors.As(err, &appErr) {
+			return nil, appErr
+		}
 		// 捕获数据库 unique violation（并发注册同一邮箱的兜底处理）
 		if isDuplicateKeyError(err) {
 			return nil, apperror.ErrConflict("auth.email_exists", "email already registered")
@@ -119,28 +140,13 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		return nil, apperror.ErrInternal("creating user", err)
 	}
 
-	// 5. 消费邀请码（在用户创建成功后）
-	if req.InviteCode != "" && s.inviteService != nil {
-		invite, err := s.inviteService.ValidateAndConsumeInviteCode(ctx, req.InviteCode, user.ID)
-		if err != nil {
-			// 邀请码消费失败不影响已创建的用户（已进入系统）
-			// 仅记录日志告警
-			s.logger.Warn("failed to consume invite code after user creation",
-				zap.String("invite_code", req.InviteCode),
-				zap.String("user_id", user.ID.String()),
-				zap.Error(err),
-			)
-		} else if s.notificationService != nil && invite != nil {
-			// 邀请码消费成功，异步通知邀请码创建者
-			creatorID := invite.CreatedBy
-			code := invite.Code
-			nickname := user.Nickname
-			go s.notificationService.NotifyInviteUsed(ctx, creatorID, code, nickname)
-		}
+	// 邀请码消费成功，异步通知邀请码创建者（脱离请求 context，避免响应结束后被取消）
+	if invite != nil && s.notificationService != nil {
+		go s.notificationService.NotifyInviteUsed(context.WithoutCancel(ctx), invite.CreatedBy, invite.Code, user.Nickname)
 	}
 
 	// 6. 生成 Token 对
-	return s.generateTokenPair(ctx, user)
+	return s.IssueTokenPair(ctx, user)
 }
 
 // Login 用户登录
@@ -166,7 +172,7 @@ func (s *AuthService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 	// 更新最后登录时间
 	_ = s.userRepo.UpdateLastLogin(ctx, user.ID)
 
-	return s.generateTokenPair(ctx, user)
+	return s.IssueTokenPair(ctx, user)
 }
 
 // RefreshToken 刷新 access token
@@ -184,23 +190,43 @@ func (s *AuthService) RefreshToken(ctx context.Context, req *dto.RefreshTokenReq
 		return nil, apperror.ErrInternal("consuming refresh token", err)
 	}
 
-	// 获取用户
+	// 获取用户（已注销的用户查不到，视为 token 无效）
 	user, err := s.userRepo.GetByID(ctx, tokenRecord.UserID)
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperror.ErrUnauthorized("auth.invalid_refresh_token", "invalid or expired refresh token")
+		}
 		return nil, apperror.ErrInternal("finding user", err)
 	}
 
-	return s.generateTokenPair(ctx, user)
+	// 被停用的账户不允许续期
+	if user.Status != "active" {
+		return nil, apperror.ErrForbidden("auth.account_disabled", "account is disabled")
+	}
+
+	return s.IssueTokenPair(ctx, user)
 }
 
-// Logout 登出（吊销当前设备的 refresh token）
+// Logout 登出（吊销该用户所有设备的 refresh token）
 func (s *AuthService) Logout(ctx context.Context, userID uuid.UUID) error {
-	// 删除该用户的所有 refresh token
-	return s.tokenRepo.DeleteByUserID(ctx, userID)
+	return s.RevokeAllTokens(ctx, userID)
 }
 
-// generateTokenPair 生成 access token + refresh token
-func (s *AuthService) generateTokenPair(ctx context.Context, user *model.User) (*dto.AuthResponse, error) {
+// RevokeAllTokens 吊销用户所有 refresh token（登出、改密码、注销账号时使用）
+func (s *AuthService) RevokeAllTokens(ctx context.Context, userID uuid.UUID) error {
+	if err := s.tokenRepo.DeleteByUserID(ctx, userID); err != nil {
+		return apperror.ErrInternal("revoking refresh tokens", err)
+	}
+	return nil
+}
+
+// PurgeExpiredTokens 清理过期的 refresh token（由后台定时任务调用）
+func (s *AuthService) PurgeExpiredTokens(ctx context.Context) error {
+	return s.tokenRepo.DeleteExpired(ctx)
+}
+
+// IssueTokenPair 生成 access token + refresh token
+func (s *AuthService) IssueTokenPair(ctx context.Context, user *model.User) (*dto.AuthResponse, error) {
 	now := time.Now()
 
 	// 生成 Access Token (JWT)
@@ -294,13 +320,8 @@ func defaultPreferences(locale string) (fuelUnit, unitSystem, currency string) {
 	}
 }
 
-// isDuplicateKeyError 判断是否为数据库唯一约束冲突错误（PostgreSQL error code 23505）
+// isDuplicateKeyError 判断是否为数据库唯一约束冲突错误
+// 依赖 gorm.Config.TranslateError，PostgreSQL 23505 会被翻译为 gorm.ErrDuplicatedKey
 func isDuplicateKeyError(err error) bool {
-	if err == nil {
-		return false
-	}
-	errMsg := err.Error()
-	return strings.Contains(errMsg, "duplicate key") ||
-		strings.Contains(errMsg, "23505") ||
-		strings.Contains(errMsg, "unique constraint")
+	return errors.Is(err, gorm.ErrDuplicatedKey)
 }

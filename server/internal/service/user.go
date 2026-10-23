@@ -17,12 +17,13 @@ import (
 // UserService 用户业务逻辑
 type UserService struct {
 	userRepo repository.UserRepo
+	tokens   TokenIssuer
 	logger   *zap.Logger
 }
 
 // NewUserService 创建 UserService 实例
-func NewUserService(userRepo repository.UserRepo, logger *zap.Logger) *UserService {
-	return &UserService{userRepo: userRepo, logger: logger}
+func NewUserService(userRepo repository.UserRepo, tokens TokenIssuer, logger *zap.Logger) *UserService {
+	return &UserService{userRepo: userRepo, tokens: tokens, logger: logger}
 }
 
 // GetProfile 获取用户资料
@@ -102,35 +103,44 @@ func (s *UserService) UpdateProfile(ctx context.Context, userID uuid.UUID, req *
 }
 
 // ChangePassword 修改密码
-func (s *UserService) ChangePassword(ctx context.Context, userID uuid.UUID, req *dto.ChangePasswordRequest) error {
+// 成功后吊销该用户所有 refresh token（其他设备需重新登录），并为当前设备签发新的 token 对
+func (s *UserService) ChangePassword(ctx context.Context, userID uuid.UUID, req *dto.ChangePasswordRequest) (*dto.AuthResponse, error) {
+	if len(req.NewPassword) > maxPasswordBytes {
+		return nil, apperror.ErrBadRequest("auth.password_too_long", "password must be at most 72 bytes")
+	}
+
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
-		return apperror.ErrInternal("fetching user", err)
+		return nil, apperror.ErrInternal("fetching user", err)
 	}
 
 	// 验证旧密码
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
-		return apperror.ErrBadRequest("user.wrong_password", "current password is incorrect")
+		return nil, apperror.ErrBadRequest("user.wrong_password", "current password is incorrect")
 	}
 
 	// 生成新密码 hash
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), 12)
 	if err != nil {
-		return apperror.ErrInternal("hashing new password", err)
+		return nil, apperror.ErrInternal("hashing new password", err)
 	}
 
 	fields := map[string]any{"password_hash": string(hash)}
 	if err := s.userRepo.UpdateFields(ctx, userID, fields); err != nil {
-		return apperror.ErrInternal("updating password", err)
+		return nil, apperror.ErrInternal("updating password", err)
 	}
+	user.PasswordHash = string(hash)
 
-	return nil
+	if err := s.tokens.RevokeAllTokens(ctx, userID); err != nil {
+		return nil, err
+	}
+	return s.tokens.IssueTokenPair(ctx, user)
 }
 
-// DeleteAccount 注销账号（软删除）
+// DeleteAccount 注销账号（软删除），并吊销所有 refresh token
 func (s *UserService) DeleteAccount(ctx context.Context, userID uuid.UUID) error {
 	if err := s.userRepo.Delete(ctx, userID); err != nil {
 		return apperror.ErrInternal("deleting user", err)
 	}
-	return nil
+	return s.tokens.RevokeAllTokens(ctx, userID)
 }

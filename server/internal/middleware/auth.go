@@ -22,8 +22,16 @@ const (
 )
 
 // Auth 返回 JWT 认证中间件
-// 从 Authorization: Bearer <token> 中提取并验证 JWT
-func Auth(jwtSecret string) Middleware {
+// 从 Authorization: Bearer <token> 中提取并验证 JWT（限定 HS256、校验签发者与过期时间）
+func Auth(jwtSecret, issuer string) Middleware {
+	parserOpts := []jwt.ParserOption{
+		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
+		jwt.WithExpirationRequired(),
+	}
+	if issuer != "" {
+		parserOpts = append(parserOpts, jwt.WithIssuer(issuer))
+	}
+
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// 从 Header 提取 Token
@@ -43,11 +51,8 @@ func Auth(jwtSecret string) Middleware {
 
 			// 解析并验证 JWT
 			token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) {
-				if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, jwt.ErrSignatureInvalid
-				}
 				return []byte(jwtSecret), nil
-			})
+			}, parserOpts...)
 
 			if err != nil || !token.Valid {
 				respond.Unauthorized(w, "invalid or expired token")

@@ -67,6 +67,7 @@ func (h *UserHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 
 // ChangePassword 修改密码
 // PUT /api/v1/users/me/password
+// 成功返回新的 token 对（其他设备的 refresh token 已吊销）
 func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
 	if !ok {
@@ -80,12 +81,14 @@ func (h *UserHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.userService.ChangePassword(r.Context(), userID, &req); err != nil {
+	result, err := h.userService.ChangePassword(r.Context(), userID, &req)
+	if err != nil {
 		handleAppError(w, h.logger, err)
 		return
 	}
 
-	respond.NoContent(w)
+	// 旧 refresh token 已全部吊销，返回当前设备的新 token 对
+	respond.OK(w, result)
 }
 
 // DeleteAccount 注销账号

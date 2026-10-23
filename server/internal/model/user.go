@@ -39,7 +39,7 @@ type RefreshToken struct {
 	BaseModel
 
 	UserID     uuid.UUID `gorm:"type:uuid;not null;index" json:"user_id"`
-	TokenHash  string    `gorm:"size:255;not null" json:"-"`
+	TokenHash  string    `gorm:"size:255;not null;uniqueIndex" json:"-"`
 	DeviceInfo string    `gorm:"size:255" json:"device_info,omitempty"`
 	ExpiresAt  time.Time `gorm:"not null" json:"expires_at"`
 

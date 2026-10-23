@@ -97,8 +97,9 @@ func TestNotificationService_CheckFuelAnomaly(t *testing.T) {
 		rid := uuid.New()
 
 		fuelRepo.EXPECT().GetVehicleStats(gomock.Any(), vid).Return(&repository.StatsResult{
-			TotalRecords:  10,
-			AvgEfficiency: 8.0,
+			TotalRecords:      10,
+			EfficiencyRecords: 10,
+			AvgEfficiency:     8.0,
 		}, nil)
 		notifRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 
@@ -111,8 +112,9 @@ func TestNotificationService_CheckFuelAnomaly(t *testing.T) {
 		vid := uuid.New()
 
 		fuelRepo.EXPECT().GetVehicleStats(gomock.Any(), vid).Return(&repository.StatsResult{
-			TotalRecords:  10,
-			AvgEfficiency: 8.0,
+			TotalRecords:      10,
+			EfficiencyRecords: 10,
+			AvgEfficiency:     8.0,
 		}, nil)
 		// No Create call expected
 
@@ -124,8 +126,9 @@ func TestNotificationService_CheckFuelAnomaly(t *testing.T) {
 		vid := uuid.New()
 
 		fuelRepo.EXPECT().GetVehicleStats(gomock.Any(), vid).Return(&repository.StatsResult{
-			TotalRecords:  2,
-			AvgEfficiency: 8.0,
+			TotalRecords:      2,
+			EfficiencyRecords: 2,
+			AvgEfficiency:     8.0,
 		}, nil)
 
 		svc.CheckFuelAnomaly(context.Background(), uuid.New(), vid, uuid.New(), 20.0)

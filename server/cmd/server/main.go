@@ -43,6 +43,9 @@ func main() {
 		zap.String("host", cfg.Server.Host),
 		zap.Int("port", cfg.Server.Port),
 	)
+	if cfg.UsesSampleJWTSecret() {
+		logger.Warn("jwt.secret is still the sample value from config.yaml; never use it in production")
+	}
 
 	// 3. 连接数据库
 	db, err := database.New(&cfg.Database, logger)
@@ -67,7 +70,7 @@ func main() {
 	reminderService := service.NewReminderService(reminderRepo, vehicleRepo, groupRepo, logger)
 	notificationService := service.NewNotificationService(notificationRepo, fuelRecordRepo, reminderRepo, logger)
 	authService := service.NewAuthService(userRepo, refreshTokenRepo, inviteService, notificationService, &cfg.JWT, cfg.Registration.Mode, logger)
-	userService := service.NewUserService(userRepo, logger)
+	userService := service.NewUserService(userRepo, authService, logger)
 	vehicleService := service.NewVehicleService(vehicleRepo, groupRepo, logger)
 	fuelRecordService := service.NewFuelRecordService(fuelRecordRepo, vehicleRepo, userRepo, groupRepo, logger, notificationService)
 	statsService := service.NewStatsService(fuelRecordRepo, vehicleRepo, userRepo, groupRepo, expenseRecordRepo, logger)
@@ -94,8 +97,17 @@ func main() {
 	exchangeRateHandler := handler.NewExchangeRateHandler(exchangeRateService, logger)
 	expenseRecordHandler := handler.NewExpenseRecordHandler(expenseRecordService, logger)
 
+	// 5c. 后台定时清理过期 refresh token
+	bgCtx, stopBackground := context.WithCancel(context.Background())
+	defer stopBackground()
+	go runPeriodically(bgCtx, time.Hour, func(ctx context.Context) {
+		if err := authService.PurgeExpiredTokens(ctx); err != nil {
+			logger.Warn("failed to purge expired refresh tokens", zap.Error(err))
+		}
+	})
+
 	// 7. 注册路由
-	mux := router.New(
+	mux, err := router.New(
 		cfg,
 		logger,
 		authHandler,
@@ -111,6 +123,9 @@ func main() {
 		exchangeRateHandler,
 		expenseRecordHandler,
 	)
+	if err != nil {
+		logger.Fatal("failed to build router", zap.Error(err))
+	}
 
 	// 8. 创建 HTTP 服务器
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
@@ -157,6 +172,21 @@ func main() {
 	}
 
 	logger.Info("GasTrack server stopped gracefully")
+}
+
+// runPeriodically 立即执行一次 fn，之后每隔 interval 执行一次，直到 ctx 取消
+func runPeriodically(ctx context.Context, interval time.Duration, fn func(ctx context.Context)) {
+	fn(ctx)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			fn(ctx)
+		case <-ctx.Done():
+			return
+		}
+	}
 }
 
 // initLogger 根据配置初始化 zap logger。

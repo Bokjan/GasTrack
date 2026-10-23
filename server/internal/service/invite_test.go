@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"gastrack/internal/dto"
 	"gastrack/internal/model"
 	"gastrack/internal/pkg/apperror"
+	"gastrack/internal/repository"
 	mockrepo "gastrack/internal/repository/mock"
 )
 
@@ -186,36 +186,36 @@ func TestInviteService_Delete(t *testing.T) {
 	})
 }
 
-func TestInviteService_ValidateAndConsumeInviteCode(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
+func TestInviteService_CreateUserWithInvite(t *testing.T) {
+	t.Run("success normalizes code", func(t *testing.T) {
 		svc, inviteRepo, _ := newInviteService(t)
-		uid := uuid.New()
+		user := &model.User{Email: "a@example.com"}
 		invite := &model.InviteCode{
 			BaseModel: model.BaseModel{ID: uuid.New()},
 			Code:      "GT-AAA",
 			CreatedBy: uuid.New(),
 		}
-		inviteRepo.EXPECT().ConsumeByCode(gomock.Any(), "GT-AAA", uid).Return(invite, nil)
+		inviteRepo.EXPECT().CreateUserWithInvite(gomock.Any(), user, "GT-AAA").Return(invite, nil)
 
-		result, err := svc.ValidateAndConsumeInviteCode(context.Background(), "GT-AAA", uid)
+		result, err := svc.CreateUserWithInvite(context.Background(), user, "  gt-aaa ")
 		assert.NoError(t, err)
 		assert.Equal(t, "GT-AAA", result.Code)
 	})
 
-	t.Run("not found", func(t *testing.T) {
+	t.Run("invalid code", func(t *testing.T) {
 		svc, inviteRepo, _ := newInviteService(t)
-		inviteRepo.EXPECT().ConsumeByCode(gomock.Any(), "INVALID", gomock.Any()).Return(nil, gorm.ErrRecordNotFound)
+		inviteRepo.EXPECT().CreateUserWithInvite(gomock.Any(), gomock.Any(), "GT-EXP").Return(nil, repository.ErrInviteInvalid)
 
-		_, err := svc.ValidateAndConsumeInviteCode(context.Background(), "INVALID", uuid.New())
+		_, err := svc.CreateUserWithInvite(context.Background(), &model.User{}, "GT-EXP")
 		assert.Equal(t, 400, err.(*apperror.AppError).Code)
 	})
 
-	t.Run("invalid code", func(t *testing.T) {
+	t.Run("other errors are passed through", func(t *testing.T) {
 		svc, inviteRepo, _ := newInviteService(t)
-		inviteRepo.EXPECT().ConsumeByCode(gomock.Any(), "GT-EXP", gomock.Any()).Return(nil, errors.New("invite code is not valid"))
+		inviteRepo.EXPECT().CreateUserWithInvite(gomock.Any(), gomock.Any(), "GT-DUP").Return(nil, gorm.ErrDuplicatedKey)
 
-		_, err := svc.ValidateAndConsumeInviteCode(context.Background(), "GT-EXP", uuid.New())
-		assert.Equal(t, 400, err.(*apperror.AppError).Code)
+		_, err := svc.CreateUserWithInvite(context.Background(), &model.User{}, "GT-DUP")
+		assert.ErrorIs(t, err, gorm.ErrDuplicatedKey)
 	})
 }
 
