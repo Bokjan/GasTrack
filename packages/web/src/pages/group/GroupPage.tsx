@@ -69,7 +69,7 @@ import type {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { useAuthStore, FUEL_GRADES, formatCurrency, formatNumber, convertEfficiencyForDisplay, convertAmount, litersToGallons, kmToMiles, isElectricVehicle, useExchangeRateStore } from '@gastrack/shared';
+import { useAuthStore, FUEL_GRADES, formatCurrency, formatNumber, convertEfficiencyForDisplay, convertAmount, litersToGallons, kmToMiles, isElectricVehicle, useExchangeRateStore, getApiErrorMessage } from '@gastrack/shared';
 
 const { Text } = Typography;
 
@@ -247,8 +247,8 @@ export default function GroupPage() {
     try {
       const { data } = await groupApi.list();
       setGroups(data.data || []);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -263,8 +263,8 @@ export default function GroupPage() {
     try {
       const { data } = await groupApi.getById(group.id);
       setSelectedGroup(data.data);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
 
     setOverviewLoading(true);
@@ -343,8 +343,8 @@ export default function GroupPage() {
         message.success(t('group.shareSuccess'));
         setSharedVehicles(prev => [...prev, data.data]);
       }
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setSharingVehicleId(null);
     }
@@ -358,8 +358,8 @@ export default function GroupPage() {
       setCreateModalOpen(false);
       createForm.resetFields();
       fetchGroups();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setCreating(false);
     }
@@ -373,8 +373,8 @@ export default function GroupPage() {
       setJoinModalOpen(false);
       joinForm.resetFields();
       fetchGroups();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setJoining(false);
     }
@@ -390,8 +390,8 @@ export default function GroupPage() {
       editForm.resetFields();
       setSelectedGroup(data.data);
       fetchGroups();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setUpdating(false);
     }
@@ -405,8 +405,8 @@ export default function GroupPage() {
       setSelectedGroup(null);
       setOverview(null);
       fetchGroups();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
@@ -418,8 +418,8 @@ export default function GroupPage() {
       setSelectedGroup(null);
       setOverview(null);
       fetchGroups();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
@@ -427,8 +427,8 @@ export default function GroupPage() {
     try {
       await navigator.clipboard.writeText(code);
       message.success(t('group.copied'));
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
@@ -439,8 +439,8 @@ export default function GroupPage() {
       message.success(t('group.regenerateSuccess'));
       setSelectedGroup(data.data);
       fetchGroups();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
@@ -450,8 +450,8 @@ export default function GroupPage() {
       await groupApi.updateMemberRole(selectedGroup.id, userId, { role });
       message.success(t('group.changeRoleSuccess'));
       selectGroup(selectedGroup);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
@@ -462,8 +462,8 @@ export default function GroupPage() {
       message.success(t('group.removeMemberSuccess'));
       selectGroup(selectedGroup);
       fetchGroups();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 

@@ -805,5 +805,81 @@
     "copyright": "© {{year}} GasTrack. All rights reserved.",
     "privacyPolicy": "Privacy Policy",
     "termsOfService": "Terms of Service"
+  },
+  "apiError": {
+    "auth": {
+      "account_disabled": "This account has been disabled",
+      "email_exists": "This email is already registered",
+      "invalid_credentials": "Incorrect email or password",
+      "invalid_refresh_token": "Your session has expired, please sign in again",
+      "invite_required": "An invite code is required to register",
+      "password_too_long": "Password is too long (max 72 bytes)",
+      "registration_closed": "Registration is currently closed",
+      "forbidden": "Permission denied",
+      "invalid": "Your session is invalid, please sign in again"
+    },
+    "expense": {
+      "invalid_date": "Invalid date format",
+      "invalid_reminder_id": "The linked reminder is invalid",
+      "maintenance_category_required": "Please choose a maintenance item for maintenance expenses",
+      "no_permission": "You can only modify your own records",
+      "not_found": "Expense record not found"
+    },
+    "group": {
+      "admin_remove_admin": "Admins cannot remove other admins",
+      "already_member": "You are already a member of this group",
+      "cannot_remove_owner": "The group owner cannot be removed",
+      "full": "This group is full",
+      "invalid_role": "Cannot assign the owner role",
+      "invite_invalid": "Invalid invite code",
+      "member_not_found": "Member not found",
+      "no_permission": "You don't have permission to do this",
+      "not_found": "Group not found",
+      "not_member": "You are not a member of this group",
+      "not_owner": "Only the group owner can do this",
+      "owner_leave": "The owner cannot leave; transfer ownership or delete the group",
+      "self_role": "You cannot change your own role",
+      "shared_vehicle_not_found": "Shared vehicle not found",
+      "vehicle_already_shared": "This vehicle is already shared in this group"
+    },
+    "invite": {
+      "forbidden": "You can only manage your own invite codes",
+      "invalid": "Invite code is invalid or expired",
+      "not_found": "Invite code not found"
+    },
+    "record": {
+      "invalid_date": "Invalid date format",
+      "no_permission": "You can only modify your own records",
+      "not_found": "Record not found"
+    },
+    "reminder": {
+      "invalid_date": "Invalid last service date",
+      "invalid_vehicle": "Invalid vehicle",
+      "mileage_required": "Please enter a mileage interval",
+      "not_found": "Reminder not found",
+      "time_required": "Please enter a time interval"
+    },
+    "user": {
+      "not_found": "User not found",
+      "wrong_password": "Current password is incorrect"
+    },
+    "vehicle": {
+      "archived": "Archived vehicles cannot be shared",
+      "invalid_id": "Invalid vehicle",
+      "not_found": "Vehicle not found",
+      "not_owner": "You can only share your own vehicles"
+    },
+    "validation": {
+      "error": "Some fields are invalid, please check and try again",
+      "required": "Please fill in the required fields"
+    },
+    "resource": {
+      "conflict": "Already exists",
+      "not_found": "Not found"
+    },
+    "error": {
+      "internal": "Something went wrong on the server, please try again later"
+    },
+    "network": "Network error, please check your connection and try again"
   }
 }

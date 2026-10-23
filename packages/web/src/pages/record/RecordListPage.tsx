@@ -34,6 +34,7 @@ import {
   useExchangeRateStore,
   convertAmount,
   getReferenceCurrencies,
+  getApiErrorMessage,
 } from '@gastrack/shared';
 import type { FuelRecord, Vehicle } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
@@ -74,8 +75,8 @@ export default function RecordListPage() {
     try {
       const { data } = await vehicleApi.getById(vehicleId!);
       setVehicle(data.data);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
@@ -89,8 +90,8 @@ export default function RecordListPage() {
       setRecords(resp.data);
       setTotal(resp.meta.total);
       setPage(p);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -101,8 +102,8 @@ export default function RecordListPage() {
       await fuelRecordApi.delete(vehicleId!, recordId);
       message.success(t('common.success'));
       loadRecords(page);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 

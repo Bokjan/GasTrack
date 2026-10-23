@@ -14,6 +14,7 @@ import {
   SUPPORTED_LOCALES,
   TIMEZONES,
   formatNumber,
+  getApiErrorMessage,
 } from '@gastrack/shared';
 import type { ChangePasswordRequest } from '@gastrack/shared';
 import type { ThemeMode } from '@gastrack/shared';
@@ -77,8 +78,8 @@ export default function SettingsPage() {
         localStorage.setItem('locale', values.locale);
       }
       message.success(t('settings.profileUpdated'));
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -99,8 +100,8 @@ export default function SettingsPage() {
       setTokens(data.data);
       message.success(t('settings.passwordChanged'));
       passwordForm.resetFields();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setChangingPwd(false);
     }
@@ -111,8 +112,8 @@ export default function SettingsPage() {
       await userApi.deleteAccount();
       await logout();
       navigate('/login');
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
@@ -143,8 +144,8 @@ export default function SettingsPage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       message.success(t('settings.exportSuccess'));
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setExporting(false);
     }

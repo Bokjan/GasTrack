@@ -29,6 +29,7 @@ import type { InviteCode, CreateInviteRequest } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { getApiErrorMessage } from '@gastrack/shared';
 
 const { Text, Paragraph } = Typography;
 
@@ -46,8 +47,8 @@ export default function InviteManagePage() {
     try {
       const { data } = await inviteApi.list();
       setInvites(data.data || []);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -76,8 +77,8 @@ export default function InviteManagePage() {
       setCreateModalOpen(false);
       form.resetFields();
       fetchInvites();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setCreating(false);
     }
@@ -87,8 +88,8 @@ export default function InviteManagePage() {
     try {
       await navigator.clipboard.writeText(code);
       message.success(t('invite.copied'));
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
@@ -97,8 +98,8 @@ export default function InviteManagePage() {
       await inviteApi.update(record.id, { is_active: !record.is_active });
       message.success(t('common.success'));
       fetchInvites();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
@@ -107,8 +108,8 @@ export default function InviteManagePage() {
       await inviteApi.delete(id);
       message.success(t('common.success'));
       fetchInvites();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 

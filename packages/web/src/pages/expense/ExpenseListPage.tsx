@@ -39,6 +39,7 @@ import {
   formatNumber,
   formatDateTime,
   useAuthStore,
+  getApiErrorMessage,
 } from '@gastrack/shared';
 import type { ExpenseRecord, Vehicle, ExpenseStatsResponse, ExpenseCategory } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
@@ -101,8 +102,8 @@ export default function ExpenseListPage() {
     try {
       const { data } = await vehicleApi.getById(vehicleId!);
       setVehicle(data.data);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
@@ -129,8 +130,8 @@ export default function ExpenseListPage() {
       setRecords(resp.data);
       setTotal(resp.meta.total);
       setPage(p);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -149,8 +150,8 @@ export default function ExpenseListPage() {
       message.success(t('expense.deleteSuccess'));
       loadRecords(page);
       loadStats();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 

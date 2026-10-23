@@ -11,7 +11,7 @@ import {
   LoadingOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore } from '@gastrack/shared';
+import { useAuthStore, getApiErrorMessage } from '@gastrack/shared';
 import { authApi, inviteApi } from '@gastrack/shared/src/api';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 
@@ -82,9 +82,8 @@ export default function RegisterPage() {
       await register(values.email, values.password, values.nickname, values.inviteCode);
       message.success(t('auth.registerSuccess'));
       navigate('/');
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      message.error(error.response?.data?.message || t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }

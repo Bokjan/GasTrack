@@ -330,7 +330,7 @@
   },
   "privacy": {
     "introTitle": "引言",
-    "introContent": "GasTrack（以下简称\u201c我们\u201d）非常重视您的隐私。本隐私政策说明我们如何收集、使用、存储和保护您的个人信息。",
+    "introContent": "GasTrack（以下简称“我们”）非常重视您的隐私。本隐私政策说明我们如何收集、使用、存储和保护您的个人信息。",
     "dataCollectedTitle": "我们收集的数据",
     "dataCollectedContent": "我们仅收集提供服务所必需的数据，包括：",
     "dataAccount": "账户信息：邮箱、昵称、偏好设置（语言、时区、货币、计量单位）",
@@ -805,5 +805,81 @@
     "copyright": "© {{year}} GasTrack 保留所有权利。",
     "privacyPolicy": "隐私政策",
     "termsOfService": "用户协议"
+  },
+  "apiError": {
+    "auth": {
+      "account_disabled": "账号已被停用",
+      "email_exists": "该邮箱已注册",
+      "invalid_credentials": "邮箱或密码错误",
+      "invalid_refresh_token": "登录已过期，请重新登录",
+      "invite_required": "注册需要邀请码",
+      "password_too_long": "密码过长（最多 72 字节）",
+      "registration_closed": "当前已关闭注册",
+      "forbidden": "没有权限",
+      "invalid": "登录状态无效，请重新登录"
+    },
+    "expense": {
+      "invalid_date": "日期格式无效",
+      "invalid_reminder_id": "关联的提醒无效",
+      "maintenance_category_required": "保养类开销需选择保养项目",
+      "no_permission": "只能操作自己的记录",
+      "not_found": "开销记录不存在"
+    },
+    "group": {
+      "admin_remove_admin": "管理员不能移除其他管理员",
+      "already_member": "你已经是该群组成员",
+      "cannot_remove_owner": "不能移除群主",
+      "full": "群组成员已满",
+      "invalid_role": "不能设置为群主角色",
+      "invite_invalid": "邀请码无效",
+      "member_not_found": "成员不存在",
+      "no_permission": "没有权限执行此操作",
+      "not_found": "群组不存在",
+      "not_member": "你不是该群组成员",
+      "not_owner": "只有群主可以执行此操作",
+      "owner_leave": "群主不能退出群组，请先转让或解散群组",
+      "self_role": "不能修改自己的角色",
+      "shared_vehicle_not_found": "共享车辆不存在",
+      "vehicle_already_shared": "该车辆已共享到此群组"
+    },
+    "invite": {
+      "forbidden": "只能管理自己创建的邀请码",
+      "invalid": "邀请码无效或已过期",
+      "not_found": "邀请码不存在"
+    },
+    "record": {
+      "invalid_date": "日期格式无效",
+      "no_permission": "只能操作自己的记录",
+      "not_found": "记录不存在"
+    },
+    "reminder": {
+      "invalid_date": "上次保养日期格式无效",
+      "invalid_vehicle": "车辆无效",
+      "mileage_required": "请填写里程间隔",
+      "not_found": "提醒不存在",
+      "time_required": "请填写时间间隔"
+    },
+    "user": {
+      "not_found": "用户不存在",
+      "wrong_password": "当前密码不正确"
+    },
+    "vehicle": {
+      "archived": "已归档的车辆不能共享",
+      "invalid_id": "车辆无效",
+      "not_found": "车辆不存在",
+      "not_owner": "只能共享自己的车辆"
+    },
+    "validation": {
+      "error": "输入内容有误，请检查后重试",
+      "required": "请填写必填项"
+    },
+    "resource": {
+      "conflict": "数据已存在",
+      "not_found": "数据不存在"
+    },
+    "error": {
+      "internal": "服务器出错了，请稍后重试"
+    },
+    "network": "网络连接失败，请检查网络后重试"
   }
 }

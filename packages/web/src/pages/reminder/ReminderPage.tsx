@@ -15,6 +15,7 @@ import {
   reminderApi,
   vehicleApi,
   useAuthStore,
+  getApiErrorMessage,
 } from '@gastrack/shared';
 import type { Reminder, Vehicle, CreateReminderRequest } from '@gastrack/shared';
 
@@ -63,8 +64,8 @@ export default function ReminderPage() {
       ]);
       setReminders(remindersRes.data.data || []);
       setVehicles(vehiclesRes.data.data || []);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -125,8 +126,11 @@ export default function ReminderPage() {
       message.success(t('common.success'));
       setModalOpen(false);
       fetchData();
-    } catch {
-      // form validation error or API error
+    } catch (err) {
+      // 表单校验失败时 antd 已在字段下提示，只需提示 API 错误
+      if (!(err && typeof err === 'object' && 'errorFields' in err)) {
+        message.error(getApiErrorMessage(err));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -136,8 +140,8 @@ export default function ReminderPage() {
     try {
       await reminderApi.update(reminder.id, { is_enabled: enabled });
       fetchData();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
@@ -146,8 +150,8 @@ export default function ReminderPage() {
       await reminderApi.delete(id);
       message.success(t('common.success'));
       fetchData();
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 

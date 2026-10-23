@@ -24,6 +24,7 @@ import {
   formatNumber,
   formatDateTime,
   useAuthStore,
+  getApiErrorMessage,
 } from '@gastrack/shared';
 import type { ExpenseRecord, Vehicle } from '@gastrack/shared';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -76,8 +77,8 @@ export default function ExpenseDetailPage() {
       ]);
       setRecord(recordRes.data.data);
       setVehicle(vehicleRes.data.data);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -88,8 +89,8 @@ export default function ExpenseDetailPage() {
       await expenseApi.delete(vehicleId!, expenseId!);
       message.success(t('expense.deleteSuccess'));
       navigate(`/vehicles/${vehicleId}/expenses`);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 

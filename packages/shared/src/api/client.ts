@@ -16,6 +16,27 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// ---------- 会话失效处理 ----------
+/** 登录/注册/刷新接口自身的 401 是业务错误（如密码错误），不应触发刷新或登出 */
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/refresh'];
+
+let unauthorizedHandler: (() => void) | null = null;
+
+/** 注册会话失效回调（由 authStore 设置，用于重置登录状态并交由路由跳转登录页） */
+export function setUnauthorizedHandler(handler: () => void) {
+  unauthorizedHandler = handler;
+}
+
+const handleSessionExpired = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  if (unauthorizedHandler) {
+    unauthorizedHandler();
+  } else {
+    window.location.href = '/login';
+  }
+};
+
 // ---------- 响应拦截器：统一错误处理 + Token 刷新 ----------
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -39,11 +60,12 @@ apiClient.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthEndpoint = AUTH_ENDPOINTS.some((p) => originalRequest?.url?.startsWith(p));
+
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
       const refreshToken = localStorage.getItem('refresh_token');
       if (!refreshToken) {
-        localStorage.clear();
-        window.location.href = '/login';
+        handleSessionExpired();
         return Promise.reject(error);
       }
 
@@ -81,8 +103,11 @@ apiClient.interceptors.response.use(
           return apiClient(originalRequest);
         }
         processQueue(refreshError, null);
-        localStorage.clear();
-        window.location.href = '/login';
+        // 仅在服务端明确拒绝 refresh token 时登出；网络错误或 5xx 保留登录状态，待恢复后重试
+        const status = axios.isAxiosError(refreshError) ? refreshError.response?.status : undefined;
+        if (status !== undefined && status < 500) {
+          handleSessionExpired();
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

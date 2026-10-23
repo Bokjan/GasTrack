@@ -27,6 +27,7 @@ import {
   getFuelGradesByLocale,
   isElectricVehicle,
   hasEngineCC,
+  getApiErrorMessage,
 } from '@gastrack/shared';
 import type { CreateVehicleRequest, FuelType } from '@gastrack/shared';
 
@@ -55,7 +56,7 @@ export default function VehicleFormPage() {
           form.setFieldsValue(data.data);
           setFuelType(data.data.fuel_type);
         })
-        .catch(() => message.error(t('common.error')))
+        .catch((err) => message.error(getApiErrorMessage(err)))
         .finally(() => setFetching(false));
     }
   }, [id]);
@@ -75,9 +76,8 @@ export default function VehicleFormPage() {
         message.success(t('common.success'));
       }
       navigate('/vehicles');
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      message.error(error.response?.data?.message || t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }

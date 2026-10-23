@@ -45,6 +45,7 @@ import {
   useExchangeRateStore,
   convertAmount,
   getReferenceCurrencies,
+  getApiErrorMessage,
 } from '@gastrack/shared';
 import type { FuelRecord, Vehicle, VehicleStats } from '@gastrack/shared';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -112,8 +113,8 @@ export default function RecordDetailPage() {
       setRecord(recordRes.data.data);
       setVehicle(vehicleRes.data.data);
       setStats(statsRes.data.data);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -124,8 +125,8 @@ export default function RecordDetailPage() {
       await fuelRecordApi.delete(vehicleId!, recordId!);
       message.success(t('common.success'));
       navigate(`/vehicles/${vehicleId}/records`);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 

@@ -805,5 +805,81 @@
     "copyright": "© {{year}} GasTrack. All rights reserved.",
     "privacyPolicy": "プライバシーポリシー",
     "termsOfService": "利用規約"
+  },
+  "apiError": {
+    "auth": {
+      "account_disabled": "このアカウントは無効化されています",
+      "email_exists": "このメールアドレスは既に登録されています",
+      "invalid_credentials": "メールアドレスまたはパスワードが正しくありません",
+      "invalid_refresh_token": "セッションの有効期限が切れました。再度ログインしてください",
+      "invite_required": "登録には招待コードが必要です",
+      "password_too_long": "パスワードが長すぎます（最大 72 バイト）",
+      "registration_closed": "現在、新規登録を受け付けていません",
+      "forbidden": "権限がありません",
+      "invalid": "ログイン状態が無効です。再度ログインしてください"
+    },
+    "expense": {
+      "invalid_date": "日付の形式が正しくありません",
+      "invalid_reminder_id": "関連付けたリマインダーが無効です",
+      "maintenance_category_required": "メンテナンス費用にはメンテナンス項目を選択してください",
+      "no_permission": "自分の記録のみ操作できます",
+      "not_found": "費用記録が見つかりません"
+    },
+    "group": {
+      "admin_remove_admin": "管理者は他の管理者を削除できません",
+      "already_member": "既にこのグループのメンバーです",
+      "cannot_remove_owner": "グループオーナーは削除できません",
+      "full": "グループのメンバーが上限に達しています",
+      "invalid_role": "オーナー権限は付与できません",
+      "invite_invalid": "招待コードが無効です",
+      "member_not_found": "メンバーが見つかりません",
+      "no_permission": "この操作を行う権限がありません",
+      "not_found": "グループが見つかりません",
+      "not_member": "このグループのメンバーではありません",
+      "not_owner": "グループオーナーのみ実行できます",
+      "owner_leave": "オーナーは退出できません。オーナーを譲渡するかグループを削除してください",
+      "self_role": "自分のロールは変更できません",
+      "shared_vehicle_not_found": "共有車両が見つかりません",
+      "vehicle_already_shared": "この車両は既にこのグループで共有されています"
+    },
+    "invite": {
+      "forbidden": "自分の招待コードのみ管理できます",
+      "invalid": "招待コードが無効または期限切れです",
+      "not_found": "招待コードが見つかりません"
+    },
+    "record": {
+      "invalid_date": "日付の形式が正しくありません",
+      "no_permission": "自分の記録のみ操作できます",
+      "not_found": "記録が見つかりません"
+    },
+    "reminder": {
+      "invalid_date": "前回の整備日の形式が正しくありません",
+      "invalid_vehicle": "車両が無効です",
+      "mileage_required": "走行距離の間隔を入力してください",
+      "not_found": "リマインダーが見つかりません",
+      "time_required": "期間の間隔を入力してください"
+    },
+    "user": {
+      "not_found": "ユーザーが見つかりません",
+      "wrong_password": "現在のパスワードが正しくありません"
+    },
+    "vehicle": {
+      "archived": "アーカイブ済みの車両は共有できません",
+      "invalid_id": "車両が無効です",
+      "not_found": "車両が見つかりません",
+      "not_owner": "自分の車両のみ共有できます"
+    },
+    "validation": {
+      "error": "入力内容に誤りがあります。確認してから再度お試しください",
+      "required": "必須項目を入力してください"
+    },
+    "resource": {
+      "conflict": "既に存在します",
+      "not_found": "見つかりません"
+    },
+    "error": {
+      "internal": "サーバーでエラーが発生しました。しばらくしてから再度お試しください"
+    },
+    "network": "ネットワークエラーです。接続を確認してから再度お試しください"
   }
 }

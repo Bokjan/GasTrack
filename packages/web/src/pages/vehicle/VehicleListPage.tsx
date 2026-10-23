@@ -10,7 +10,7 @@ import {
   WalletOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { useVehicleStore, vehicleApi, FUEL_GRADES } from '@gastrack/shared';
+import { useVehicleStore, vehicleApi, FUEL_GRADES, getApiErrorMessage } from '@gastrack/shared';
 
 export default function VehicleListPage() {
   const { t } = useTranslation();
@@ -26,8 +26,8 @@ export default function VehicleListPage() {
       await vehicleApi.delete(id);
       removeVehicle(id);
       message.success(t('common.success'));
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
@@ -37,8 +37,8 @@ export default function VehicleListPage() {
       // 重新获取列表以更新默认状态
       fetchVehicles();
       message.success(t('common.success'));
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 

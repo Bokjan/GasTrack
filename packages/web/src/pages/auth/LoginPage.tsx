@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Form, Input, Button, message } from 'antd';
 import { MailOutlined, LockOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore } from '@gastrack/shared';
+import { useAuthStore, getApiErrorMessage } from '@gastrack/shared';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 export default function LoginPage() {
@@ -18,9 +18,8 @@ export default function LoginPage() {
       await login(values.email, values.password);
       message.success(t('auth.loginSuccess'));
       navigate('/');
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      message.error(error.response?.data?.message || t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }

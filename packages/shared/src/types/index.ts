@@ -41,6 +41,7 @@ export interface RegisterRequest {
   email: string;
   password: string;
   nickname: string;
+  locale?: string;
   invite_code?: string;
 }
 

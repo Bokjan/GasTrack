@@ -24,6 +24,7 @@ import {
   FUEL_GRADES,
   getFuelGradesByLocale,
   isElectricVehicle,
+  getApiErrorMessage,
 } from '@gastrack/shared';
 import type { CreateFuelRecordRequest, Vehicle } from '@gastrack/shared';
 import dayjs from 'dayjs';
@@ -187,7 +188,7 @@ export default function RecordFormPage() {
             refuel_date: dayjs(record.refuel_date),
           });
         })
-        .catch(() => message.error(t('common.error')))
+        .catch((err) => message.error(getApiErrorMessage(err)))
         .finally(() => setFetching(false));
     }
   }, [vehicleId, recordId]);
@@ -284,9 +285,8 @@ export default function RecordFormPage() {
       } else {
         navigate(-1);
       }
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      message.error(error.response?.data?.message || t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }

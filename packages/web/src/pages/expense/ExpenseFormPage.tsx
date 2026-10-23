@@ -20,6 +20,7 @@ import {
   reminderApi,
   useAuthStore,
   CURRENCIES,
+  getApiErrorMessage,
 } from '@gastrack/shared';
 import type { CreateExpenseRequest, Reminder, ExpenseCategory, MaintenanceCategory } from '@gastrack/shared';
 import dayjs from 'dayjs';
@@ -115,7 +116,7 @@ export default function ExpenseFormPage() {
               : undefined,
           });
         })
-        .catch(() => message.error(t('common.error')))
+        .catch((err) => message.error(getApiErrorMessage(err)))
         .finally(() => setFetching(false));
     }
   }, [vehicleId, expenseId]);
@@ -147,9 +148,8 @@ export default function ExpenseFormPage() {
         message.success(t('expense.createSuccess'));
       }
       navigate(`/vehicles/${vehicleId}/expenses`);
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      message.error(error.response?.data?.message || t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }

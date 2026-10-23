@@ -16,6 +16,7 @@ import {
   isElectricVehicle,
   useAuthStore,
   useVehicleStore,
+  getApiErrorMessage,
 } from '@gastrack/shared';
 import type { Notification } from '@gastrack/shared';
 import { useIsMobile } from '../hooks/useIsMobile';
@@ -120,8 +121,8 @@ export default function NotificationBell() {
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
       setUnreadCount((c) => Math.max(0, c - 1));
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
@@ -130,8 +131,8 @@ export default function NotificationBell() {
       await notificationApi.markAllAsRead();
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
       setUnreadCount(0);
-    } catch {
-      message.error(t('common.error'));
+    } catch (err) {
+      message.error(getApiErrorMessage(err));
     }
   };
 
