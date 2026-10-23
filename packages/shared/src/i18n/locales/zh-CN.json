@@ -546,10 +546,10 @@
     "anomalyFuel": "异常油耗",
     "maintenanceDue": "保养到期",
     "inviteUsed": "邀请码被使用",
-    "anomalyFuelMsg": "本次加油：{{current}}，历史均值：{{avg}}（{{direction}} {{pct}}%）",
+    "anomalyFuelMsg": "本次加油：{{current}} {{unit}}，历史均值：{{avg}} {{unit}}（{{direction}} {{pct}}%）",
     "directionHigher": "偏高",
     "directionLower": "偏低",
-    "maintenanceDueMsg": "当前里程 {{currentOdo}} 已达到预定保养里程 {{targetOdo}}",
+    "maintenanceDueMsg": "当前里程 {{currentOdo}} {{unit}} 已达到预定保养里程 {{targetOdo}} {{unit}}",
     "inviteUsedMsg": "用户 {{nickname}} 使用了你的邀请码 {{code}} 注册"
   },
   "group": {

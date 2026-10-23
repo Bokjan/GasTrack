@@ -546,10 +546,10 @@
     "anomalyFuel": "Fuel Anomaly",
     "maintenanceDue": "Maintenance Due",
     "inviteUsed": "Invite Used",
-    "anomalyFuelMsg": "This refuel: {{current}}, historical average: {{avg}} ({{direction}} {{pct}}%)",
+    "anomalyFuelMsg": "This refuel: {{current}} {{unit}}, historical average: {{avg}} {{unit}} ({{direction}} {{pct}}%)",
     "directionHigher": "higher",
     "directionLower": "lower",
-    "maintenanceDueMsg": "Current odometer {{currentOdo}} has reached the scheduled service mileage {{targetOdo}}",
+    "maintenanceDueMsg": "Current odometer {{currentOdo}} {{unit}} has reached the scheduled service mileage {{targetOdo}} {{unit}}",
     "inviteUsedMsg": "User {{nickname}} registered using your invite code {{code}}"
   },
   "group": {

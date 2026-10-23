@@ -8,7 +8,15 @@ import {
   UserAddOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { notificationApi } from '@gastrack/shared';
+import {
+  notificationApi,
+  formatNumber,
+  convertFuelEfficiency,
+  kmToMiles,
+  isElectricVehicle,
+  useAuthStore,
+  useVehicleStore,
+} from '@gastrack/shared';
 import type { Notification } from '@gastrack/shared';
 import { useIsMobile } from '../hooks/useIsMobile';
 import dayjs from 'dayjs';
@@ -20,9 +28,52 @@ dayjs.extend(relativeTime);
 
 const { Text } = Typography;
 
+/**
+ * 解析后端结构化通知参数："k1=v1;k2=v2"
+ * 不含 '=' 的片段视为上一个值中的 ';'（如提醒标题本身含分号）
+ */
+function parseParams(raw: string): Record<string, string> {
+  const params: Record<string, string> = {};
+  let lastKey: string | null = null;
+  for (const seg of raw.split(';')) {
+    const idx = seg.indexOf('=');
+    if (idx > 0) {
+      lastKey = seg.slice(0, idx);
+      params[lastKey] = seg.slice(idx + 1);
+    } else if (lastKey) {
+      params[lastKey] += `;${seg}`;
+    }
+  }
+  return params;
+}
+
+/** 燃油单位对应的电耗单位 */
+const EV_UNIT_OF: Record<string, string> = {
+  'L/100km': 'kWh/100km',
+  'km/L': 'km/kWh',
+  'MPG': 'mi/kWh',
+};
+
+/**
+ * 将后端基准油耗（L/100km 或 kWh/100km）转为用户偏好单位
+ * 电动车按燃油单位的同类形式换算：kWh/100km、km/kWh、mi/kWh
+ */
+function convertEfficiencyForDisplay(value: number, unit: string, isEv: boolean): { value: number; unit: string } {
+  if (!isEv) return { value: convertFuelEfficiency(value, 'L/100km', unit), unit };
+  const evUnit = EV_UNIT_OF[unit] ?? 'kWh/100km';
+  if (value <= 0 || evUnit === 'kWh/100km') return { value, unit: evUnit };
+  const kmPerKwh = 100 / value;
+  return { value: evUnit === 'km/kWh' ? kmPerKwh : kmToMiles(kmPerKwh), unit: evUnit };
+}
+
 export default function NotificationBell() {
   const { t, i18n } = useTranslation();
   const isMobile = useIsMobile();
+  const user = useAuthStore((s) => s.user);
+  const vehicles = useVehicleStore((s) => s.vehicles);
+  const fetchVehicles = useVehicleStore((s) => s.fetchVehicles);
+  const efficiencyUnit = user?.fuel_efficiency_unit || 'L/100km';
+  const isImperial = user?.unit_system === 'imperial';
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -68,6 +119,8 @@ export default function NotificationBell() {
   useEffect(() => {
     if (open) {
       fetchNotifications();
+      // 油耗异常通知需按车辆类型（燃油/电动）选择单位
+      if (vehicles.length === 0) fetchVehicles().catch(() => {});
     }
   }, [open, fetchNotifications]);
 
@@ -103,6 +156,53 @@ export default function NotificationBell() {
         return <UserAddOutlined style={{ color: '#52c41a' }} />;
       default:
         return <BellOutlined />;
+    }
+  };
+
+  /**
+   * 将结构化通知渲染为本地化标题与正文；旧版纯文本通知原样显示
+   * showTag：标题与类型标签相同时不重复显示标签
+   */
+  const renderNotification = (item: Notification): { title: string; message: string; showTag: boolean } => {
+    if (!item.title.startsWith('notification.') || !i18n.exists(item.title)) {
+      return { title: item.title, message: item.message, showTag: true };
+    }
+    const params = parseParams(item.message);
+    switch (item.type) {
+      case 'anomaly_fuel': {
+        // 后端参数为基准单位，换算后重新计算方向与偏离比例（km/L、MPG 下高低关系相反）
+        const vehicle = vehicles.find((v) => v.id === item.vehicle_id);
+        const isEv = vehicle ? isElectricVehicle(vehicle.fuel_type) : false;
+        const current = convertEfficiencyForDisplay(Number(params.current), efficiencyUnit, isEv);
+        const avg = convertEfficiencyForDisplay(Number(params.avg), efficiencyUnit, isEv);
+        const pct = avg.value > 0 ? Math.round((Math.abs(current.value - avg.value) / avg.value) * 100) : Number(params.pct);
+        return {
+          title: t(item.title),
+          message: t('notification.anomalyFuelMsg', {
+            current: formatNumber(current.value, 1),
+            avg: formatNumber(avg.value, 1),
+            unit: current.unit,
+            pct,
+            direction: t(current.value < avg.value ? 'notification.directionLower' : 'notification.directionHigher'),
+          }),
+          showTag: false,
+        };
+      }
+      case 'maintenance_due':
+        return {
+          title: params.reminderTitle || t(item.title),
+          // 后端里程统一为 km
+          message: t('notification.maintenanceDueMsg', {
+            currentOdo: formatNumber(isImperial ? kmToMiles(Number(params.currentOdo)) : Number(params.currentOdo), 0),
+            targetOdo: formatNumber(isImperial ? kmToMiles(Number(params.targetOdo)) : Number(params.targetOdo), 0),
+            unit: isImperial ? 'mi' : 'km',
+          }),
+          showTag: !!params.reminderTitle,
+        };
+      case 'invite_used':
+        return { title: t(item.title), message: t('notification.inviteUsedMsg', params), showTag: false };
+      default:
+        return { title: t(item.title), message: item.message, showTag: false };
     }
   };
 
@@ -146,51 +246,54 @@ export default function NotificationBell() {
         <List
           loading={loading}
           dataSource={notifications}
-          renderItem={(item) => (
-            <List.Item
-              key={item.id}
-              style={{
-                cursor: item.is_read ? 'default' : 'pointer',
-                background: item.is_read ? 'transparent' : 'rgba(24, 144, 255, 0.04)',
-                padding: '8px 4px',
-              }}
-              onClick={() => {
-                if (!item.is_read) handleMarkAsRead(item.id);
-              }}
-            >
-              <List.Item.Meta
-                avatar={getNotificationIcon(item.type)}
-                title={
-                  <Space size={4} style={{ flexWrap: 'wrap' }}>
-                    <Text
-                      style={{
-                        fontWeight: item.is_read ? 'normal' : 'bold',
-                        fontSize: 13,
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {item.title}
-                    </Text>
-                    {getNotificationTag(item.type)}
-                  </Space>
-                }
-                description={
-                  <Space direction="vertical" size={0} style={{ width: '100%' }}>
-                    <Text type="secondary" style={{ fontSize: 12, wordBreak: 'break-word' }}>{item.message}</Text>
-                    <Text type="secondary" style={{ fontSize: 11 }}>
-                      {dayjs(item.created_at).fromNow()}
-                    </Text>
-                  </Space>
-                }
-              />
-              {!item.is_read && (
-                <div style={{
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: '#1890ff', flexShrink: 0,
-                }} />
-              )}
-            </List.Item>
-          )}
+          renderItem={(item) => {
+            const { title, message: body, showTag } = renderNotification(item);
+            return (
+              <List.Item
+                key={item.id}
+                style={{
+                  cursor: item.is_read ? 'default' : 'pointer',
+                  background: item.is_read ? 'transparent' : 'rgba(24, 144, 255, 0.04)',
+                  padding: '8px 4px',
+                }}
+                onClick={() => {
+                  if (!item.is_read) handleMarkAsRead(item.id);
+                }}
+              >
+                <List.Item.Meta
+                  avatar={getNotificationIcon(item.type)}
+                  title={
+                    <Space size={4} style={{ flexWrap: 'wrap' }}>
+                      <Text
+                        style={{
+                          fontWeight: item.is_read ? 'normal' : 'bold',
+                          fontSize: 13,
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {title}
+                      </Text>
+                      {showTag && getNotificationTag(item.type)}
+                    </Space>
+                  }
+                  description={
+                    <Space direction="vertical" size={0} style={{ width: '100%' }}>
+                      <Text type="secondary" style={{ fontSize: 12, wordBreak: 'break-word' }}>{body}</Text>
+                      <Text type="secondary" style={{ fontSize: 11 }}>
+                        {dayjs(item.created_at).fromNow()}
+                      </Text>
+                    </Space>
+                  }
+                />
+                {!item.is_read && (
+                  <div style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: '#1890ff', flexShrink: 0,
+                  }} />
+                )}
+              </List.Item>
+            );
+          }}
         />
       )}
     </div>

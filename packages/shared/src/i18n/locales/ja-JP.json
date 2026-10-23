@@ -546,10 +546,10 @@
     "anomalyFuel": "燃費異常",
     "maintenanceDue": "メンテナンス期限",
     "inviteUsed": "招待コード使用",
-    "anomalyFuelMsg": "今回の給油：{{current}}、過去平均：{{avg}}（{{direction}} {{pct}}%）",
+    "anomalyFuelMsg": "今回の給油：{{current}} {{unit}}、過去平均：{{avg}} {{unit}}（{{direction}} {{pct}}%）",
     "directionHigher": "高め",
     "directionLower": "低め",
-    "maintenanceDueMsg": "現在の走行距離 {{currentOdo}} が予定メンテナンス距離 {{targetOdo}} に達しました",
+    "maintenanceDueMsg": "現在の走行距離 {{currentOdo}} {{unit}} が予定メンテナンス距離 {{targetOdo}} {{unit}} に達しました",
     "inviteUsedMsg": "ユーザー {{nickname}} があなたの招待コード {{code}} を使って登録しました"
   },
   "group": {
