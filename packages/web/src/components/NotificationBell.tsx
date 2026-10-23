@@ -27,6 +27,9 @@ dayjs.extend(relativeTime);
 
 const { Text } = Typography;
 
+// 长标签（如日文）允许换行，避免撑出横向滚动
+const tagStyle = { marginInlineEnd: 0, whiteSpace: 'normal', maxWidth: '100%' } as const;
+
 /**
  * 解析后端结构化通知参数：新版为 JSON 对象，旧版为 "k1=v1;k2=v2"
  * 旧版中不含 '=' 的片段视为上一个值中的 ';'（如提醒标题本身含分号）
@@ -207,18 +210,27 @@ export default function NotificationBell() {
   const getNotificationTag = (type: string) => {
     switch (type) {
       case 'anomaly_fuel':
-        return <Tag color="warning">{t('notification.anomalyFuel')}</Tag>;
+        return <Tag color="warning" style={tagStyle}>{t('notification.anomalyFuel')}</Tag>;
       case 'maintenance_due':
-        return <Tag color="processing">{t('notification.maintenanceDue')}</Tag>;
+        return <Tag color="processing" style={tagStyle}>{t('notification.maintenanceDue')}</Tag>;
       case 'invite_used':
-        return <Tag color="success">{t('notification.inviteUsed')}</Tag>;
+        return <Tag color="success" style={tagStyle}>{t('notification.inviteUsed')}</Tag>;
       default:
         return null;
     }
   };
 
   const content = (
-    <div style={{ maxHeight: isMobile ? 'calc(100vh - 120px)' : 440, overflow: 'auto' }}>
+    // 桌面端固定宽度：Popover 默认按内容收缩，会被标题栏宽度挤窄
+    <div
+      style={{
+        width: isMobile ? '100%' : 360,
+        maxWidth: 'calc(100vw - 32px)',
+        maxHeight: isMobile ? 'calc(100vh - 120px)' : 440,
+        overflowX: 'hidden',
+        overflowY: 'auto',
+      }}
+    >
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',

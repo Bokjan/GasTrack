@@ -16,9 +16,12 @@
   --gt-shadow-header: 0 2px 8px rgba(0, 0, 0, 0.04);
   --gt-auth-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --gt-auth-card-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  color-scheme: light;
 }
 
 [data-theme='dark'] {
+  /* 原生滚动条、表单控件跟随暗色 */
+  color-scheme: dark;
   --gt-bg-body: #141414;
   --gt-bg-card: #1f1f1f;
   --gt-bg-sider: #1f1f1f;
