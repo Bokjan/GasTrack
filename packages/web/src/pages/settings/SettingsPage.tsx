@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Form, Input, Select, Button, Space, message, Divider, Popconfirm, Typography, Segmented, Table, Spin, Radio } from 'antd';
+import { Card, Form, Input, Select, Button, Space, message, Divider, Modal, Typography, Segmented, Table, Spin, Radio } from 'antd';
 import { BulbOutlined, DownloadOutlined, SwapOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -33,6 +33,11 @@ export default function SettingsPage() {
   const [exporting, setExporting] = useState(false);
   const [exportScope, setExportScope] = useState<'basic' | 'full'>('basic');
   const [exportFormat, setExportFormat] = useState<'csv' | 'zip' | 'json'>('csv');
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  // 参考币种不能与主币种相同：随表单中的主币种实时过滤
+  const selectedCurrency = Form.useWatch('currency_code', profileForm);
 
   const {
     data: exchangeRateData,
@@ -106,14 +111,19 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAccount = async () => {
+    setDeleting(true);
     try {
       await userApi.deleteAccount();
       await logout();
       navigate('/login');
     } catch (err) {
       message.error(getApiErrorMessage(err));
+    } finally {
+      setDeleting(false);
     }
   };
+
+  const deleteEmailMatches = deleteConfirmEmail.trim().toLowerCase() === user.email.toLowerCase();
 
   const handleExportData = async () => {
     setExporting(true);
@@ -129,14 +139,29 @@ export default function SettingsPage() {
         json: 'application/json; charset=utf-8',
       };
       const blob = new Blob([response.data], { type: mimeMap[actualFormat] || 'application/octet-stream' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
       // 从响应头提取文件名，或使用默认名
       const contentDisposition = response.headers['content-disposition'];
       const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/);
       const extMap: Record<string, string> = { csv: '.csv', zip: '.zip', json: '.json' };
-      link.download = filenameMatch ? filenameMatch[1] : `gastrack-export${extMap[actualFormat] || '.csv'}`;
+      const filename = filenameMatch ? filenameMatch[1] : `gastrack-export${extMap[actualFormat] || '.csv'}`;
+
+      // iOS 主屏幕 PWA 不支持 <a download>，改用系统分享面板保存文件
+      const file = new File([blob], filename, { type: blob.type });
+      const isIOSStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
+      if (isIOSStandalone && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+          message.success(t('settings.exportSuccess'));
+        } catch (shareErr) {
+          if ((shareErr as Error).name !== 'AbortError') throw shareErr;
+        }
+        return;
+      }
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -253,7 +278,7 @@ export default function SettingsPage() {
                 options={[
                   { value: '', label: t('exchangeRate.referenceCurrencyAuto') },
                   ...CURRENCIES
-                    .filter((c) => c.value !== (profileForm.getFieldValue('currency_code') || user.currency_code))
+                    .filter((c) => c.value !== (selectedCurrency || user.currency_code))
                     .map((c) => ({
                       value: c.value,
                       label: `${c.symbol} ${t(`exchangeRate.currencyName.${c.value}`)} (${c.value})`,
@@ -463,15 +488,38 @@ export default function SettingsPage() {
           <Title level={5} type="danger">{t('settings.deleteAccountWarning')}</Title>
           <Text type="secondary">{t('settings.deleteAccountConfirm')}</Text>
           <Divider />
-          <Popconfirm
-            title={t('settings.deleteAccountConfirm')}
-            onConfirm={handleDeleteAccount}
-            okText={t('common.confirm')}
-            cancelText={t('common.cancel')}
-            okButtonProps={{ danger: true }}
+          <Button
+            danger
+            onClick={() => {
+              setDeleteConfirmEmail('');
+              setDeleteModalOpen(true);
+            }}
           >
-            <Button danger>{t('settings.deleteAccount')}</Button>
-          </Popconfirm>
+            {t('settings.deleteAccount')}
+          </Button>
+          <Modal
+            open={deleteModalOpen}
+            title={t('settings.deleteAccount')}
+            onCancel={() => setDeleteModalOpen(false)}
+            onOk={handleDeleteAccount}
+            okText={t('settings.deleteAccount')}
+            cancelText={t('common.cancel')}
+            okButtonProps={{ danger: true, disabled: !deleteEmailMatches }}
+            confirmLoading={deleting}
+            destroyOnHidden
+          >
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Text>{t('settings.deleteAccountConfirm')}</Text>
+              <Text strong>{t('settings.deleteAccountTypeEmail', { email: user.email })}</Text>
+              <Input
+                value={deleteConfirmEmail}
+                onChange={(e) => setDeleteConfirmEmail(e.target.value)}
+                placeholder={user.email}
+                autoComplete="off"
+                onPressEnter={() => deleteEmailMatches && handleDeleteAccount()}
+              />
+            </Space>
+          </Modal>
         </Card>
       </Space>
     </div>

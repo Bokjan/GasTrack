@@ -322,7 +322,8 @@
     "exportScopeBasicHint": "包含个人资料、车辆信息、加油/充电记录",
     "exportScopeFullHint": "包含全部数据：加油记录、开销记录、保养提醒、通知、邀请码、群组关系等",
     "exportFormat": "文件格式",
-    "exportFormatHint": "CSV 适合基础数据直接打开；ZIP 包含多文件分类导出 + 数据清单；JSON 方便二次处理"
+    "exportFormatHint": "CSV 适合基础数据直接打开；ZIP 包含多文件分类导出 + 数据清单；JSON 方便二次处理",
+    "deleteAccountTypeEmail": "请输入你的邮箱 {{email}} 以确认注销："
   },
   "legal": {
     "privacyPolicy": "隐私政策",

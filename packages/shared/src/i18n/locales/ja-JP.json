@@ -322,7 +322,8 @@
     "exportScopeBasicHint": "プロフィール、車両情報、給油/充電記録を含みます",
     "exportScopeFullHint": "すべてのデータを含みます：給油記録、経費、リマインダー、通知、招待コード、グループなど",
     "exportFormat": "ファイル形式",
-    "exportFormatHint": "CSV は基本データ向け、ZIP は分類ファイル＋マニフェスト付き、JSON はプログラム処理向け"
+    "exportFormatHint": "CSV は基本データ向け、ZIP は分類ファイル＋マニフェスト付き、JSON はプログラム処理向け",
+    "deleteAccountTypeEmail": "確認のため、メールアドレス {{email}} を入力してください："
   },
   "legal": {
     "privacyPolicy": "プライバシーポリシー",

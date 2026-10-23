@@ -322,7 +322,8 @@
     "exportScopeBasicHint": "Includes profile, vehicles, and fuel/charging records",
     "exportScopeFullHint": "Includes all data: fuel records, expenses, reminders, notifications, invite codes, groups, etc.",
     "exportFormat": "File Format",
-    "exportFormatHint": "CSV is best for basic data; ZIP includes categorized files + manifest; JSON for programmatic use"
+    "exportFormatHint": "CSV is best for basic data; ZIP includes categorized files + manifest; JSON for programmatic use",
+    "deleteAccountTypeEmail": "Type your email {{email}} to confirm:"
   },
   "legal": {
     "privacyPolicy": "Privacy Policy",
