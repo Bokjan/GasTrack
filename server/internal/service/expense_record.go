@@ -423,6 +423,7 @@ func (s *ExpenseRecordService) GetStats(ctx context.Context, userID, vehicleID u
 		VehicleID:             vehicleID.String(),
 		TotalRecords:          totalRecords,
 		TotalsByCurrency:      dtoTotals,
+		TotalAmount:           grandTotal,
 		CategoryBreakdown:     dtoCats,
 		MonthlyTrend:          dtoMonthly,
 		Last30DaysAmount:      last30Amount,

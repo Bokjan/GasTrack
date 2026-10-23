@@ -93,9 +93,11 @@ type ExpenseMonthlyTrend struct {
 
 // VehicleExpenseStatsResponse 车辆开销统计响应
 type VehicleExpenseStatsResponse struct {
-	VehicleID          string                     `json:"vehicle_id"`
-	TotalRecords       int64                      `json:"total_records"`
-	TotalsByCurrency   []ExpenseCurrencyTotal     `json:"totals_by_currency"`
+	VehicleID        string                 `json:"vehicle_id"`
+	TotalRecords     int64                  `json:"total_records"`
+	TotalsByCurrency []ExpenseCurrencyTotal `json:"totals_by_currency"`
+	// TotalAmount 全部开销按参考汇率换算为 currency_code 后的总额（不含 unconverted_currencies）
+	TotalAmount        float64                    `json:"total_amount"`
 	CategoryBreakdown  []ExpenseCategoryBreakdown `json:"category_breakdown"`
 	MonthlyTrend       []ExpenseMonthlyTrend      `json:"monthly_trend"`
 	Last30DaysAmount   float64                    `json:"last_30_days_amount"`

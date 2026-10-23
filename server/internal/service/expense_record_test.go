@@ -227,6 +227,7 @@ func TestExpenseRecordService_GetStats(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "CNY", resp.CurrencyCode)
 	assert.Equal(t, []string{"EUR"}, resp.UnconvertedCurrencies)
+	assert.InDelta(t, 1000, resp.TotalAmount, 0.001)                 // 300 + 100 + 600，EUR 未计入
 	assert.Equal(t, "insurance", resp.CategoryBreakdown[0].Category) // 按换算后金额降序
 	assert.InDelta(t, 400, resp.CategoryBreakdown[1].TotalAmount, 0.001)
 	assert.Equal(t, 3, resp.CategoryBreakdown[1].RecordCount)
