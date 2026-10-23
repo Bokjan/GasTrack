@@ -988,7 +988,7 @@ GET /api/v1/users/me/export
 | POST | `/api/v1/groups/{id}/shared-vehicles` | ✅ | 共享车辆到群组 |
 | DELETE | `/api/v1/groups/{id}/shared-vehicles/{vid}` | ✅ | 取消车辆共享 |
 | GET | `/api/v1/groups/{id}/shared-vehicles` | ✅ | 群组共享车辆列表 |
-| GET | `/api/v1/groups/{id}/leaderboard` | ✅ | 油耗排行榜 |
+| GET | `/api/v1/groups/{id}/leaderboard` | ✅ | 排行榜（`metric`=efficiency/cost/distance/frequency；油耗排行用 `energy`=fuel/electric 区分燃油车与电动车） |
 | GET | `/api/v1/groups/{id}/expense-stats` | ✅ | 费用统计看板 |
 | GET | `/api/v1/groups/{id}/stations` | ✅ | 加油站推荐共享 |
 

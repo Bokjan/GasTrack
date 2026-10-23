@@ -265,3 +265,23 @@ sudo ufw enable
 - [x] CORS 限制为 `https://你的域名`
 - [x] 默认邀请制注册（`invite_only`）
 - [x] 定时数据库备份
+
+
+## 运维命令
+
+后端二进制支持以下一次性运维命令，执行完毕即退出、不启动 HTTP 服务。它们会修改数据库，请在备份后手动执行：
+
+```bash
+# 按当前算法（满油到满油、按里程加权）重算所有加油记录的行驶距离、油耗与区间里程
+docker exec gastrack-backend ./gastrack-server recompute-fuel-stats
+
+# 彻底清除旧版本"软删除"注销遗留的账号及其数据
+docker exec gastrack-backend ./gastrack-server purge-deleted-users
+```
+
+### 统计口径说明
+
+- 多币种金额按参考汇率（frankfurter.app）换算为查看者的偏好币种后汇总；无汇率的币种不计入总额，接口通过 `unconverted_currencies` 返回，原币明细保留在 `costs_by_currency` 中。
+- 燃油（L，gal 自动换算）与充电（kWh）分开统计；电动车电耗按用户的油耗单位映射为 kWh/100km、km/kWh 或 mi/kWh。
+- 平均油耗 = 总油量 / 总里程（按满油到满油区间的里程加权）。
+- 群组统计只包含已共享到该群组的车辆。
