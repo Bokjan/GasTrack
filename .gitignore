@@ -53,3 +53,11 @@ server/uploads/
 # Docker volumes (local)
 # ========================
 pgdata/
+
+# ========================
+# Production deployment (secrets / certs / data)
+# ========================
+.env.production
+ssl/
+certbot/
+backups/
