@@ -21,6 +21,8 @@ import {
   useAuthStore,
   CURRENCIES,
   getApiErrorMessage,
+  toPickerValue,
+  fromPickerValue,
 } from '@gastrack/shared';
 import type { CreateExpenseRequest, Reminder, ExpenseCategory, MaintenanceCategory } from '@gastrack/shared';
 import dayjs from 'dayjs';
@@ -110,7 +112,7 @@ export default function ExpenseFormPage() {
           setSelectedCategory(record.category);
           form.setFieldsValue({
             ...record,
-            expense_date: dayjs(record.expense_date),
+            expense_date: toPickerValue(record.expense_date, user?.timezone),
             maintenance_category: record.maintenance_category
               ? record.maintenance_category.split(',').filter(Boolean)
               : undefined,
@@ -127,7 +129,7 @@ export default function ExpenseFormPage() {
     setLoading(true);
     const payload: CreateExpenseRequest = {
       ...values,
-      expense_date: values.expense_date.format('YYYY-MM-DDTHH:mm:ssZ'),
+      expense_date: fromPickerValue(values.expense_date, user?.timezone),
       currency_code: values.currency_code || defaultCurrency,
       distance_unit: values.distance_unit || defaultDistanceUnit,
     };
@@ -189,7 +191,7 @@ export default function ExpenseFormPage() {
           layout="vertical"
           onFinish={onFinish}
           initialValues={{
-            expense_date: dayjs(),
+            expense_date: toPickerValue(undefined, user?.timezone),
             currency_code: defaultCurrency,
             distance_unit: defaultDistanceUnit,
             category: preCategory,

@@ -25,6 +25,25 @@ export function formatDateTime(
   return tz ? d.tz(tz).format(fmt) : d.local().format(fmt);
 }
 
+/**
+ * 日期选择器使用浏览器本地时区，而展示统一用资料中的时区。
+ * 以下两个函数在两者之间转换"墙上时间"，保证录入与展示一致（例如出差时设备时区与资料时区不同）。
+ */
+const WALL_CLOCK_FMT = 'YYYY-MM-DDTHH:mm:ss';
+
+/** 将 UTC 时间（缺省为当前时间）转为用户时区的墙上时间，供日期选择器显示 */
+export function toPickerValue(dateStr?: string, tz?: string): dayjs.Dayjs {
+  const d = dateStr ? dayjs.utc(dateStr) : dayjs.utc();
+  return tz ? dayjs(d.tz(tz).format(WALL_CLOCK_FMT)) : d.local();
+}
+
+/** 将日期选择器的值按用户时区解释，返回带时区偏移的 ISO 8601 字符串 */
+export function fromPickerValue(value: dayjs.Dayjs, tz?: string): string {
+  return tz
+    ? dayjs.tz(value.format(WALL_CLOCK_FMT), tz).format()
+    : value.format('YYYY-MM-DDTHH:mm:ssZ');
+}
+
 // ============================================================
 // 单位换算工具函数
 // ============================================================

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -68,6 +68,7 @@ import type {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useLatestRequest } from '../../hooks/useLatestRequest';
 import { useAuthStore, FUEL_GRADES, formatCurrency, formatNumber, convertEfficiencyForDisplay, litersToGallons, kmToMiles, isElectricVehicle, getApiErrorMessage } from '@gastrack/shared';
 import { useCurrency } from '../../hooks/useCurrency';
 import UnconvertedNotice from '../../components/UnconvertedNotice';
@@ -188,62 +189,65 @@ export default function GroupPage() {
     fetchGroups();
   }, [fetchGroups]);
 
-  // 选中群组时获取详情 + 数据汇总
+  // 选中群组时并行获取详情、数据汇总与共享车辆；快速切换群组时丢弃旧群组的响应
+  const activeGroupIdRef = useRef<string | null>(null);
   const selectGroup = useCallback(async (group: Group) => {
-    try {
-      const { data } = await groupApi.getById(group.id);
-      setSelectedGroup(data.data);
-    } catch (err) {
-      message.error(getApiErrorMessage(err));
-    }
-
+    activeGroupIdRef.current = group.id;
+    const isStale = () => activeGroupIdRef.current !== group.id;
     setOverviewLoading(true);
-    try {
-      const { data } = await groupApi.getOverview(group.id);
-      setOverview(data.data);
-    } catch {
-      setOverview(null);
-    } finally {
-      setOverviewLoading(false);
-    }
 
-    // 获取共享车辆
-    try {
-      const { data } = await groupApi.listSharedVehicles(group.id);
-      setSharedVehicles(data.data || []);
-    } catch {
-      setSharedVehicles([]);
+    const [detailRes, overviewRes, sharedRes] = await Promise.allSettled([
+      groupApi.getById(group.id),
+      groupApi.getOverview(group.id),
+      groupApi.listSharedVehicles(group.id),
+    ]);
+    if (isStale()) return;
+
+    if (detailRes.status === 'fulfilled') {
+      setSelectedGroup(detailRes.value.data.data);
+    } else {
+      message.error(getApiErrorMessage(detailRes.reason));
     }
-  }, [t]);
+    setOverview(overviewRes.status === 'fulfilled' ? overviewRes.value.data.data : null);
+    setSharedVehicles(sharedRes.status === 'fulfilled' ? sharedRes.value.data.data || [] : []);
+    setOverviewLoading(false);
+  }, []);
+
+  const beginLeaderboard = useLatestRequest();
+  const beginExpense = useLatestRequest();
+  const beginStation = useLatestRequest();
 
   // 获取排行榜数据
   const fetchLeaderboard = useCallback(async (groupId: string, metric: LeaderboardMetric, period: LeaderboardPeriod, energy: LeaderboardEnergy) => {
+    const isLatest = beginLeaderboard();
     setLeaderboardLoading(true);
     try {
       const { data } = await groupApi.getLeaderboard(groupId, { metric, period, energy });
-      setLeaderboard(data.data);
+      if (isLatest()) setLeaderboard(data.data);
     } catch {
-      setLeaderboard(null);
+      if (isLatest()) setLeaderboard(null);
     } finally {
-      setLeaderboardLoading(false);
+      if (isLatest()) setLeaderboardLoading(false);
     }
-  }, []);
+  }, [beginLeaderboard]);
 
   // 获取费用统计数据
   const fetchExpenseStats = useCallback(async (groupId: string, period: 'month' | 'year', year: number) => {
+    const isLatest = beginExpense();
     setExpenseLoading(true);
     try {
       const { data } = await groupApi.getExpenseStats(groupId, { period, year: period === 'month' ? year : undefined });
-      setExpenseStats(data.data);
+      if (isLatest()) setExpenseStats(data.data);
     } catch {
-      setExpenseStats(null);
+      if (isLatest()) setExpenseStats(null);
     } finally {
-      setExpenseLoading(false);
+      if (isLatest()) setExpenseLoading(false);
     }
-  }, []);
+  }, [beginExpense]);
 
   // 获取加油站数据
   const fetchStationStats = useCallback(async (groupId: string, fuelGrade: string, months: number, sortBy: string) => {
+    const isLatest = beginStation();
     setStationLoading(true);
     try {
       const { data } = await groupApi.getStationStats(groupId, {
@@ -251,13 +255,13 @@ export default function GroupPage() {
         months,
         sort_by: sortBy,
       });
-      setStationStats(data.data);
+      if (isLatest()) setStationStats(data.data);
     } catch {
-      setStationStats(null);
+      if (isLatest()) setStationStats(null);
     } finally {
-      setStationLoading(false);
+      if (isLatest()) setStationLoading(false);
     }
-  }, []);
+  }, [beginStation]);
 
   // 共享/取消共享车辆
   const handleShareToggle = async (vehicleId: string, isCurrentlyShared: boolean) => {

@@ -25,6 +25,8 @@ import {
   getFuelGradesByLocale,
   isElectricVehicle,
   getApiErrorMessage,
+  toPickerValue,
+  fromPickerValue,
 } from '@gastrack/shared';
 import type { CreateFuelRecordRequest, Vehicle } from '@gastrack/shared';
 import dayjs from 'dayjs';
@@ -185,7 +187,7 @@ export default function RecordFormPage() {
           const record = data.data;
           form.setFieldsValue({
             ...record,
-            refuel_date: dayjs(record.refuel_date),
+            refuel_date: toPickerValue(record.refuel_date, user?.timezone),
           });
         })
         .catch((err) => message.error(getApiErrorMessage(err)))
@@ -265,7 +267,7 @@ export default function RecordFormPage() {
     setLoading(true);
     const payload: CreateFuelRecordRequest = {
       ...values,
-      refuel_date: values.refuel_date.format('YYYY-MM-DDTHH:mm:ssZ'),
+      refuel_date: fromPickerValue(values.refuel_date, user?.timezone),
       currency_code: values.currency_code || defaultCurrency,
       fuel_unit: values.fuel_unit || defaultFuelUnit,
       distance_unit: values.distance_unit || defaultDistanceUnit,
@@ -326,7 +328,7 @@ export default function RecordFormPage() {
           layout="vertical"
           onFinish={onFinish}
           initialValues={{
-            refuel_date: dayjs(),
+            refuel_date: toPickerValue(undefined, user?.timezone),
             is_full_tank: true,
             fuel_unit: defaultFuelUnit,
             currency_code: defaultCurrency,
