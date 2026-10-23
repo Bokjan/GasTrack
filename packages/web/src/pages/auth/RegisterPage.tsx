@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Form, Input, Button, message, Typography } from 'antd';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Form, Input, Button, message, Typography, Spin } from 'antd';
 import {
   MailOutlined,
   LockOutlined,
@@ -20,7 +20,11 @@ type InviteStatus = 'idle' | 'validating' | 'valid' | 'invalid';
 
 export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
-  const [registrationMode, setRegistrationMode] = useState<string>('invite_only');
+  // null：尚未查询到注册模式，先不渲染表单，避免开放注册时闪现邀请码输入框
+  const [registrationMode, setRegistrationMode] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  // 邀请链接 /register?invite=XXXX 预填邀请码
+  const inviteFromLink = searchParams.get('invite')?.trim() || '';
   const [inviteStatus, setInviteStatus] = useState<InviteStatus>('idle');
   const [inviteHint, setInviteHint] = useState('');
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -34,7 +38,13 @@ export default function RegisterPage() {
       setRegistrationMode(data.data.mode);
     }).catch(() => {
       // 查询失败默认 invite_only
+      setRegistrationMode('invite_only');
     });
+  }, []);
+
+  // 卸载时取消未执行的邀请码校验
+  useEffect(() => () => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
   }, []);
 
   // 邀请码实时校验（debounce 500ms）
@@ -70,6 +80,13 @@ export default function RegisterPage() {
     }, 500);
   }, [t]);
 
+  // 通过邀请链接进入时自动校验预填的邀请码
+  useEffect(() => {
+    if (registrationMode === 'invite_only' && inviteFromLink) {
+      validateInviteCode(inviteFromLink);
+    }
+  }, [registrationMode, inviteFromLink, validateInviteCode]);
+
   const onFinish = async (values: {
     email: string;
     password: string;
@@ -87,6 +104,14 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
+
+  if (registrationMode === null) {
+    return (
+      <div className="auth-container">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   // 注册完全关闭
   if (registrationMode === 'closed') {
@@ -138,7 +163,7 @@ export default function RegisterPage() {
           <p>{t('auth.register')}</p>
         </div>
 
-        <Form layout="vertical" onFinish={onFinish} size="large">
+        <Form layout="vertical" onFinish={onFinish} size="large" initialValues={{ inviteCode: inviteFromLink || undefined }}>
           {showInviteField && (
             <Form.Item
               name="inviteCode"

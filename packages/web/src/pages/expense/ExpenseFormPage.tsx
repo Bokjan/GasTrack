@@ -25,6 +25,7 @@ import {
   fromPickerValue,
   EXPENSE_CATEGORIES,
   MAINTENANCE_CATEGORIES,
+  currencySymbol,
 } from '@gastrack/shared';
 import type { CreateExpenseRequest, Reminder } from '@gastrack/shared';
 import dayjs from 'dayjs';
@@ -50,6 +51,7 @@ export default function ExpenseFormPage() {
   const isImperial = user?.unit_system === 'imperial';
   const defaultDistanceUnit = isImperial ? 'mi' : 'km';
   const defaultCurrency = user?.currency_code || 'CNY';
+  const currency: string = Form.useWatch('currency_code', form) || defaultCurrency;
 
   // 从 URL 查询参数预填（从提醒页"完成并记账"跳转时）
   const preCategory = searchParams.get('category') || 'maintenance';
@@ -84,9 +86,9 @@ export default function ExpenseFormPage() {
 
       // 加载保养提醒列表（用于联动选择）
       reminderApi.list().then(({ data }) => {
-        // 只显示当前车辆的提醒
+        // 只显示当前车辆的提醒；已停用的提醒仍保留，以便编辑时正确显示已关联的提醒
         const vehicleReminders = (data.data || []).filter(
-          (r: Reminder) => r.vehicle_id === vehicleId && r.is_enabled
+          (r: Reminder) => r.vehicle_id === vehicleId
         );
         setReminders(vehicleReminders);
       }).catch(() => { /* ignore */ });
@@ -242,10 +244,18 @@ export default function ExpenseFormPage() {
               min={0.01}
               step={0.01}
               style={{ width: '100%' }}
-              prefix={CURRENCIES.find((c) => c.value === defaultCurrency)?.symbol || defaultCurrency}
+              prefix={currencySymbol(currency)}
+              addonAfter={
+                <Form.Item name="currency_code" noStyle>
+                  <Select
+                    aria-label={t('fuelRecord.currency')}
+                    popupMatchSelectWidth={false}
+                    options={CURRENCIES.map((c) => ({ value: c.value, label: c.value }))}
+                  />
+                </Form.Item>
+              }
             />
           </Form.Item>
-          <Form.Item name="currency_code" hidden><Input /></Form.Item>
 
           {/* 日期 */}
           <Form.Item

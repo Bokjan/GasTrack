@@ -85,7 +85,8 @@
     "maxUsesHint": "Set to 0 for unlimited uses",
     "expiresHint": "Leave empty for default 30-day expiry",
     "expiresPlaceholder": "Select expiry date",
-    "maxUsesPlaceholder": "0 = unlimited"
+    "maxUsesPlaceholder": "0 = unlimited",
+    "copyLink": "Copy sign-up link (invite code pre-filled)"
   },
   "vehicle": {
     "title": "Vehicles",
@@ -140,7 +141,10 @@
     "myVehicles": "My Vehicles",
     "sharedVehicles": "Shared Vehicles (from {{groupName}})",
     "selectVehicle": "Select Vehicle",
-    "selectVehiclePlaceholder": "Please select a vehicle"
+    "selectVehiclePlaceholder": "Please select a vehicle",
+    "energyKind": "Record type",
+    "energyKindFuel": "⛽ Refuel",
+    "energyKindCharge": "⚡ Charge"
   },
   "recordDetail": {
     "title": "Details",

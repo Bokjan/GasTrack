@@ -13,6 +13,7 @@ import {
   message,
   Spin,
   AutoComplete,
+  Segmented,
 } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +22,7 @@ import {
   vehicleApi,
   useAuthStore,
   CURRENCIES,
+  currencySymbol,
   FUEL_GRADES,
   getFuelGradesByLocale,
   isElectricVehicle,
@@ -28,7 +30,7 @@ import {
   toPickerValue,
   fromPickerValue,
 } from '@gastrack/shared';
-import type { CreateFuelRecordRequest, Vehicle } from '@gastrack/shared';
+import type { CreateFuelRecordRequest, FuelType, Vehicle } from '@gastrack/shared';
 import dayjs from 'dayjs';
 
 /**
@@ -39,6 +41,24 @@ import dayjs from 'dayjs';
  */
 
 type CalcField = 'fuel_amount' | 'unit_price' | 'total_cost';
+
+/** 本次记录的能源类型：插混车可以记录加油或充电 */
+type EnergyKind = 'fuel' | 'electric';
+
+/** 编辑时只提交改动过的字段，避免把后端换算后的展示值（如 L→gal）原样写回造成精度漂移 */
+function changedFields(
+  values: Record<string, unknown>,
+  initial: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(values)) {
+    if ((value ?? null) !== (initial[key] ?? null)) out[key] = value;
+  }
+  // 数值字段以展示单位提交，改动了数值时需同时提交其单位
+  if ('fuel_amount' in out || 'unit_price' in out) out.fuel_unit = values.fuel_unit;
+  if ('odometer' in out) out.distance_unit = values.distance_unit;
+  return out;
+}
 
 export default function RecordFormPage() {
   const { t, i18n: i18nInstance } = useTranslation();
@@ -51,7 +71,13 @@ export default function RecordFormPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
-  const [isEv, setIsEv] = useState(false);
+  const [vehicleFuelType, setVehicleFuelType] = useState<FuelType>();
+  const [energy, setEnergy] = useState<EnergyKind>('fuel');
+  /** 本次是否为充电记录 */
+  const isEv = energy === 'electric';
+  const isHybrid = vehicleFuelType === 'hybrid';
+  /** 编辑时加载到的原始表单值，用于计算改动 */
+  const initialValuesRef = useRef<Record<string, unknown>>({});
   const [stationSuggestions, setStationSuggestions] = useState<string[]>([]);
   const [stationSearch, setStationSearch] = useState('');
   const user = useAuthStore((s) => s.user);
@@ -83,6 +109,14 @@ export default function RecordFormPage() {
   const defaultFuelUnit = isImperial ? 'gal' : 'L';
   const defaultDistanceUnit = isImperial ? 'mi' : 'km';
   const defaultCurrency = user?.currency_code || 'CNY';
+  const currency: string = Form.useWatch('currency_code', form) || defaultCurrency;
+  const currencyPrefix = currencySymbol(currency);
+
+  /** 切换本次记录的能源类型，并同步加注量单位 */
+  const applyEnergy = useCallback((kind: EnergyKind) => {
+    setEnergy(kind);
+    form.setFieldValue('fuel_unit', kind === 'electric' ? 'kWh' : defaultFuelUnit);
+  }, [form, defaultFuelUnit]);
 
   // 加油站建议：根据输入文字模糊过滤
   const stationOptions = useMemo(() => {
@@ -160,11 +194,9 @@ export default function RecordFormPage() {
       vehicleApi.getById(vehicleId).then(({ data }) => {
         const vehicle = data.data;
         const ev = isElectricVehicle(vehicle.fuel_type);
-        setIsEv(ev);
-        // 电动车默认能量单位为 kWh
-        if (ev && !isEdit) {
-          form.setFieldValue('fuel_unit', 'kWh');
-        }
+        setVehicleFuelType(vehicle.fuel_type);
+        // 编辑时能源类型以记录本身为准（见下方加载记录）
+        if (!isEdit) applyEnergy(ev ? 'electric' : 'fuel');
         // 自动带入车辆的默认燃油标号（仅新建时）
         if (!ev && !isEdit && vehicle.fuel_grade) {
           form.setFieldValue('fuel_grade', vehicle.fuel_grade);
@@ -185,10 +217,14 @@ export default function RecordFormPage() {
         .getById(vehicleId, recordId)
         .then(({ data }) => {
           const record = data.data;
-          form.setFieldsValue({
+          const values = {
             ...record,
             refuel_date: toPickerValue(record.refuel_date, user?.timezone),
-          });
+          };
+          form.setFieldsValue(values);
+          // 加载时表单尚未挂载（显示加载中），需用 getFieldsValue(true) 读取整个 store
+          initialValuesRef.current = { ...form.getFieldsValue(true), refuel_date: values.refuel_date.format() };
+          setEnergy(record.fuel_unit === 'kWh' ? 'electric' : 'fuel');
         })
         .catch((err) => message.error(getApiErrorMessage(err)))
         .finally(() => setFetching(false));
@@ -246,17 +282,23 @@ export default function RecordFormPage() {
     const vehicle = allVehicles.find((v) => v.id === value);
     if (vehicle) {
       const ev = isElectricVehicle(vehicle.fuel_type);
-      setIsEv(ev);
-      if (ev) {
-        form.setFieldValue('fuel_unit', 'kWh');
-      } else {
-        form.setFieldValue('fuel_unit', defaultFuelUnit);
-        if (vehicle.fuel_grade) {
-          form.setFieldValue('fuel_grade', vehicle.fuel_grade);
-        }
+      setVehicleFuelType(vehicle.fuel_type);
+      applyEnergy(ev ? 'electric' : 'fuel');
+      if (!ev && vehicle.fuel_grade) {
+        form.setFieldValue('fuel_grade', vehicle.fuel_grade);
       }
     }
-  }, [allVehicles, form, defaultFuelUnit]);
+  }, [allVehicles, form, applyEnergy]);
+
+  /** 保存或取消后返回：直接打开表单（无站内历史）时回到车辆记录页 */
+  const goBack = () => {
+    const hasHistory = ((window.history.state as { idx?: number } | null)?.idx ?? 0) > 0;
+    if (urlVehicleId || !hasHistory) {
+      navigate(vehicleId ? `/vehicles/${vehicleId}/records` : '/');
+    } else {
+      navigate(-1);
+    }
+  };
 
   const onFinish = async (values: CreateFuelRecordRequest & { refuel_date: dayjs.Dayjs }) => {
     if (!vehicleId) {
@@ -275,18 +317,17 @@ export default function RecordFormPage() {
 
     try {
       if (isEdit) {
-        await fuelRecordApi.update(vehicleId!, recordId!, payload);
+        const changed = changedFields(
+          { ...payload, refuel_date: values.refuel_date.format() },
+          initialValuesRef.current,
+        );
+        if ('refuel_date' in changed) changed.refuel_date = payload.refuel_date;
+        await fuelRecordApi.update(vehicleId!, recordId!, changed);
       } else {
         await fuelRecordApi.create(vehicleId!, payload);
       }
       message.success(t('common.success'));
-      // 如果是通过 URL vehicleId 进入的，返回该车辆的记录页
-      // 否则返回到之前的页面（如群组页）
-      if (urlVehicleId) {
-        navigate(`/vehicles/${vehicleId}/records`);
-      } else {
-        navigate(-1);
-      }
+      goBack();
     } catch (err) {
       message.error(getApiErrorMessage(err));
     } finally {
@@ -306,16 +347,7 @@ export default function RecordFormPage() {
     <div className="page-container">
       <div className="page-header">
         <Space>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => {
-              if (urlVehicleId) {
-                navigate(`/vehicles/${urlVehicleId}/records`);
-              } else {
-                navigate(-1);
-              }
-            }}
-          />
+          <Button icon={<ArrowLeftOutlined />} onClick={goBack} />
           <h2>
             {isEdit ? t('fuelRecord.editRecord') : t('fuelRecord.addRecord')}
           </h2>
@@ -353,6 +385,20 @@ export default function RecordFormPage() {
               />
             </Form.Item>
           )}
+          {/* 插混车：选择本次是加油还是充电（编辑时不可切换） */}
+          {isHybrid && (
+            <Form.Item label={t('fuelRecord.energyKind')}>
+              <Segmented
+                value={energy}
+                disabled={isEdit}
+                onChange={(val) => applyEnergy(val as EnergyKind)}
+                options={[
+                  { label: t('fuelRecord.energyKindFuel'), value: 'fuel' },
+                  { label: t('fuelRecord.energyKindCharge'), value: 'electric' },
+                ]}
+              />
+            </Form.Item>
+          )}
           <Form.Item
             name="refuel_date"
             label={isEv ? t('fuelRecord.chargingDate') : t('fuelRecord.fuelDate')}
@@ -379,6 +425,7 @@ export default function RecordFormPage() {
           <Form.Item
             name="fuel_amount"
             label={isEv ? t('fuelRecord.chargingAmount') : t('fuelRecord.fuelAmount')}
+            rules={[{ required: true, message: t('common.required') }]}
           >
             <InputNumber
               min={0.01}
@@ -399,12 +446,11 @@ export default function RecordFormPage() {
               min={0.01}
               step={0.01}
               style={{ width: '100%' }}
-              prefix={CURRENCIES.find((c) => c.value === defaultCurrency)?.symbol || defaultCurrency}
+              prefix={currencyPrefix}
               suffix={`/${isEv ? 'kWh' : defaultFuelUnit}`}
               onChange={() => autoCalc('unit_price')}
             />
           </Form.Item>
-          <Form.Item name="currency_code" hidden><Input /></Form.Item>
 
           {/* 总费用 */}
           <Form.Item
@@ -416,7 +462,17 @@ export default function RecordFormPage() {
               min={0}
               step={0.01}
               style={{ width: '100%' }}
-              prefix={CURRENCIES.find((c) => c.value === defaultCurrency)?.symbol || defaultCurrency}
+              prefix={currencyPrefix}
+              // 币种默认为偏好币种，在外地加油时可切换
+              addonAfter={
+                <Form.Item name="currency_code" noStyle>
+                  <Select
+                    aria-label={t('fuelRecord.currency')}
+                    popupMatchSelectWidth={false}
+                    options={CURRENCIES.map((c) => ({ value: c.value, label: c.value }))}
+                  />
+                </Form.Item>
+              }
               onChange={() => autoCalc('total_cost')}
             />
           </Form.Item>
@@ -481,15 +537,7 @@ export default function RecordFormPage() {
               <Button type="primary" htmlType="submit" loading={loading}>
                 {t('common.save')}
               </Button>
-              <Button
-                onClick={() => {
-                  if (urlVehicleId) {
-                    navigate(`/vehicles/${urlVehicleId}/records`);
-                  } else {
-                    navigate(-1);
-                  }
-                }}
-              >
+              <Button onClick={goBack}>
                 {t('common.cancel')}
               </Button>
             </Space>

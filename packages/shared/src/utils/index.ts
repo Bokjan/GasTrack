@@ -185,6 +185,17 @@ export function formatCurrency(amount: number | undefined | null, currency: stri
   }
 }
 
+/** 当前语言下的币种符号（用于输入框前缀），如中文界面 CNY → ¥、JPY → JP¥ */
+export function currencySymbol(currency: string): string {
+  try {
+    return new Intl.NumberFormat(appLocale(), { style: 'currency', currency })
+      .formatToParts(0)
+      .find((p) => p.type === 'currency')?.value || currency;
+  } catch {
+    return currency;
+  }
+}
+
 // ============================================================
 // 汇率参考工具函数
 // ============================================================

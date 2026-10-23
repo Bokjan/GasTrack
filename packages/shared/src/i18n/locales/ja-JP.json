@@ -85,7 +85,8 @@
     "maxUsesHint": "0 にすると無制限になります",
     "expiresHint": "空白の場合、デフォルトで 30 日後に期限切れ",
     "expiresPlaceholder": "有効期限を選択",
-    "maxUsesPlaceholder": "0 = 無制限"
+    "maxUsesPlaceholder": "0 = 無制限",
+    "copyLink": "登録リンクをコピー（招待コード入力済み）"
   },
   "vehicle": {
     "title": "車両管理",
@@ -140,7 +141,10 @@
     "myVehicles": "マイ車両",
     "sharedVehicles": "共有車両（{{groupName}}から）",
     "selectVehicle": "車両を選択",
-    "selectVehiclePlaceholder": "車両を選択してください"
+    "selectVehiclePlaceholder": "車両を選択してください",
+    "energyKind": "記録の種類",
+    "energyKindFuel": "⛽ 給油",
+    "energyKindCharge": "⚡ 充電"
   },
   "recordDetail": {
     "title": "詳細",

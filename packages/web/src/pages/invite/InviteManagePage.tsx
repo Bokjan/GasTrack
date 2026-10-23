@@ -20,6 +20,7 @@ import {
 import {
   PlusOutlined,
   CopyOutlined,
+  LinkOutlined,
   DeleteOutlined,
   GiftOutlined,
 } from '@ant-design/icons';
@@ -83,14 +84,17 @@ export default function InviteManagePage() {
     }
   };
 
-  const handleCopy = async (code: string) => {
+  const handleCopy = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(code);
+      await navigator.clipboard.writeText(text);
       message.success(t('invite.copied'));
     } catch (err) {
       message.error(getApiErrorMessage(err));
     }
   };
+
+  /** 注册链接：打开后自动填入邀请码 */
+  const registerLink = (code: string) => `${window.location.origin}/register?invite=${encodeURIComponent(code)}`;
 
   const handleToggleActive = async (record: InviteCode) => {
     try {
@@ -140,8 +144,18 @@ export default function InviteManagePage() {
             <Button
               type="text"
               size="small"
+              aria-label={t('invite.copyToClipboard')}
               icon={<CopyOutlined />}
               onClick={() => handleCopy(code)}
+            />
+          </Tooltip>
+          <Tooltip title={t('invite.copyLink')}>
+            <Button
+              type="text"
+              size="small"
+              aria-label={t('invite.copyLink')}
+              icon={<LinkOutlined />}
+              onClick={() => handleCopy(registerLink(code))}
             />
           </Tooltip>
         </Space>
@@ -233,8 +247,16 @@ export default function InviteManagePage() {
                 <Button
                   type="text"
                   size="small"
+                  aria-label={t('invite.copyToClipboard')}
                   icon={<CopyOutlined />}
                   onClick={() => handleCopy(record.code)}
+                />
+                <Button
+                  type="text"
+                  size="small"
+                  aria-label={t('invite.copyLink')}
+                  icon={<LinkOutlined />}
+                  onClick={() => handleCopy(registerLink(record.code))}
                 />
               </Space>
               {renderStatus(record)}

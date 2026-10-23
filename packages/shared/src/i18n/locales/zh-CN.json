@@ -85,7 +85,8 @@
     "maxUsesHint": "设为 0 表示不限次数",
     "expiresHint": "留空则默认 30 天后过期",
     "expiresPlaceholder": "选择过期时间",
-    "maxUsesPlaceholder": "0 = 不限次数"
+    "maxUsesPlaceholder": "0 = 不限次数",
+    "copyLink": "复制注册链接（自动填入邀请码）"
   },
   "vehicle": {
     "title": "车辆管理",
@@ -140,7 +141,10 @@
     "myVehicles": "我的车辆",
     "sharedVehicles": "共享车辆（来自{{groupName}}）",
     "selectVehicle": "选择车辆",
-    "selectVehiclePlaceholder": "请选择车辆"
+    "selectVehiclePlaceholder": "请选择车辆",
+    "energyKind": "记录类型",
+    "energyKindFuel": "⛽ 加油",
+    "energyKindCharge": "⚡ 充电"
   },
   "recordDetail": {
     "title": "详情",
