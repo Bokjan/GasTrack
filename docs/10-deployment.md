@@ -196,20 +196,25 @@ chmod +x scripts/restore.sh
 
 ### 6.4 SSL 证书续期
 
+项目提供 `scripts/renew-ssl.sh` 一键续期 + 同步脚本，建议加入 crontab 每天执行。
+脚本会：先 `certbot renew` 尝试续期；**无论续期是否触发，都会把 certbot 卷内当前有效证书同步到 `./ssl/` 并重载 Nginx**。
+这样即使某次续期失败，站点也始终使用卷内最新证书，不会用到过期证书。
+
+证书目录会根据 `.env.production` 中的 `DOMAIN` 自动探测（兼容 certbot 生成的 `<domain>-0001` 等后缀目录）。
+
 ```bash
-# 手动续期
-docker run --rm \
-  -v certbot-etc:/etc/letsencrypt \
-  -v certbot-var:/var/lib/letsencrypt \
-  -v $(pwd)/certbot/www:/var/www/certbot \
-  certbot/certbot renew --quiet
-cp /etc/letsencrypt/live/$DOMAIN/fullchain.pem ./ssl/
-cp /etc/letsencrypt/live/$DOMAIN/privkey.pem ./ssl/
-docker exec gastrack-nginx nginx -s reload
+# 手动跑一次（续期 + 同步 + 重载）
+./scripts/renew-ssl.sh
+# 日志：backups/ssl-renew.log
 
 # 自动续期（加入 crontab，每天 4 点）
-(crontab -l 2>/dev/null; echo '0 4 * * * cd /opt/gastrack && docker run --rm -v certbot-etc:/etc/letsencrypt -v certbot-var:/var/lib/letsencrypt -v $(pwd)/certbot/www:/var/www/certbot certbot/certbot renew --quiet && cp /etc/letsencrypt/live/$(grep DOMAIN .env.production | cut -d= -f2)/fullchain.pem ./ssl/ && cp /etc/letsencrypt/live/$(grep DOMAIN .env.production | cut -d= -f2)/privkey.pem ./ssl/ && docker exec gastrack-nginx nginx -s reload') | crontab -
+(crontab -l 2>/dev/null; echo '7 4 * * * /opt/gastrack/scripts/renew-ssl.sh') | crontab -
 ```
+
+> ⚠️ **常见坑**：certbot 的续期配置文件（`/etc/letsencrypt/renewal/*.conf`）若损坏（例如空文件），
+> `certbot renew` 会返回非零退出码。若用 `renew --quiet && cp ... && reload` 的 `&&` 链，
+> 整条命令会中断，导致证书续期了却没同步到 Nginx —— 这正是证书过期的根因。
+> 使用 `renew-ssl.sh` 可避免此问题（复制/重载不再依赖续期成功）。
 
 ---
 
