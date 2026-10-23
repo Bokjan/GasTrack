@@ -100,7 +100,7 @@ export default function DashboardPage() {
               title={t('stats.combinedCost')}
               value={formatCurrency(vehicleCombinedCost, currency)}
               prefix={<span>💰</span>}
-              valueStyle={{ color: 'var(--ant-color-primary)' }}
+              valueStyle={{ color: 'var(--gt-color-primary)' }}
             />
           </Card>
         </Col>
@@ -179,7 +179,7 @@ export default function DashboardPage() {
                         title={t('stats.combinedCost')}
                         value={overview ? formatCurrency(overviewCombinedCost, currency) : '-'}
                         prefix={<span>💰</span>}
-                        valueStyle={{ color: 'var(--ant-color-primary)' }}
+                        valueStyle={{ color: 'var(--gt-color-primary)' }}
                       />
                     </Card>
                   </Tooltip>
@@ -204,7 +204,12 @@ export default function DashboardPage() {
                         gap: 8,
                         cursor: 'pointer',
                       }}
+                      role="link"
+                      tabIndex={0}
                       onClick={() => navigate(`/vehicles/${vs.vehicle_id}/records`)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') navigate(`/vehicles/${vs.vehicle_id}/records`);
+                      }}
                     >
                       <span>
                         {vehicle?.fuel_type === 'electric' ? '⚡' :

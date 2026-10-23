@@ -307,7 +307,7 @@ export default function RecordDetailPage() {
               )}
 
               <Descriptions.Item label={t('fuelRecord.totalCost')}>
-                <Text strong style={{ fontSize: 18, color: 'var(--ant-color-primary)' }}>
+                <Text strong style={{ fontSize: 18, color: 'var(--gt-color-primary)' }}>
                   {formatCurrency(record.total_cost, record.currency_code || currency)}
                 </Text>
                 {(() => {

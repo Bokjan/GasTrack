@@ -282,7 +282,8 @@
     "invites": "邀请码",
     "reminders": "保养提醒",
     "groups": "家庭群组",
-    "settings": "设置"
+    "settings": "设置",
+    "toggleMenu": "展开/收起菜单"
   },
   "settings": {
     "title": "设置",

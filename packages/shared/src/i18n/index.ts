@@ -1,5 +1,8 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import dayjs from 'dayjs';
+import 'dayjs/locale/zh-cn';
+import 'dayjs/locale/ja';
 import zhCN from './locales/zh-CN.json';
 import enUS from './locales/en-US.json';
 import jaJP from './locales/ja-JP.json';
@@ -29,5 +32,12 @@ i18n.use(initReactI18next).init({
     escapeValue: false,
   },
 });
+
+/** dayjs（相对时间、日期选择器等）跟随界面语言 */
+const syncDayjsLocale = (lng: string) => {
+  dayjs.locale(lng.startsWith('zh') ? 'zh-cn' : lng.startsWith('ja') ? 'ja' : 'en');
+};
+syncDayjsLocale(i18n.language);
+i18n.on('languageChanged', syncDayjsLocale);
 
 export default i18n;

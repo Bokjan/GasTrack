@@ -282,7 +282,8 @@
     "reminders": "リマインダー",
     "invites": "招待コード",
     "groups": "ファミリーグループ",
-    "settings": "設定"
+    "settings": "設定",
+    "toggleMenu": "メニューの切り替え"
   },
   "settings": {
     "title": "設定",

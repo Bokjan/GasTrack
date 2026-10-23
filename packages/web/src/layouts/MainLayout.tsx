@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, Suspense } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import PageFallback from '../components/PageFallback';
-import { Layout, Menu, Avatar, Dropdown, Typography, theme, Drawer, Grid } from 'antd';
+import { Layout, Menu, Avatar, Button, Dropdown, Typography, theme, Drawer, Grid } from 'antd';
 import {
   DashboardOutlined,
   CarOutlined,
@@ -209,12 +209,13 @@ export default function MainLayout() {
             zIndex: isMobile ? 10 : undefined,
           }}
         >
-          <div
-            style={{ cursor: 'pointer', fontSize: 18 }}
+          <Button
+            type="text"
+            aria-label={t('nav.toggleMenu')}
+            style={{ fontSize: 18 }}
+            icon={isMobile ? <MenuOutlined /> : (collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />)}
             onClick={() => (isMobile ? setDrawerOpen(!drawerOpen) : setCollapsed(!collapsed))}
-          >
-            {isMobile ? <MenuOutlined /> : (collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />)}
-          </div>
+          />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 8 : 16 }}>
             <LanguageSwitcher style={{ fontSize: 18 }} />
@@ -257,23 +258,23 @@ export default function MainLayout() {
         >
           <div>{t('footer.copyright', { year: new Date().getFullYear() })}</div>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: 4 }}>
-            <a
-              href="/privacy"
+            <Link
+              to="/privacy"
               style={{ color: token.colorTextSecondary, textDecoration: 'none' }}
               onMouseEnter={(e) => (e.currentTarget.style.color = token.colorPrimary)}
               onMouseLeave={(e) => (e.currentTarget.style.color = token.colorTextSecondary)}
             >
               {t('footer.privacyPolicy')}
-            </a>
+            </Link>
             <span style={{ color: token.colorTextQuaternary }}>·</span>
-            <a
-              href="/terms"
+            <Link
+              to="/terms"
               style={{ color: token.colorTextSecondary, textDecoration: 'none' }}
               onMouseEnter={(e) => (e.currentTarget.style.color = token.colorPrimary)}
               onMouseLeave={(e) => (e.currentTarget.style.color = token.colorTextSecondary)}
             >
               {t('footer.termsOfService')}
-            </a>
+            </Link>
           </div>
         </Footer>
       </Layout>

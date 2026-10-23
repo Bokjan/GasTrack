@@ -245,7 +245,7 @@ export default function ExpenseListPage() {
   const renderMobileCards = () => (
     <div className="mobile-card-list">
       {records.length === 0 && !loading && (
-        <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--gt-text-tertiary)' }}>
           <p>{t('expense.empty')}</p>
           <p style={{ fontSize: 12 }}>{t('expense.emptyHint')}</p>
         </div>

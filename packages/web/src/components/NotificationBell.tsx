@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Badge, Popover, Drawer, List, Button, Typography, Space, Tag, Empty, message } from 'antd';
+import { Badge, Popover, Drawer, List, Button, Typography, Space, Tag, Empty, Spin, message, theme } from 'antd';
 import {
   BellOutlined,
   WarningOutlined,
@@ -22,8 +22,6 @@ import type { Notification } from '@gastrack/shared';
 import { useIsMobile } from '../hooks/useIsMobile';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/zh-cn';
-import 'dayjs/locale/ja';
 
 dayjs.extend(relativeTime);
 
@@ -68,14 +66,7 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // 设置 dayjs locale
-  useEffect(() => {
-    const lang = i18n.language;
-    if (lang.startsWith('zh')) dayjs.locale('zh-cn');
-    else if (lang.startsWith('ja')) dayjs.locale('ja');
-    else dayjs.locale('en');
-  }, [i18n.language]);
+  const { token } = theme.useToken();
 
   const fetchUnreadCount = useCallback(async () => {
     try {
@@ -98,11 +89,20 @@ export default function NotificationBell() {
     }
   }, []);
 
-  // 轮询未读数（每 60 秒）
+  // 轮询未读数（每 60 秒）；后台标签页暂停，回到前台立即刷新
   useEffect(() => {
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 60000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchUnreadCount();
+    }, 60000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchUnreadCount();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [fetchUnreadCount]);
 
   // 打开 Popover 时加载列表
@@ -112,7 +112,7 @@ export default function NotificationBell() {
       // 油耗异常通知需按车辆类型（燃油/电动）选择单位
       if (vehicles.length === 0) fetchVehicles().catch(() => {});
     }
-  }, [open, fetchNotifications]);
+  }, [open, fetchNotifications, fetchVehicles, vehicles.length]);
 
   const handleMarkAsRead = async (id: string) => {
     try {
@@ -224,7 +224,7 @@ export default function NotificationBell() {
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '0 0 8px',
-        borderBottom: '1px solid #f0f0f0',
+        borderBottom: `1px solid ${token.colorBorderSecondary}`,
       }}>
         <Text strong style={{ flexShrink: 0 }}>{t('notification.title')}</Text>
         {unreadCount > 0 && (
@@ -234,7 +234,9 @@ export default function NotificationBell() {
         )}
       </div>
 
-      {notifications.length === 0 ? (
+      {loading && notifications.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '24px 0' }}><Spin /></div>
+      ) : notifications.length === 0 ? (
         <Empty
           image={Empty.PRESENTED_IMAGE_SIMPLE}
           description={t('notification.noNotifications')}
@@ -251,7 +253,7 @@ export default function NotificationBell() {
                 key={item.id}
                 style={{
                   cursor: item.is_read ? 'default' : 'pointer',
-                  background: item.is_read ? 'transparent' : 'rgba(24, 144, 255, 0.04)',
+                  background: item.is_read ? 'transparent' : token.colorPrimaryBg,
                   padding: '8px 4px',
                 }}
                 onClick={() => {
@@ -286,7 +288,7 @@ export default function NotificationBell() {
                 {!item.is_read && (
                   <div style={{
                     width: 8, height: 8, borderRadius: '50%',
-                    background: '#1890ff', flexShrink: 0,
+                    background: token.colorPrimary, flexShrink: 0,
                   }} />
                 )}
               </List.Item>

@@ -158,7 +158,7 @@ export default function ExpenseDetailPage() {
           </Descriptions.Item>
 
           <Descriptions.Item label={t('expense.field.amount')}>
-            <Text strong style={{ fontSize: 18, color: 'var(--ant-color-primary)' }}>
+            <Text strong style={{ fontSize: 18, color: 'var(--gt-color-primary)' }}>
               {formatCurrency(record.amount, record.currency_code || currency)}
             </Text>
           </Descriptions.Item>

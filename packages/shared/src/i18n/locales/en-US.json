@@ -282,7 +282,8 @@
     "invites": "Invites",
     "reminders": "Reminders",
     "groups": "Groups",
-    "settings": "Settings"
+    "settings": "Settings",
+    "toggleMenu": "Toggle menu"
   },
   "settings": {
     "title": "Settings",

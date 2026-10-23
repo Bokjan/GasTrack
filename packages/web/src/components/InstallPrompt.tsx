@@ -41,9 +41,11 @@ export default function InstallPrompt() {
     };
     window.addEventListener('beforeinstallprompt', handler);
 
-    // iOS Safari 检测
-    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
-    const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    // iOS Safari 检测（iPadOS 13+ 的 UA 与 macOS 相同，需结合触屏判断）
+    const ua = navigator.userAgent;
+    const isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    // 提示文案针对 Safari 的分享按钮；iOS 上的 Chrome/Firefox/Edge UA 也含 Safari 字样
+    const isSafari = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(ua);
     if (isIOS && isSafari) {
       setShowIOSPrompt(true);
     }

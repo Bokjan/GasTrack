@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Avatar, Badge, Card, Empty, List, Segmented, Select, Space, Typography } from 'antd';
+import { Avatar, Badge, Card, Empty, List, Segmented, Select, Space, Typography, theme } from 'antd';
 import { useTranslation } from 'react-i18next';
 import { formatNumber, groupApi } from '@gastrack/shared';
 import type { LeaderboardEnergy, LeaderboardMetric, LeaderboardPeriod, LeaderboardResponse } from '@gastrack/shared';
@@ -13,6 +13,7 @@ const { Text } = Typography;
 export default function GroupLeaderboardTab({ groupId }: { groupId: string }) {
   const { t } = useTranslation();
   const { currency, distanceUnit, convertDistance, effDisplay } = useGroupUnits();
+  const { token } = theme.useToken();
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardResponse | null>(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
@@ -120,7 +121,7 @@ export default function GroupLeaderboardTab({ groupId }: { groupId: string }) {
             return (
               <List.Item
                 style={{
-                  background: item.is_self ? 'rgba(22, 119, 255, 0.06)' : undefined,
+                  background: item.is_self ? token.colorPrimaryBg : undefined,
                   borderRadius: 8,
                   padding: '12px 16px',
                   marginBottom: 4,
@@ -131,7 +132,7 @@ export default function GroupLeaderboardTab({ groupId }: { groupId: string }) {
                     medal ? (
                       <span style={{ fontSize: 24 }}>{medal}</span>
                     ) : (
-                      <Avatar size="small" style={{ backgroundColor: '#f0f0f0', color: '#999' }}>
+                      <Avatar size="small" style={{ backgroundColor: token.colorFillSecondary, color: token.colorTextSecondary }}>
                         {item.rank}
                       </Avatar>
                     )
@@ -144,7 +145,7 @@ export default function GroupLeaderboardTab({ groupId }: { groupId: string }) {
                       <Text type="secondary" style={{ fontSize: 12 }}>
                         {item.vehicle_name}
                       </Text>
-                      {item.is_self && <Badge count="✦" style={{ backgroundColor: '#1677ff' }} />}
+                      {item.is_self && <Badge count="✦" style={{ backgroundColor: token.colorPrimary }} />}
                     </Space>
                   }
                   description={
