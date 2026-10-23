@@ -9,16 +9,17 @@ import (
 
 // Response 统一的 API 响应结构
 type Response struct {
-	Code    int         `json:"code"`              // 业务状态码，0 表示成功
-	Message string      `json:"message"`           // 消息描述
-	Data    interface{} `json:"data,omitempty"`    // 响应数据
+	Code    int         `json:"code"`           // 业务状态码，0 表示成功
+	Message string      `json:"message"`        // 消息描述
+	Data    interface{} `json:"data,omitempty"` // 响应数据
 }
 
 // ErrorResponse 错误响应结构
 type ErrorResponse struct {
-	Code    int         `json:"code"`              // 业务错误码
-	Message string      `json:"message"`           // 错误消息
-	Errors  interface{} `json:"errors,omitempty"` // 详细错误（校验错误等）
+	Code       int         `json:"code"`                  // 业务错误码
+	Message    string      `json:"message"`               // 错误消息（英文兜底）
+	MessageKey string      `json:"message_key,omitempty"` // i18n 消息 key，前端据此本地化
+	Errors     interface{} `json:"errors,omitempty"`      // 详细错误（校验错误等）
 }
 
 // PagedResponse 分页响应结构
@@ -104,15 +105,30 @@ func Error(w http.ResponseWriter, statusCode int, code int, message string) {
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
+// ErrorWithKey 写入带 i18n key 的错误 JSON 响应
+func ErrorWithKey(w http.ResponseWriter, statusCode int, code int, messageKey, message string) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(statusCode)
+
+	resp := ErrorResponse{
+		Code:       code,
+		Message:    message,
+		MessageKey: messageKey,
+	}
+
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
 // ValidationError 写入校验错误响应（422）
 func ValidationError(w http.ResponseWriter, errors interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusUnprocessableEntity)
 
 	resp := ErrorResponse{
-		Code:    4220,
-		Message: "validation_error",
-		Errors:  errors,
+		Code:       4220,
+		Message:    "validation_error",
+		MessageKey: "validation.error",
+		Errors:     errors,
 	}
 
 	_ = json.NewEncoder(w).Encode(resp)

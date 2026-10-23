@@ -109,7 +109,7 @@ func handleAppError(w http.ResponseWriter, logger *zap.Logger, err error) {
 				zap.Error(appErr.Err),
 			)
 		}
-		respond.Error(w, appErr.Code, appErr.BizCode, appErr.Message)
+		respond.ErrorWithKey(w, appErr.Code, appErr.BizCode, appErr.MessageKey, appErr.Message)
 		return
 	}
 
