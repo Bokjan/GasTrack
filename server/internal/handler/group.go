@@ -404,8 +404,14 @@ func (h *GroupHandler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
 
 	metric := decode.QueryString(r, "metric", "efficiency")
 	period := decode.QueryString(r, "period", "current_month")
+	// 油耗排行只比较同一能源类别：fuel（默认）或 electric
+	energy := decode.QueryString(r, "energy", "fuel")
+	if energy != "fuel" && energy != "electric" {
+		respond.BadRequest(w, "energy must be 'fuel' or 'electric'")
+		return
+	}
 
-	result, err := h.groupService.GetLeaderboard(r.Context(), groupID, userID, metric, period)
+	result, err := h.groupService.GetLeaderboard(r.Context(), groupID, userID, metric, period, energy)
 	if err != nil {
 		handleAppError(w, h.logger, err)
 		return

@@ -801,36 +801,6 @@ func (mr *MockGroupRepoMockRecorder) GetByInviteCode(ctx, code any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByInviteCode", reflect.TypeOf((*MockGroupRepo)(nil).GetByInviteCode), ctx, code)
 }
 
-// GetGroupExpenseByMonth mocks base method.
-func (m *MockGroupRepo) GetGroupExpenseByMonth(ctx context.Context, groupID uuid.UUID, year int) ([]repository.GroupExpenseRow, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetGroupExpenseByMonth", ctx, groupID, year)
-	ret0, _ := ret[0].([]repository.GroupExpenseRow)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetGroupExpenseByMonth indicates an expected call of GetGroupExpenseByMonth.
-func (mr *MockGroupRepoMockRecorder) GetGroupExpenseByMonth(ctx, groupID, year any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGroupExpenseByMonth", reflect.TypeOf((*MockGroupRepo)(nil).GetGroupExpenseByMonth), ctx, groupID, year)
-}
-
-// GetGroupExpenseByYear mocks base method.
-func (m *MockGroupRepo) GetGroupExpenseByYear(ctx context.Context, groupID uuid.UUID) ([]repository.GroupExpenseRow, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetGroupExpenseByYear", ctx, groupID)
-	ret0, _ := ret[0].([]repository.GroupExpenseRow)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetGroupExpenseByYear indicates an expected call of GetGroupExpenseByYear.
-func (mr *MockGroupRepoMockRecorder) GetGroupExpenseByYear(ctx, groupID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGroupExpenseByYear", reflect.TypeOf((*MockGroupRepo)(nil).GetGroupExpenseByYear), ctx, groupID)
-}
-
 // GetGroupStationStats mocks base method.
 func (m *MockGroupRepo) GetGroupStationStats(ctx context.Context, groupID uuid.UUID, months int, fuelGrade, sortBy string) ([]repository.StationStatsRow, error) {
 	m.ctrl.T.Helper()
@@ -844,36 +814,6 @@ func (m *MockGroupRepo) GetGroupStationStats(ctx context.Context, groupID uuid.U
 func (mr *MockGroupRepoMockRecorder) GetGroupStationStats(ctx, groupID, months, fuelGrade, sortBy any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGroupStationStats", reflect.TypeOf((*MockGroupRepo)(nil).GetGroupStationStats), ctx, groupID, months, fuelGrade, sortBy)
-}
-
-// GetGroupVehicleSummary mocks base method.
-func (m *MockGroupRepo) GetGroupVehicleSummary(ctx context.Context, groupID uuid.UUID) ([]repository.VehicleSummaryRow, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetGroupVehicleSummary", ctx, groupID)
-	ret0, _ := ret[0].([]repository.VehicleSummaryRow)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetGroupVehicleSummary indicates an expected call of GetGroupVehicleSummary.
-func (mr *MockGroupRepoMockRecorder) GetGroupVehicleSummary(ctx, groupID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGroupVehicleSummary", reflect.TypeOf((*MockGroupRepo)(nil).GetGroupVehicleSummary), ctx, groupID)
-}
-
-// GetLeaderboard mocks base method.
-func (m *MockGroupRepo) GetLeaderboard(ctx context.Context, groupID uuid.UUID, metric string, startDate, endDate time.Time) ([]repository.LeaderboardRow, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLeaderboard", ctx, groupID, metric, startDate, endDate)
-	ret0, _ := ret[0].([]repository.LeaderboardRow)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetLeaderboard indicates an expected call of GetLeaderboard.
-func (mr *MockGroupRepoMockRecorder) GetLeaderboard(ctx, groupID, metric, startDate, endDate any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLeaderboard", reflect.TypeOf((*MockGroupRepo)(nil).GetLeaderboard), ctx, groupID, metric, startDate, endDate)
 }
 
 // GetMember mocks base method.
@@ -979,6 +919,21 @@ func (m *MockGroupRepo) JoinGroupByInviteCode(ctx context.Context, code string, 
 func (mr *MockGroupRepoMockRecorder) JoinGroupByInviteCode(ctx, code, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "JoinGroupByInviteCode", reflect.TypeOf((*MockGroupRepo)(nil).JoinGroupByInviteCode), ctx, code, userID)
+}
+
+// ListGroupVehicles mocks base method.
+func (m *MockGroupRepo) ListGroupVehicles(ctx context.Context, groupID, viewerID uuid.UUID) ([]repository.GroupVehicleRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListGroupVehicles", ctx, groupID, viewerID)
+	ret0, _ := ret[0].([]repository.GroupVehicleRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListGroupVehicles indicates an expected call of ListGroupVehicles.
+func (mr *MockGroupRepoMockRecorder) ListGroupVehicles(ctx, groupID, viewerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListGroupVehicles", reflect.TypeOf((*MockGroupRepo)(nil).ListGroupVehicles), ctx, groupID, viewerID)
 }
 
 // ListGroupsByUser mocks base method.

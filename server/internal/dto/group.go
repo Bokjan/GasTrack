@@ -55,11 +55,12 @@ type GroupVehicleSummary struct {
 	OwnerName    string  `json:"owner_name"`
 	VehicleType  string  `json:"vehicle_type"`
 	FuelType     string  `json:"fuel_type"`
-	CurrencyCode string  `json:"currency_code"`
+	IsShared     bool    `json:"is_shared"`     // 是否已共享到本群组（查看者自己的未共享车辆也会列出）
+	CurrencyCode string  `json:"currency_code"` // total_cost 的币种（查看者偏好币种，按参考汇率换算）
 	Records      int64   `json:"total_records"`
 	TotalCost    float64 `json:"total_cost"`
-	TotalFuel    float64 `json:"total_fuel"`
-	AvgEff       float64 `json:"avg_efficiency"`
+	TotalFuel    float64 `json:"total_fuel"`     // 燃油车为升，电动车为 kWh（见 fuel_type）
+	AvgEff       float64 `json:"avg_efficiency"` // 燃油车为 L/100km，电动车为 kWh/100km；按里程加权
 }
 
 // GroupOverviewResponse 群组数据汇总响应
@@ -115,10 +116,11 @@ type LeaderboardResponse struct {
 	GroupID           string             `json:"group_id"`
 	GroupName         string             `json:"group_name"`
 	Metric            string             `json:"metric"`
+	Energy            string             `json:"energy"` // fuel / electric：油耗排行只比较同一能源类别
 	Period            string             `json:"period"`
 	PeriodLabel       string             `json:"period_label"`
 	GroupAvg          float64            `json:"group_avg"`
-	Unit              string             `json:"unit"`
+	Unit              string             `json:"unit"` // 油耗为基准单位 L/100km 或 kWh/100km；费用为空（已换算为查看者币种）
 	Rankings          []LeaderboardEntry `json:"rankings"`
 	TotalParticipants int                `json:"total_participants"`
 }
@@ -127,10 +129,12 @@ type LeaderboardResponse struct {
 
 // GroupExpenseSummary 群组费用统计摘要
 type GroupExpenseSummary struct {
-	TotalCost           float64 `json:"total_cost"`
-	TotalFuel           float64 `json:"total_fuel"`
-	TotalDistance       float64 `json:"total_distance"`
-	AvgEfficiency       float64 `json:"avg_efficiency"`
+	TotalCost           float64 `json:"total_cost"`     // 换算为查看者币种
+	TotalFuel           float64 `json:"total_fuel"`     // 燃油（L），不含充电
+	TotalEnergy         float64 `json:"total_energy"`   // 充电（kWh）
+	TotalDistance       float64 `json:"total_distance"` // km
+	AvgEfficiency       float64 `json:"avg_efficiency"` // 燃油车平均油耗 L/100km（按里程加权）
+	AvgEnergyEfficiency float64 `json:"avg_energy_efficiency"` // 电动车平均电耗 kWh/100km
 	CostChangePct       float64 `json:"cost_change_pct"`
 	FuelChangePct       float64 `json:"fuel_change_pct"`
 	DistanceChangePct   float64 `json:"distance_change_pct"`
@@ -141,9 +145,10 @@ type GroupExpenseSummary struct {
 type MemberCostBreakdown struct {
 	UserID       string  `json:"user_id"`
 	Nickname     string  `json:"nickname"`
-	TotalCost    float64 `json:"total_cost"`
+	TotalCost    float64 `json:"total_cost"`    // 换算为 currency_code（查看者币种）
 	CurrencyCode string  `json:"currency_code"`
-	TotalFuel    float64 `json:"total_fuel"`
+	TotalFuel    float64 `json:"total_fuel"`    // 燃油（L）
+	TotalEnergy  float64 `json:"total_energy"`  // 充电（kWh）
 	Percentage   float64 `json:"percentage"`
 }
 
@@ -157,12 +162,14 @@ type MemberCostItem struct {
 
 // GroupTrendItem 群组趋势项
 type GroupTrendItem struct {
-	PeriodLabel   string           `json:"period_label"`
-	TotalCost     float64          `json:"total_cost"`
-	TotalFuel     float64          `json:"total_fuel"`
-	TotalDistance float64          `json:"total_distance"`
-	AvgEfficiency float64          `json:"avg_efficiency"`
-	ByMember      []MemberCostItem `json:"by_member,omitempty"`
+	PeriodLabel         string           `json:"period_label"`
+	TotalCost           float64          `json:"total_cost"` // 换算为查看者币种
+	TotalFuel           float64          `json:"total_fuel"` // L
+	TotalEnergy         float64          `json:"total_energy"` // kWh
+	TotalDistance       float64          `json:"total_distance"`
+	AvgEfficiency       float64          `json:"avg_efficiency"`        // L/100km
+	AvgEnergyEfficiency float64          `json:"avg_energy_efficiency"` // kWh/100km
+	ByMember            []MemberCostItem `json:"by_member,omitempty"`
 }
 
 // GroupExpenseStatsResponse 群组费用统计看板响应
@@ -172,6 +179,8 @@ type GroupExpenseStatsResponse struct {
 	Period          string                `json:"period"`
 	Year            int                   `json:"year,omitempty"`
 	Summary         GroupExpenseSummary    `json:"summary"`
+	CurrencyCode    string                 `json:"currency_code"` // 所有金额换算后的币种（查看者偏好币种）
+	UnconvertedCurrencies []string         `json:"unconverted_currencies,omitempty"`
 	MemberBreakdown []MemberCostBreakdown `json:"member_breakdown"`
 	TrendItems      []GroupTrendItem       `json:"trend_items"`
 	PrevTrendItems  []GroupTrendItem       `json:"prev_trend_items,omitempty"`
@@ -191,6 +200,7 @@ type StationInfo struct {
 	StationName     string           `json:"station_name"`
 	AvgUnitPrice    float64          `json:"avg_unit_price"`
 	LatestUnitPrice float64          `json:"latest_unit_price"`
+	PriceUnit       string           `json:"price_unit"` // L（gal 已换算为每升）或 kWh
 	PriceTrend      string           `json:"price_trend"` // "up" / "down" / "stable"
 	CurrencyCode    string           `json:"currency_code"`
 	VisitCount      int              `json:"visit_count"`

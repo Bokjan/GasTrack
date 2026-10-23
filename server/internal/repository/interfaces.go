@@ -77,7 +77,7 @@ type GroupRepo interface {
 	ListMembershipsByUser(ctx context.Context, userID uuid.UUID) ([]model.GroupMember, error)
 	ListSharedVehiclesByUser(ctx context.Context, userID uuid.UUID) ([]model.SharedVehicle, error)
 	JoinGroupByInviteCode(ctx context.Context, code string, userID uuid.UUID) (*model.Group, error)
-	GetGroupVehicleSummary(ctx context.Context, groupID uuid.UUID) ([]VehicleSummaryRow, error)
+	ListGroupVehicles(ctx context.Context, groupID, viewerID uuid.UUID) ([]GroupVehicleRow, error)
 	CreateSharedVehicle(ctx context.Context, sv *model.SharedVehicle) error
 	DeleteSharedVehicle(ctx context.Context, groupID, vehicleID uuid.UUID) error
 	ListSharedVehiclesByGroup(ctx context.Context, groupID uuid.UUID) ([]model.SharedVehicle, error)
@@ -85,9 +85,6 @@ type GroupRepo interface {
 	GetSharedVehicle(ctx context.Context, groupID, vehicleID uuid.UUID) (*model.SharedVehicle, error)
 	ListSharedVehiclesForUser(ctx context.Context, userID uuid.UUID) ([]SharedVehicleWithGroup, error)
 	IsVehicleSharedToUser(ctx context.Context, vehicleID, userID uuid.UUID) (bool, error)
-	GetLeaderboard(ctx context.Context, groupID uuid.UUID, metric string, startDate, endDate time.Time) ([]LeaderboardRow, error)
-	GetGroupExpenseByMonth(ctx context.Context, groupID uuid.UUID, year int) ([]GroupExpenseRow, error)
-	GetGroupExpenseByYear(ctx context.Context, groupID uuid.UUID) ([]GroupExpenseRow, error)
 	GetGroupStationStats(ctx context.Context, groupID uuid.UUID, months int, fuelGrade, sortBy string) ([]StationStatsRow, error)
 	GetStationVisitors(ctx context.Context, groupID uuid.UUID, stationNames []string, months int) ([]StationVisitorRow, error)
 	GetStationLatestPrices(ctx context.Context, groupID uuid.UUID, stationNames []string, months int) ([]StationLatestPriceRow, error)

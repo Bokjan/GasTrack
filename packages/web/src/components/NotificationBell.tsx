@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import {
   notificationApi,
   formatNumber,
-  convertFuelEfficiency,
+  convertEfficiencyForDisplay,
   kmToMiles,
   isElectricVehicle,
   useAuthStore,
@@ -53,25 +53,6 @@ function parseParams(raw: string): Record<string, string> {
     }
   }
   return params;
-}
-
-/** 燃油单位对应的电耗单位 */
-const EV_UNIT_OF: Record<string, string> = {
-  'L/100km': 'kWh/100km',
-  'km/L': 'km/kWh',
-  'MPG': 'mi/kWh',
-};
-
-/**
- * 将后端基准油耗（L/100km 或 kWh/100km）转为用户偏好单位
- * 电动车按燃油单位的同类形式换算：kWh/100km、km/kWh、mi/kWh
- */
-function convertEfficiencyForDisplay(value: number, unit: string, isEv: boolean): { value: number; unit: string } {
-  if (!isEv) return { value: convertFuelEfficiency(value, 'L/100km', unit), unit };
-  const evUnit = EV_UNIT_OF[unit] ?? 'kWh/100km';
-  if (value <= 0 || evUnit === 'kWh/100km') return { value, unit: evUnit };
-  const kmPerKwh = 100 / value;
-  return { value: evUnit === 'km/kWh' ? kmPerKwh : kmToMiles(kmPerKwh), unit: evUnit };
 }
 
 export default function NotificationBell() {

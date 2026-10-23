@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sort"
 	"strings"
 	"time"
 
@@ -25,6 +26,8 @@ type GroupService struct {
 	groupRepo   repository.GroupRepo
 	userRepo    repository.UserRepo
 	vehicleRepo repository.VehicleRepo
+	recordRepo  repository.FuelRecordRepo
+	rates       RateProvider
 	logger      *zap.Logger
 }
 
@@ -33,14 +36,53 @@ func NewGroupService(
 	groupRepo repository.GroupRepo,
 	userRepo repository.UserRepo,
 	vehicleRepo repository.VehicleRepo,
+	recordRepo repository.FuelRecordRepo,
+	rates RateProvider,
 	logger *zap.Logger,
 ) *GroupService {
 	return &GroupService{
 		groupRepo:   groupRepo,
 		userRepo:    userRepo,
 		vehicleRepo: vehicleRepo,
+		recordRepo:  recordRepo,
+		rates:       rates,
 		logger:      logger,
 	}
+}
+
+// viewerConverter 按查看者的偏好币种创建金额换算器
+func (s *GroupService) viewerConverter(ctx context.Context, viewerID uuid.UUID) *moneyConverter {
+	currency := ""
+	if u, err := s.userRepo.GetByID(ctx, viewerID); err == nil {
+		currency = u.CurrencyCode
+	}
+	return newMoneyConverter(s.rates, currency)
+}
+
+// sharedVehicles 群组中已共享的车辆（群组统计的数据范围）
+func sharedVehicles(rows []repository.GroupVehicleRow) []repository.GroupVehicleRow {
+	out := make([]repository.GroupVehicleRow, 0, len(rows))
+	for _, r := range rows {
+		if r.IsShared {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+func vehicleIDsOf(rows []repository.GroupVehicleRow) []uuid.UUID {
+	ids := make([]uuid.UUID, len(rows))
+	for i, r := range rows {
+		ids[i] = r.VehicleID
+	}
+	return ids
+}
+
+func groupRowEnergyKind(r repository.GroupVehicleRow) energyKind {
+	if model.FuelType(r.FuelType) == model.FuelTypeElectric {
+		return energyElectric
+	}
+	return energyLiquid
 }
 
 // Create 创建群组
@@ -378,10 +420,16 @@ func (s *GroupService) GetOverview(ctx context.Context, groupID, userID uuid.UUI
 		return nil, apperror.ErrInternal("counting members", err)
 	}
 
-	rows, err := s.groupRepo.GetGroupVehicleSummary(ctx, groupID)
+	// 统计范围：已共享到本群组的车辆；查看者自己的未共享车辆也列出，便于开启共享
+	rows, err := s.groupRepo.ListGroupVehicles(ctx, groupID, userID)
 	if err != nil {
-		return nil, apperror.ErrInternal("fetching group vehicle summary", err)
+		return nil, apperror.ErrInternal("listing group vehicles", err)
 	}
+	aggRows, err := s.recordRepo.Aggregate(ctx, repository.FuelAggregateQuery{VehicleIDs: vehicleIDsOf(rows)})
+	if err != nil {
+		return nil, apperror.ErrInternal("fetching group vehicle stats", err)
+	}
+	byVehicle := totalsByVehicle(aggRows)
 
 	// 批量查询所有车辆 owner 信息（1 次 SQL 替代 N 次）
 	ownerIDSet := make(map[uuid.UUID]struct{})
@@ -397,12 +445,22 @@ func (s *GroupService) GetOverview(ctx context.Context, groupID, userID uuid.UUI
 		return nil, apperror.ErrInternal("batch fetching vehicle owners", err)
 	}
 
+	conv := s.viewerConverter(ctx, userID)
+	sharedCount := 0
 	vehicles := make([]dto.GroupVehicleSummary, 0, len(rows))
 	for _, row := range rows {
+		if row.IsShared {
+			sharedCount++
+		}
 		ownerName := ""
 		if owner, ok := ownerMap[row.OwnerID]; ok {
 			ownerName = owner.Nickname
 		}
+		t, ok := byVehicle[row.VehicleID.String()]
+		if !ok {
+			t = newFuelTotals()
+		}
+		kind := groupRowEnergyKind(row)
 
 		vehicles = append(vehicles, dto.GroupVehicleSummary{
 			VehicleID:    row.VehicleID.String(),
@@ -411,11 +469,12 @@ func (s *GroupService) GetOverview(ctx context.Context, groupID, userID uuid.UUI
 			OwnerName:    ownerName,
 			VehicleType:  row.VehicleType,
 			FuelType:     row.FuelType,
-			CurrencyCode: row.CurrencyCode,
-			Records:      row.Records,
-			TotalCost:    row.TotalCost,
-			TotalFuel:    row.TotalFuel,
-			AvgEff:       row.AvgEff,
+			IsShared:     row.IsShared,
+			CurrencyCode: conv.base,
+			Records:      t.Records,
+			TotalCost:    conv.sum(t.costs),
+			TotalFuel:    t.amount(kind),
+			AvgEff:       t.avgEfficiency(kind),
 		})
 	}
 
@@ -423,7 +482,7 @@ func (s *GroupService) GetOverview(ctx context.Context, groupID, userID uuid.UUI
 		GroupID:      group.ID.String(),
 		GroupName:    group.Name,
 		MemberCount:  int(memberCount),
-		VehicleCount: len(vehicles),
+		VehicleCount: sharedCount,
 		Vehicles:     vehicles,
 	}, nil
 }
@@ -682,7 +741,8 @@ func (s *GroupService) ListSharedVehicles(ctx context.Context, groupID, userID u
 // ===================== 功能②: 群组油耗排行榜 =====================
 
 // GetLeaderboard 获取群组排行榜
-func (s *GroupService) GetLeaderboard(ctx context.Context, groupID, userID uuid.UUID, metric, period string) (*dto.LeaderboardResponse, error) {
+// 只统计已共享到群组的车辆；费用按查看者币种换算；油耗排行只在同一能源类别（energy）内比较
+func (s *GroupService) GetLeaderboard(ctx context.Context, groupID, userID uuid.UUID, metric, period, energy string) (*dto.LeaderboardResponse, error) {
 	// 验证成员身份
 	_, err := s.groupRepo.GetMember(ctx, groupID, userID)
 	if err != nil {
@@ -722,84 +782,115 @@ func (s *GroupService) GetLeaderboard(ctx context.Context, groupID, userID uuid.
 		periodLabel = now.Format("2006-01")
 	}
 
-	rows, err := s.groupRepo.GetLeaderboard(ctx, groupID, metric, startDate, endDate)
+	groupVehicles, err := s.groupRepo.ListGroupVehicles(ctx, groupID, userID)
+	if err != nil {
+		return nil, apperror.ErrInternal("listing group vehicles", err)
+	}
+	shared := sharedVehicles(groupVehicles)
+	aggRows, err := s.recordRepo.Aggregate(ctx, repository.FuelAggregateQuery{
+		VehicleIDs: vehicleIDsOf(shared), Start: &startDate, End: &endDate,
+	})
 	if err != nil {
 		return nil, apperror.ErrInternal("fetching leaderboard", err)
 	}
+	byVehicle := totalsByVehicle(aggRows)
+
+	wantKind := energyLiquid
+	if energy == "electric" {
+		wantKind = energyElectric
+	}
+	conv := s.viewerConverter(ctx, userID)
+
+	type entry struct {
+		vehicle repository.GroupVehicleRow
+		records int64
+		value   float64
+	}
+	entries := make([]entry, 0, len(shared))
+	for _, v := range shared {
+		t, ok := byVehicle[v.VehicleID.String()]
+		// 至少 2 条记录才参与排行
+		if !ok || t.Records < 2 {
+			continue
+		}
+		var value float64
+		switch metric {
+		case "cost":
+			value = conv.sum(t.costs)
+		case "distance":
+			value = t.Distance
+		case "frequency":
+			value = float64(t.Records)
+		default: // efficiency：只比较同一能源类别、且有有效油耗的车辆
+			if groupRowEnergyKind(v) != wantKind || t.avgEfficiency(wantKind) <= 0 {
+				continue
+			}
+			value = t.avgEfficiency(wantKind)
+		}
+		entries = append(entries, entry{vehicle: v, records: t.Records, value: value})
+	}
+
+	// 油耗越低越好（升序），其余指标越高排名越前（降序）
+	sort.SliceStable(entries, func(i, j int) bool {
+		if metric == "cost" || metric == "distance" || metric == "frequency" {
+			return entries[i].value > entries[j].value
+		}
+		return entries[i].value < entries[j].value
+	})
 
 	// 计算群组平均值和单位
 	var groupAvg float64
-	unit := string(convert.UnitL100km)
-	if len(rows) > 0 {
+	if len(entries) > 0 {
 		var sum float64
-		for _, row := range rows {
-			switch metric {
-			case "cost":
-				sum += row.TotalCost
-			case "distance":
-				sum += row.TotalDistance
-			case "frequency":
-				sum += float64(row.RecordCount)
-			default:
-				sum += row.AvgEfficiency
-			}
+		for _, e := range entries {
+			sum += e.value
 		}
-		groupAvg = sum / float64(len(rows))
+		groupAvg = sum / float64(len(entries))
 	}
 
+	unit := string(convert.UnitL100km)
+	if wantKind == energyElectric {
+		unit = "kWh/100km"
+	}
 	switch metric {
-	case "cost":
+	case "cost", "frequency":
 		unit = ""
 	case "distance":
 		unit = string(convert.UnitKm)
-	case "frequency":
-		unit = ""
 	}
 
 	// 批量查询排行榜所有用户昵称（1 次 SQL 替代 N 次）
-	leaderUserIDs := make([]uuid.UUID, len(rows))
-	for i, row := range rows {
-		leaderUserIDs[i] = row.UserID
+	leaderUserIDs := make([]uuid.UUID, len(entries))
+	for i, e := range entries {
+		leaderUserIDs[i] = e.vehicle.OwnerID
 	}
 	leaderUserMap, err := s.userRepo.GetByIDs(ctx, leaderUserIDs)
 	if err != nil {
 		return nil, apperror.ErrInternal("batch fetching leaderboard users", err)
 	}
 
-	rankings := make([]dto.LeaderboardEntry, 0, len(rows))
-	for i, row := range rows {
-		var value float64
-		switch metric {
-		case "cost":
-			value = row.TotalCost
-		case "distance":
-			value = row.TotalDistance
-		case "frequency":
-			value = float64(row.RecordCount)
-		default:
-			value = row.AvgEfficiency
-		}
-
+	rankings := make([]dto.LeaderboardEntry, 0, len(entries))
+	for i, e := range entries {
 		diffFromAvg := 0.0
 		if groupAvg > 0 {
-			diffFromAvg = ((value - groupAvg) / groupAvg) * 100
+			diffFromAvg = ((e.value - groupAvg) / groupAvg) * 100
 		}
 
 		nickname := ""
-		if u, ok := leaderUserMap[row.UserID]; ok {
+		if u, ok := leaderUserMap[e.vehicle.OwnerID]; ok {
 			nickname = u.Nickname
 		}
 
 		rankings = append(rankings, dto.LeaderboardEntry{
 			Rank:        i + 1,
-			UserID:      row.UserID.String(),
+			UserID:      e.vehicle.OwnerID.String(),
 			Nickname:    nickname,
-			VehicleID:   row.VehicleID.String(),
-			VehicleName: row.VehicleName,
-			Value:       value,
+			VehicleID:   e.vehicle.VehicleID.String(),
+			VehicleName: e.vehicle.VehicleName,
+			Value:       e.value,
 			DiffFromAvg: diffFromAvg,
-			RecordCount: row.RecordCount,
-			IsSelf:      row.UserID == userID,
+			RecordCount: int(e.records),
+			IsSelf:      e.vehicle.OwnerID == userID,
 		})
 	}
 
@@ -807,6 +898,7 @@ func (s *GroupService) GetLeaderboard(ctx context.Context, groupID, userID uuid.
 		GroupID:           groupID.String(),
 		GroupName:         group.Name,
 		Metric:            metric,
+		Energy:            energy,
 		Period:            period,
 		PeriodLabel:       periodLabel,
 		GroupAvg:          groupAvg,
@@ -834,11 +926,24 @@ func (s *GroupService) GetExpenseStats(ctx context.Context, groupID, userID uuid
 		return nil, apperror.ErrInternal("fetching group", err)
 	}
 
-	// 获取当前时段和上一时段数据
-	var rows, prevRows []repository.GroupExpenseRow
+	// 统计范围：已共享到本群组的车辆；费用归属车主
+	groupVehicles, err := s.groupRepo.ListGroupVehicles(ctx, groupID, userID)
+	if err != nil {
+		return nil, apperror.ErrInternal("listing group vehicles", err)
+	}
+	shared := sharedVehicles(groupVehicles)
+	ownerOf := make(map[uuid.UUID]uuid.UUID, len(shared))
+	for _, v := range shared {
+		ownerOf[v.VehicleID] = v.OwnerID
+	}
+	ids := vehicleIDsOf(shared)
 
+	// 获取当前时段和上一时段数据
+	var rows, prevRows []repository.FuelAggregateRow
 	if period == "year" {
-		rows, err = s.groupRepo.GetGroupExpenseByYear(ctx, groupID)
+		// 限制最近 10 年的数据，避免全表扫描
+		cutoff := time.Now().AddDate(-10, 0, 0)
+		rows, err = s.recordRepo.Aggregate(ctx, repository.FuelAggregateQuery{VehicleIDs: ids, PeriodFormat: repository.PeriodYear, Start: &cutoff})
 		if err != nil {
 			return nil, apperror.ErrInternal("fetching expense stats by year", err)
 		}
@@ -847,12 +952,14 @@ func (s *GroupService) GetExpenseStats(ctx context.Context, groupID, userID uuid
 		if year == 0 {
 			year = time.Now().Year()
 		}
-		rows, err = s.groupRepo.GetGroupExpenseByMonth(ctx, groupID, year)
+		start, end := yearRange(year)
+		rows, err = s.recordRepo.Aggregate(ctx, repository.FuelAggregateQuery{VehicleIDs: ids, PeriodFormat: repository.PeriodMonth, Start: start, End: end})
 		if err != nil {
 			return nil, apperror.ErrInternal("fetching expense stats by month", err)
 		}
 		// 上一年同期数据
-		prevRows, err = s.groupRepo.GetGroupExpenseByMonth(ctx, groupID, year-1)
+		start, end = yearRange(year - 1)
+		prevRows, err = s.recordRepo.Aggregate(ctx, repository.FuelAggregateQuery{VehicleIDs: ids, PeriodFormat: repository.PeriodMonth, Start: start, End: end})
 		if err != nil {
 			return nil, apperror.ErrInternal("fetching prev expense stats", err)
 		}
@@ -872,195 +979,138 @@ func (s *GroupService) GetExpenseStats(ctx context.Context, groupID, userID uuid
 		}
 	}
 
-	// 聚合当前时段
-	trendItems, memberTotals := s.buildTrendItems(rows, nicknameMap)
-
-	// 聚合上一时段
-	prevTrendItems, prevMemberTotals := s.buildTrendItems(prevRows, nicknameMap)
-
-	// 计算汇总
-	summary := s.calculateSummary(memberTotals, prevMemberTotals)
-
-	// 计算成员费用占比（用原始费用总和计算百分比，而非 summary.TotalCost 的占位 0）
-	var rawTotalCost float64
-	for _, mt := range memberTotals {
-		for _, cost := range mt.CostByCurrency {
-			rawTotalCost += cost
-		}
-	}
-	memberBreakdown := s.buildMemberBreakdown(memberTotals, nicknameMap, rawTotalCost)
+	conv := s.viewerConverter(ctx, userID)
+	trendItems, memberTotals := buildGroupTrend(rows, ownerOf, nicknameMap, conv)
+	prevTrendItems, prevMemberTotals := buildGroupTrend(prevRows, ownerOf, nicknameMap, conv)
 
 	return &dto.GroupExpenseStatsResponse{
-		GroupID:         groupID.String(),
-		GroupName:       group.Name,
-		Period:          period,
-		Year:            year,
-		Summary:         summary,
-		MemberBreakdown: memberBreakdown,
-		TrendItems:      trendItems,
-		PrevTrendItems:  prevTrendItems,
+		GroupID:               groupID.String(),
+		GroupName:             group.Name,
+		Period:                period,
+		Year:                  year,
+		Summary:               groupExpenseSummary(memberTotals, prevMemberTotals, conv),
+		CurrencyCode:          conv.base,
+		UnconvertedCurrencies: conv.unconvertedCurrencies(),
+		MemberBreakdown:       groupMemberBreakdown(memberTotals, nicknameMap, conv),
+		TrendItems:            trendItems,
+		PrevTrendItems:        prevTrendItems,
 	}, nil
 }
 
-// memberTotal 成员总计
-type memberTotal struct {
-	CostByCurrency map[string]float64 // currency_code -> cost
-	Fuel           float64
-	Distance       float64
-	Efficiency     float64
-	Count          int
-}
+// buildGroupTrend 将按 车辆 × 币种 × 时段 的聚合行汇总为趋势项，并返回按成员（车主）汇总的合计
+func buildGroupTrend(rows []repository.FuelAggregateRow, ownerOf map[uuid.UUID]uuid.UUID, nicknameMap map[string]string, conv *moneyConverter) ([]dto.GroupTrendItem, map[string]*fuelTotals) {
+	periodTotals := make(map[string]*fuelTotals)
+	periodMembers := make(map[string]map[string]*fuelTotals)
+	memberTotals := make(map[string]*fuelTotals)
+	var order []string
 
-// buildTrendItems 从查询行构建趋势项
-func (s *GroupService) buildTrendItems(rows []repository.GroupExpenseRow, nicknameMap map[string]string) ([]dto.GroupTrendItem, map[string]*memberTotal) {
-	// period -> list of rows
-	periodData := make(map[string][]*repository.GroupExpenseRow)
-	periodOrder := make([]string, 0)
-	memberTotals := make(map[string]*memberTotal)
-
-	for i := range rows {
-		row := &rows[i]
-		if _, ok := periodData[row.PeriodLabel]; !ok {
-			periodOrder = append(periodOrder, row.PeriodLabel)
+	for _, row := range rows {
+		uid := ownerOf[row.VehicleID].String()
+		if periodTotals[row.Period] == nil {
+			periodTotals[row.Period] = newFuelTotals()
+			periodMembers[row.Period] = make(map[string]*fuelTotals)
+			order = append(order, row.Period)
 		}
-		periodData[row.PeriodLabel] = append(periodData[row.PeriodLabel], row)
-
-		uid := row.UserID.String()
-		if _, ok := memberTotals[uid]; !ok {
-			memberTotals[uid] = &memberTotal{CostByCurrency: make(map[string]float64)}
+		if periodMembers[row.Period][uid] == nil {
+			periodMembers[row.Period][uid] = newFuelTotals()
 		}
-		mt := memberTotals[uid]
-		mt.CostByCurrency[row.CurrencyCode] += row.Cost
-		mt.Fuel += row.Fuel
-		mt.Distance += row.Distance
-		if row.AvgEfficiency > 0 {
-			mt.Efficiency += row.AvgEfficiency
-			mt.Count++
+		if memberTotals[uid] == nil {
+			memberTotals[uid] = newFuelTotals()
 		}
+		periodTotals[row.Period].add(row)
+		periodMembers[row.Period][uid].add(row)
+		memberTotals[uid].add(row)
 	}
 
-	trendItems := make([]dto.GroupTrendItem, 0, len(periodOrder))
-	for _, pl := range periodOrder {
-		rowList := periodData[pl]
-		var totalFuel, totalDist, totalEff float64
-		var effCount int
-		byMember := make([]dto.MemberCostItem, 0)
-
-		for _, row := range rowList {
-			totalFuel += row.Fuel
-			totalDist += row.Distance
-			if row.AvgEfficiency > 0 {
-				totalEff += row.AvgEfficiency
-				effCount++
-			}
-			// 每个 (user, currency) 组合生成一个 MemberCostItem
+	items := make([]dto.GroupTrendItem, 0, len(order))
+	for _, p := range order {
+		t := periodTotals[p]
+		uids := make([]string, 0, len(periodMembers[p]))
+		for uid := range periodMembers[p] {
+			uids = append(uids, uid)
+		}
+		sort.Strings(uids)
+		byMember := make([]dto.MemberCostItem, 0, len(uids))
+		for _, uid := range uids {
 			byMember = append(byMember, dto.MemberCostItem{
-				UserID:       row.UserID.String(),
-				Nickname:     nicknameMap[row.UserID.String()],
-				Cost:         row.Cost,
-				CurrencyCode: row.CurrencyCode,
+				UserID:       uid,
+				Nickname:     nicknameMap[uid],
+				Cost:         conv.sum(periodMembers[p][uid].costs),
+				CurrencyCode: conv.base,
 			})
 		}
-
-		avgEff := 0.0
-		if effCount > 0 {
-			avgEff = totalEff / float64(effCount)
-		}
-
-		trendItems = append(trendItems, dto.GroupTrendItem{
-			PeriodLabel:   pl,
-			TotalCost:     0, // 前端按 by_member 各币种换算后汇总
-			TotalFuel:     totalFuel,
-			TotalDistance:  totalDist,
-			AvgEfficiency: avgEff,
-			ByMember:      byMember,
+		items = append(items, dto.GroupTrendItem{
+			PeriodLabel:         p,
+			TotalCost:           conv.sum(t.costs),
+			TotalFuel:           t.Liters,
+			TotalEnergy:         t.Kwh,
+			TotalDistance:       t.Distance,
+			AvgEfficiency:       t.LiquidEfficiency(),
+			AvgEnergyEfficiency: t.ElectricEfficiency(),
+			ByMember:            byMember,
 		})
 	}
-
-	return trendItems, memberTotals
+	return items, memberTotals
 }
 
-// calculateSummary 计算费用摘要及环比变化
-func (s *GroupService) calculateSummary(current, prev map[string]*memberTotal) dto.GroupExpenseSummary {
-	var totalCost, totalFuel, totalDist, totalEff float64
-	var effCount int
-
-	for _, mt := range current {
-		for _, cost := range mt.CostByCurrency {
-			totalCost += cost
-		}
-		totalFuel += mt.Fuel
-		totalDist += mt.Distance
-		if mt.Count > 0 {
-			totalEff += mt.Efficiency
-			effCount += mt.Count
-		}
+// groupExpenseSummary 计算费用摘要及同比变化（金额已换算为同一币种，油耗按里程加权）
+func groupExpenseSummary(current, prev map[string]*fuelTotals, conv *moneyConverter) dto.GroupExpenseSummary {
+	cur, old := newFuelTotals(), newFuelTotals()
+	for _, t := range current {
+		cur.merge(t)
+	}
+	for _, t := range prev {
+		old.merge(t)
 	}
 
-	avgEff := 0.0
-	if effCount > 0 {
-		avgEff = totalEff / float64(effCount)
-	}
-
-	// 上一时段汇总
-	var prevCost, prevFuel, prevDist, prevEff float64
-	var prevEffCount int
-	for _, mt := range prev {
-		for _, cost := range mt.CostByCurrency {
-			prevCost += cost
-		}
-		prevFuel += mt.Fuel
-		prevDist += mt.Distance
-		if mt.Count > 0 {
-			prevEff += mt.Efficiency
-			prevEffCount += mt.Count
-		}
-	}
-	prevAvgEff := 0.0
-	if prevEffCount > 0 {
-		prevAvgEff = prevEff / float64(prevEffCount)
-	}
-
-	// 计算环比变化百分比
 	pctChange := func(curr, prev float64) float64 {
 		if prev == 0 {
 			return 0
 		}
 		return ((curr - prev) / prev) * 100
 	}
+	curCost, oldCost := conv.sum(cur.costs), conv.sum(old.costs)
 
 	return dto.GroupExpenseSummary{
-		TotalCost:           0, // 前端根据 member_breakdown 各币种换算后汇总
-		TotalFuel:           totalFuel,
-		TotalDistance:        totalDist,
-		AvgEfficiency:       avgEff,
-		CostChangePct:       pctChange(totalCost, prevCost),
-		FuelChangePct:       pctChange(totalFuel, prevFuel),
-		DistanceChangePct:   pctChange(totalDist, prevDist),
-		EfficiencyChangePct: pctChange(avgEff, prevAvgEff),
+		TotalCost:           curCost,
+		TotalFuel:           cur.Liters,
+		TotalEnergy:         cur.Kwh,
+		TotalDistance:       cur.Distance,
+		AvgEfficiency:       cur.LiquidEfficiency(),
+		AvgEnergyEfficiency: cur.ElectricEfficiency(),
+		CostChangePct:       pctChange(curCost, oldCost),
+		FuelChangePct:       pctChange(cur.Liters, old.Liters),
+		DistanceChangePct:   pctChange(cur.Distance, old.Distance),
+		EfficiencyChangePct: pctChange(cur.LiquidEfficiency(), old.LiquidEfficiency()),
 	}
 }
 
-// buildMemberBreakdown 构建成员费用占比
-func (s *GroupService) buildMemberBreakdown(memberTotals map[string]*memberTotal, nicknameMap map[string]string, totalCost float64) []dto.MemberCostBreakdown {
-	result := make([]dto.MemberCostBreakdown, 0)
-	for uid, mt := range memberTotals {
-		// 每个币种生成一条记录
-		for cur, cost := range mt.CostByCurrency {
-			pct := 0.0
-			if totalCost > 0 {
-				pct = (cost / totalCost) * 100
-			}
-			result = append(result, dto.MemberCostBreakdown{
-				UserID:       uid,
-				Nickname:     nicknameMap[uid],
-				TotalCost:    cost,
-				CurrencyCode: cur,
-				TotalFuel:    mt.Fuel,
-				Percentage:   pct,
-			})
-		}
+// groupMemberBreakdown 构建成员费用占比（按换算后金额降序）
+func groupMemberBreakdown(memberTotals map[string]*fuelTotals, nicknameMap map[string]string, conv *moneyConverter) []dto.MemberCostBreakdown {
+	var total float64
+	costs := make(map[string]float64, len(memberTotals))
+	for uid, t := range memberTotals {
+		costs[uid] = conv.sum(t.costs)
+		total += costs[uid]
 	}
+
+	result := make([]dto.MemberCostBreakdown, 0, len(memberTotals))
+	for uid, t := range memberTotals {
+		pct := 0.0
+		if total > 0 {
+			pct = costs[uid] / total * 100
+		}
+		result = append(result, dto.MemberCostBreakdown{
+			UserID:       uid,
+			Nickname:     nicknameMap[uid],
+			TotalCost:    costs[uid],
+			CurrencyCode: conv.base,
+			TotalFuel:    t.Liters,
+			TotalEnergy:  t.Kwh,
+			Percentage:   pct,
+		})
+	}
+	sort.SliceStable(result, func(i, j int) bool { return result[i].TotalCost > result[j].TotalCost })
 	return result
 }
 
@@ -1157,13 +1207,16 @@ func (s *GroupService) GetStationStats(ctx context.Context, groupID, userID uuid
 		latest float64
 		trend  string
 	}
+	// 同一站点可能有多个币种、燃油/充电两种单价，按 站点 × 币种 × 单位 区分
+	priceKey := func(station, currency, unit string) string { return station + "\x00" + currency + "\x00" + unit }
 	priceMap := make(map[string]*priceInfo)
 	for _, p := range latestPrices {
-		if _, ok := priceMap[p.StationName]; !ok {
-			priceMap[p.StationName] = &priceInfo{latest: p.UnitPrice, trend: "stable"}
+		key := priceKey(p.StationName, p.CurrencyCode, p.PriceUnit)
+		if _, ok := priceMap[key]; !ok {
+			priceMap[key] = &priceInfo{latest: p.UnitPrice, trend: "stable"}
 		} else {
 			// row_num=1 是最新的，row_num=2 是上一次的
-			pi := priceMap[p.StationName]
+			pi := priceMap[key]
 			if p.UnitPrice > 0 {
 				if pi.latest > p.UnitPrice {
 					pi.trend = "up"
@@ -1185,7 +1238,7 @@ func (s *GroupService) GetStationStats(ctx context.Context, groupID, userID uuid
 	for _, row := range stationRows {
 		latestUnitPrice := row.AvgUnitPrice
 		priceTrend := "stable"
-		if pi, ok := priceMap[row.StationName]; ok {
+		if pi, ok := priceMap[priceKey(row.StationName, row.CurrencyCode, row.PriceUnit)]; ok {
 			latestUnitPrice = pi.latest
 			priceTrend = pi.trend
 		}
@@ -1204,6 +1257,7 @@ func (s *GroupService) GetStationStats(ctx context.Context, groupID, userID uuid
 			StationName:     row.StationName,
 			AvgUnitPrice:    row.AvgUnitPrice,
 			LatestUnitPrice: latestUnitPrice,
+			PriceUnit:       row.PriceUnit,
 			PriceTrend:      priceTrend,
 			CurrencyCode:    row.CurrencyCode,
 			VisitCount:      row.VisitCount,

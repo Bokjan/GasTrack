@@ -506,10 +506,14 @@ export interface GroupVehicleSummary {
   owner_name: string;
   vehicle_type: string;
   fuel_type: string;
+  /** 是否已共享到本群组（群组统计只包含已共享车辆；自己的未共享车辆也会列出） */
+  is_shared?: boolean;
   currency_code: string;
   total_records: number;
   total_cost: number;
+  /** 燃油车为 L，电动车为 kWh */
   total_fuel: number;
+  /** 燃油车为 L/100km，电动车为 kWh/100km（按里程加权） */
   avg_efficiency: number;
 }
 
@@ -559,6 +563,7 @@ export interface LeaderboardResponse {
   group_id: string;
   group_name: string;
   metric: string;
+  energy?: LeaderboardEnergy;
   period: string;
   period_label: string;
   group_avg: number;
@@ -570,6 +575,9 @@ export interface LeaderboardResponse {
 /** 排行指标类型 */
 export type LeaderboardMetric = 'efficiency' | 'cost' | 'distance' | 'frequency';
 
+/** 油耗排行的能源类别：燃油与电动车分开比较 */
+export type LeaderboardEnergy = 'fuel' | 'electric';
+
 /** 排行时间范围 */
 export type LeaderboardPeriod = 'current_month' | 'last_month' | 'last_3_months' | 'current_year';
 
@@ -578,9 +586,15 @@ export type LeaderboardPeriod = 'current_month' | 'last_month' | 'last_3_months'
 /** 群组费用统计摘要 */
 export interface GroupExpenseSummary {
   total_cost: number;
+  /** 燃油（L），不含充电 */
   total_fuel: number;
+  /** 充电（kWh） */
+  total_energy?: number;
   total_distance: number;
+  /** 燃油车平均油耗 L/100km */
   avg_efficiency: number;
+  /** 电动车平均电耗 kWh/100km */
+  avg_energy_efficiency?: number;
   cost_change_pct: number;
   fuel_change_pct: number;
   distance_change_pct: number;
@@ -639,8 +653,10 @@ export interface StationVisitor {
 /** 加油站信息 */
 export interface StationInfo {
   station_name: string;
+  /** 单价统一为每升（gal 已换算）或每 kWh，见 price_unit */
   avg_unit_price: number;
   latest_unit_price: number;
+  price_unit?: 'L' | 'kWh';
   price_trend: 'up' | 'down' | 'stable';
   currency_code: string;
   visit_count: number;

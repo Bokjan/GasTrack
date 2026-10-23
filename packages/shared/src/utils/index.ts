@@ -114,6 +114,25 @@ export function convertFuelEfficiency(
   }
 }
 
+/** 燃油单位对应的电耗单位 */
+export const EV_EFFICIENCY_UNIT_OF: Record<string, string> = {
+  'L/100km': 'kWh/100km',
+  'km/L': 'km/kWh',
+  'MPG': 'mi/kWh',
+};
+
+/**
+ * 将后端基准油耗（L/100km）或电耗（kWh/100km）转为用户偏好单位。
+ * 电动车按燃油单位的同类形式换算：kWh/100km、km/kWh、mi/kWh
+ */
+export function convertEfficiencyForDisplay(value: number, unit: string, isEv: boolean): { value: number; unit: string } {
+  if (!isEv) return { value: convertFuelEfficiency(value, 'L/100km', unit), unit };
+  const evUnit = EV_EFFICIENCY_UNIT_OF[unit] ?? 'kWh/100km';
+  if (value <= 0 || evUnit === 'kWh/100km') return { value, unit: evUnit };
+  const kmPerKwh = 100 / value;
+  return { value: Math.round((evUnit === 'km/kWh' ? kmPerKwh : kmToMiles(kmPerKwh)) * 100) / 100, unit: evUnit };
+}
+
 /** 燃油车三种油耗单位 */
 export const FUEL_EFFICIENCY_UNITS = ['L/100km', 'km/L', 'MPG'] as const;
 

@@ -59,6 +59,8 @@ import type {
   SharedVehicleResponse,
   LeaderboardResponse,
   LeaderboardMetric,
+  LeaderboardEnergy,
+  GroupVehicleSummary,
   LeaderboardPeriod,
   GroupExpenseStatsResponse,
   GroupStationStatsResponse,
@@ -67,7 +69,7 @@ import type {
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { useAuthStore, FUEL_GRADES, formatCurrency, formatNumber, convertFuelEfficiency, convertAmount, litersToGallons, kmToMiles, useExchangeRateStore } from '@gastrack/shared';
+import { useAuthStore, FUEL_GRADES, formatCurrency, formatNumber, convertEfficiencyForDisplay, convertAmount, litersToGallons, kmToMiles, isElectricVehicle, useExchangeRateStore } from '@gastrack/shared';
 
 const { Text } = Typography;
 
@@ -121,19 +123,29 @@ export default function GroupPage() {
     return { text: formatCurrency(amount, from), converted: false };
   };
 
+  /** 将后端的加注量（燃油为 L，电动车为 kWh）按用户偏好转换 */
+  const fuelDisplay = (amount: number, isEv = false): { value: number; unit: string } =>
+    isEv ? { value: amount, unit: 'kWh' } : { value: isImperial ? litersToGallons(amount) : amount, unit: fuelUnit };
+
   /** 将后端的油量 (L) 按用户偏好转换 */
-  const convertFuel = (liters: number): number => {
-    return isImperial ? litersToGallons(liters) : liters;
-  };
+  const convertFuel = (liters: number): number => fuelDisplay(liters).value;
 
   /** 将后端的距离 (km) 按用户偏好转换 */
   const convertDistance = (km: number): number => {
     return isImperial ? kmToMiles(km) : km;
   };
 
+  /** 将后端基准油耗（L/100km）或电耗（kWh/100km）按用户偏好转换 */
+  const effDisplay = (base: number, isEv = false): { value: number; unit: string } =>
+    convertEfficiencyForDisplay(base, efficiencyUnit, isEv);
+
   /** 将后端的油耗 (L/100km) 按用户偏好转换 */
-  const convertEfficiency = (l100km: number): number => {
-    return convertFuelEfficiency(l100km, 'L/100km', efficiencyUnit);
+  const convertEfficiency = (l100km: number): number => effDisplay(l100km).value;
+
+  /** 加油站单价：后端统一为每升（或每 kWh），英制显示为每加仑 */
+  const stationPrice = (price: number, priceUnit?: string): { value: number; unit: string } => {
+    if (priceUnit === 'kWh') return { value: price, unit: 'kWh' };
+    return isImperial ? { value: price * 3.78541, unit: 'gal' } : { value: price, unit: 'L' };
   };
 
   /** 带"经换算"提示的金额展示组件 */
@@ -201,6 +213,8 @@ export default function GroupPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardResponse | null>(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [lbMetric, setLbMetric] = useState<LeaderboardMetric>('efficiency');
+  // 油耗排行只在同一能源类别内比较
+  const [lbEnergy, setLbEnergy] = useState<LeaderboardEnergy>('fuel');
   const [lbPeriod, setLbPeriod] = useState<LeaderboardPeriod>('current_month');
 
   // Expense Stats
@@ -273,10 +287,10 @@ export default function GroupPage() {
   }, [t]);
 
   // 获取排行榜数据
-  const fetchLeaderboard = useCallback(async (groupId: string, metric: LeaderboardMetric, period: LeaderboardPeriod) => {
+  const fetchLeaderboard = useCallback(async (groupId: string, metric: LeaderboardMetric, period: LeaderboardPeriod, energy: LeaderboardEnergy) => {
     setLeaderboardLoading(true);
     try {
-      const { data } = await groupApi.getLeaderboard(groupId, { metric, period });
+      const { data } = await groupApi.getLeaderboard(groupId, { metric, period, energy });
       setLeaderboard(data.data);
     } catch {
       setLeaderboard(null);
@@ -738,8 +752,14 @@ export default function GroupPage() {
                             value={overview.vehicle_count}
                           />
                         </Col>
+                        <Col xs={24}>
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            <InfoCircleOutlined style={{ marginRight: 4 }} />
+                            {t('group.statsSharedOnlyHint')}
+                          </Text>
+                        </Col>
                       </Row>
-                      <Table
+                      <Table<GroupVehicleSummary>
                         rowKey="vehicle_id"
                         size="small"
                         scroll={isMobile ? { x: 700 } : undefined}
@@ -774,20 +794,26 @@ export default function GroupPage() {
                             dataIndex: 'total_fuel',
                             key: 'total_fuel',
                             width: 120,
-                            render: (val: number) => `${formatNumber(convertFuel(val), 2)} ${fuelUnit}`,
+                            render: (val: number, record: GroupVehicleSummary) => {
+                              const d = fuelDisplay(val, isElectricVehicle(record.fuel_type));
+                              return `${formatNumber(d.value, 2)} ${d.unit}`;
+                            },
                           },
                           {
                             title: t('group.avgEfficiency'),
                             dataIndex: 'avg_efficiency',
                             key: 'avg_efficiency',
                             width: 130,
-                            render: (val: number) => `${formatNumber(convertEfficiency(val), 2)} ${efficiencyUnit}`,
+                            render: (val: number, record: GroupVehicleSummary) => {
+                              const d = effDisplay(val, isElectricVehicle(record.fuel_type));
+                              return `${formatNumber(d.value, 2)} ${d.unit}`;
+                            },
                           },
                           {
                             title: t('group.shareVehicle'),
                             key: 'shared',
                             width: 100,
-                            render: (_: unknown, record: { vehicle_id: string; owner_id: string }) => {
+                            render: (_: unknown, record: GroupVehicleSummary) => {
                               const isShared = sharedVehicles.some(sv => sv.vehicle_id === record.vehicle_id);
                               const isMyVehicle = record.owner_id === user?.id;
                               if (!isMyVehicle) {
@@ -811,7 +837,7 @@ export default function GroupPage() {
                             title: '',
                             key: 'actions',
                             width: 200,
-                            render: (_: unknown, record: { vehicle_id: string; owner_id: string }) => {
+                            render: (_: unknown, record: GroupVehicleSummary) => {
                               const isShared = sharedVehicles.some(sv => sv.vehicle_id === record.vehicle_id);
                               const isMyVehicle = record.owner_id === user?.id;
                               // 只有自己的车辆或已共享的车辆才显示操作按钮
@@ -867,7 +893,7 @@ export default function GroupPage() {
                       onChange={(val) => {
                         const m = val as LeaderboardMetric;
                         setLbMetric(m);
-                        fetchLeaderboard(selectedGroup.id, m, lbPeriod);
+                        fetchLeaderboard(selectedGroup.id, m, lbPeriod, lbEnergy);
                       }}
                       options={[
                         { label: t('group.metricEfficiency'), value: 'efficiency' },
@@ -876,11 +902,25 @@ export default function GroupPage() {
                         { label: t('group.metricFrequency'), value: 'frequency' },
                       ]}
                     />
+                    {lbMetric === 'efficiency' && (
+                      <Segmented
+                        value={lbEnergy}
+                        onChange={(val) => {
+                          const e = val as LeaderboardEnergy;
+                          setLbEnergy(e);
+                          fetchLeaderboard(selectedGroup.id, lbMetric, lbPeriod, e);
+                        }}
+                        options={[
+                          { label: t('group.energyFuel'), value: 'fuel' },
+                          { label: t('group.energyElectric'), value: 'electric' },
+                        ]}
+                      />
+                    )}
                     <Select
                       value={lbPeriod}
                       onChange={(val) => {
                         setLbPeriod(val);
-                        fetchLeaderboard(selectedGroup.id, lbMetric, val);
+                        fetchLeaderboard(selectedGroup.id, lbMetric, val, lbEnergy);
                       }}
                       style={{ width: 120 }}
                       options={[
@@ -902,13 +942,13 @@ export default function GroupPage() {
                           <>
                             <Text strong>
                               {lbMetric === 'efficiency'
-                                ? formatNumber(convertEfficiency(leaderboard.group_avg), 2)
+                                ? formatNumber(effDisplay(leaderboard.group_avg, leaderboard.unit === 'kWh/100km').value, 2)
                                 : lbMetric === 'distance'
                                 ? formatNumber(convertDistance(leaderboard.group_avg), 0)
                                 : formatNumber(leaderboard.group_avg, 2)}
                             </Text>{' '}
                             {lbMetric === 'efficiency'
-                              ? efficiencyUnit
+                              ? effDisplay(0, leaderboard.unit === 'kWh/100km').unit
                               : lbMetric === 'distance'
                               ? distanceUnit
                               : leaderboard.unit}
@@ -964,12 +1004,12 @@ export default function GroupPage() {
                                     ) : (
                                       <>
                                         {lbMetric === 'efficiency'
-                                          ? formatNumber(convertEfficiency(item.value), 2)
+                                          ? formatNumber(effDisplay(item.value, leaderboard.unit === 'kWh/100km').value, 2)
                                           : lbMetric === 'distance'
                                           ? formatNumber(convertDistance(item.value), 0)
                                           : formatNumber(item.value, 2)}{' '}
                                         {lbMetric === 'efficiency'
-                                          ? efficiencyUnit
+                                          ? effDisplay(0, leaderboard.unit === 'kWh/100km').unit
                                           : lbMetric === 'distance'
                                           ? distanceUnit
                                           : leaderboard.unit}
@@ -1087,6 +1127,27 @@ export default function GroupPage() {
                             suffix: efficiencyUnit,
                             isCost: false,
                           },
+                          // 有电动车数据时单独展示充电量与电耗（与燃油分开统计）
+                          ...((expenseStats.summary.total_energy ?? 0) > 0
+                            ? [
+                                {
+                                  title: t('group.totalEnergyAmount'),
+                                  value: { raw: expenseStats.summary.total_energy ?? 0, displayText: '', isConverted: false },
+                                  change: 0,
+                                  precision: 2,
+                                  suffix: 'kWh',
+                                  isCost: false,
+                                },
+                                {
+                                  title: t('group.avgEnergyEfficiency'),
+                                  value: { raw: effDisplay(expenseStats.summary.avg_energy_efficiency ?? 0, true).value, displayText: '', isConverted: false },
+                                  change: 0,
+                                  precision: 2,
+                                  suffix: effDisplay(0, true).unit,
+                                  isCost: false,
+                                },
+                              ]
+                            : []),
                         ].map((card, idx) => (
                           <Col xs={12} sm={6} key={idx}>
                             <Card size="small">
@@ -1312,15 +1373,15 @@ export default function GroupPage() {
                                 <Col span={12}>
                                   <Text type="secondary" style={{ fontSize: 12 }}>{t('group.avgPrice')}</Text>
                                   <div>
-                                    <Text strong><ConvertedCost amount={station.avg_unit_price} sourceCurrency={station.currency_code || currency} /></Text>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>/{fuelUnit}</Text>
+                                    <Text strong><ConvertedCost amount={stationPrice(station.avg_unit_price, station.price_unit).value} sourceCurrency={station.currency_code || currency} /></Text>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>/{stationPrice(0, station.price_unit).unit}</Text>
                                   </div>
                                 </Col>
                                 <Col span={12}>
                                   <Text type="secondary" style={{ fontSize: 12 }}>{t('group.latestPrice')}</Text>
                                   <div>
-                                    <Text strong><ConvertedCost amount={station.latest_unit_price} sourceCurrency={station.currency_code || currency} /></Text>
-                                    <Text type="secondary" style={{ fontSize: 12 }}>/{fuelUnit} </Text>
+                                    <Text strong><ConvertedCost amount={stationPrice(station.latest_unit_price, station.price_unit).value} sourceCurrency={station.currency_code || currency} /></Text>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>/{stationPrice(0, station.price_unit).unit} </Text>
                                     <Text
                                       type={station.price_trend === 'up' ? 'danger' : station.price_trend === 'down' ? 'success' : 'secondary'}
                                       style={{ fontSize: 12 }}
@@ -1390,7 +1451,7 @@ export default function GroupPage() {
           onChange={(key) => {
             if (!selectedGroup) return;
             if (key === 'leaderboard' && !leaderboard) {
-              fetchLeaderboard(selectedGroup.id, lbMetric, lbPeriod);
+              fetchLeaderboard(selectedGroup.id, lbMetric, lbPeriod, lbEnergy);
             }
             if (key === 'expense' && !expenseStats) {
               fetchExpenseStats(selectedGroup.id, expensePeriod, expenseYear);

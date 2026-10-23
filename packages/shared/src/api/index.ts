@@ -318,7 +318,7 @@ export const groupApi = {
   // --- 排行榜 ---
 
   /** 获取群组排行榜 */
-  getLeaderboard: (groupId: string, params?: { metric?: string; period?: string }) =>
+  getLeaderboard: (groupId: string, params?: { metric?: string; period?: string; energy?: string }) =>
     apiClient.get<ApiResponse<LeaderboardResponse>>(`/groups/${groupId}/leaderboard`, { params }),
 
   // --- 费用统计看板 ---

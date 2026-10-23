@@ -77,7 +77,7 @@ func main() {
 	fuelRecordService := service.NewFuelRecordService(fuelRecordRepo, vehicleRepo, userRepo, groupRepo, logger, notificationService)
 	statsService := service.NewStatsService(fuelRecordRepo, vehicleRepo, userRepo, groupRepo, expenseRecordRepo, exchangeRateService, logger)
 	exportService := service.NewExportService(userRepo, vehicleRepo, fuelRecordRepo, expenseRecordRepo, reminderRepo, notificationRepo, inviteCodeRepo, groupRepo, logger)
-	groupService := service.NewGroupService(groupRepo, userRepo, vehicleRepo, logger)
+	groupService := service.NewGroupService(groupRepo, userRepo, vehicleRepo, fuelRecordRepo, exchangeRateService, logger)
 	expenseRecordService := service.NewExpenseRecordService(expenseRecordRepo, vehicleRepo, groupRepo, reminderRepo, userRepo, exchangeRateService, logger)
 
 	// 运维命令：gastrack-server <command>，执行完毕即退出，不启动 HTTP 服务

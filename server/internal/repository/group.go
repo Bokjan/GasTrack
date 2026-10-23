@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,6 +10,7 @@ import (
 	"gorm.io/gorm/clause"
 
 	"gastrack/internal/model"
+	"gastrack/internal/pkg/convert"
 )
 
 // GroupRepository 群组数据访问
@@ -232,59 +234,38 @@ func (r *GroupRepository) JoinGroupByInviteCode(ctx context.Context, code string
 	return &group, nil
 }
 
-// --- 群组车辆数据汇总 ---
+// --- 群组车辆 ---
 
-// VehicleSummaryRow 车辆汇总查询结果行
-type VehicleSummaryRow struct {
-	VehicleID    uuid.UUID `gorm:"column:vehicle_id"`
-	VehicleName  string    `gorm:"column:vehicle_name"`
-	OwnerID      uuid.UUID `gorm:"column:owner_id"`
-	VehicleType  string    `gorm:"column:vehicle_type"`
-	FuelType     string    `gorm:"column:fuel_type"`
-	CurrencyCode string    `gorm:"column:currency_code"`
-	Records      int64     `gorm:"column:total_records"`
-	TotalCost    float64   `gorm:"column:total_cost"`
-	TotalFuel    float64   `gorm:"column:total_fuel"`
-	AvgEff       float64   `gorm:"column:avg_efficiency"`
+// GroupVehicleRow 群组内可见的车辆：已共享到群组的车辆，以及查看者自己名下（可能尚未共享）的车辆
+type GroupVehicleRow struct {
+	VehicleID   uuid.UUID `gorm:"column:vehicle_id"`
+	VehicleName string    `gorm:"column:vehicle_name"`
+	OwnerID     uuid.UUID `gorm:"column:owner_id"`
+	VehicleType string    `gorm:"column:vehicle_type"`
+	FuelType    string    `gorm:"column:fuel_type"`
+	IsShared    bool      `gorm:"column:is_shared"`
 }
 
-// GetGroupVehicleSummary 获取群组内所有成员的车辆数据汇总
-func (r *GroupRepository) GetGroupVehicleSummary(ctx context.Context, groupID uuid.UUID) ([]VehicleSummaryRow, error) {
-	var results []VehicleSummaryRow
+// sharedInGroupSQL 车辆 v 已共享到群组 @gid，且共享发起人仍是群组成员
+const sharedInGroupSQL = `EXISTS (
+	SELECT 1 FROM shared_vehicles sv
+	JOIN group_members sgm ON sgm.group_id = sv.group_id AND sgm.user_id = sv.shared_by
+	WHERE sv.group_id = @gid AND sv.vehicle_id = v.id AND sv.deleted_at IS NULL
+)`
 
+// ListGroupVehicles 列出群组统计可见的车辆（未归档、未删除）。
+// 群组统计只基于已共享的车辆；查看者自己的未共享车辆也会列出（IsShared=false），便于在群组内开启共享。
+func (r *GroupRepository) ListGroupVehicles(ctx context.Context, groupID, viewerID uuid.UUID) ([]GroupVehicleRow, error) {
+	var rows []GroupVehicleRow
 	err := r.db.WithContext(ctx).Raw(`
-		SELECT 
-			v.id AS vehicle_id,
-			v.name AS vehicle_name,
-			v.user_id AS owner_id,
-			v.vehicle_type,
-			v.fuel_type,
-			COALESCE(top_cur.currency_code, u.currency_code) AS currency_code,
-			COUNT(fr.id) AS total_records,
-			COALESCE(SUM(fr.total_cost), 0) AS total_cost,
-			COALESCE(SUM(fr.fuel_amount), 0) AS total_fuel,
-			CASE WHEN COUNT(fr.id) > 0 
-				THEN COALESCE(AVG(fr.fuel_efficiency), 0)
-				ELSE 0 
-			END AS avg_efficiency
+		SELECT v.id AS vehicle_id, v.name AS vehicle_name, v.user_id AS owner_id, v.vehicle_type, v.fuel_type,
+			`+sharedInGroupSQL+` AS is_shared
 		FROM vehicles v
-		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
-		JOIN users u ON u.id = v.user_id
-		LEFT JOIN fuel_records fr ON fr.vehicle_id = v.id AND fr.deleted_at IS NULL
-		LEFT JOIN LATERAL (
-			SELECT fr2.currency_code
-			FROM fuel_records fr2
-			WHERE fr2.vehicle_id = v.id AND fr2.deleted_at IS NULL
-			GROUP BY fr2.currency_code
-			ORDER BY COUNT(*) DESC
-			LIMIT 1
-		) top_cur ON true
 		WHERE v.deleted_at IS NULL AND v.is_archived = false
-		GROUP BY v.id, v.name, v.user_id, v.vehicle_type, v.fuel_type, u.currency_code, top_cur.currency_code
+		  AND (`+sharedInGroupSQL+` OR v.user_id = @viewer)
 		ORDER BY v.name ASC
-	`, groupID).Scan(&results).Error
-
-	return results, err
+	`, map[string]any{"gid": groupID, "viewer": viewerID}).Scan(&rows).Error
+	return rows, err
 }
 
 // --- 自定义错误 ---
@@ -417,133 +398,20 @@ func (r *GroupRepository) IsVehicleSharedToUser(ctx context.Context, vehicleID, 
 	return exists, err
 }
 
-// --- 排行榜 ---
+// --- 加油站推荐共享（仅统计已共享到群组的车辆） ---
 
-// LeaderboardRow 排行榜查询结果行
-type LeaderboardRow struct {
-	VehicleID     uuid.UUID `gorm:"column:vehicle_id"`
-	VehicleName   string    `gorm:"column:vehicle_name"`
-	UserID        uuid.UUID `gorm:"column:user_id"`
-	RecordCount   int       `gorm:"column:record_count"`
-	AvgEfficiency float64   `gorm:"column:avg_efficiency"`
-	TotalCost     float64   `gorm:"column:total_cost"`
-	TotalDistance float64   `gorm:"column:total_distance"`
-}
+var gallonToLiterSQL = fmt.Sprintf("%v", convert.GallonToLiter)
 
-// GetLeaderboard 获取群组排行榜数据
-func (r *GroupRepository) GetLeaderboard(ctx context.Context, groupID uuid.UUID, metric string, startDate, endDate time.Time) ([]LeaderboardRow, error) {
-	var results []LeaderboardRow
+// stationPriceSQL 单价统一为每升（gal 已换算）或每 kWh
+var stationPriceSQL = "CASE WHEN fr.fuel_unit = 'gal' THEN fr.unit_price / " + gallonToLiterSQL + " ELSE fr.unit_price END"
 
-	// 白名单映射排序列，避免 SQL 注入
-	orderClauses := map[string]string{
-		"cost":      "total_cost DESC",
-		"distance":  "total_distance DESC",
-		"frequency": "record_count DESC",
-	}
-	orderClause, ok := orderClauses[metric]
-	if !ok {
-		orderClause = "avg_efficiency ASC" // 默认油耗排行，越低越好
-	}
+// stationPriceUnitSQL 单价单位：充电为 kWh，其余为 L
+const stationPriceUnitSQL = "CASE WHEN fr.fuel_unit = 'kWh' THEN 'kWh' ELSE 'L' END"
 
-	err := r.db.WithContext(ctx).Raw(`
-		SELECT 
-			v.id AS vehicle_id,
-			v.name AS vehicle_name,
-			v.user_id,
-			COUNT(fr.id) AS record_count,
-			COALESCE(AVG(NULLIF(fr.fuel_efficiency, 0)), 0) AS avg_efficiency,
-			COALESCE(SUM(fr.total_cost), 0) AS total_cost,
-			COALESCE(SUM(fr.trip_distance), 0) AS total_distance
-		FROM vehicles v
-		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
-		JOIN fuel_records fr ON fr.vehicle_id = v.id AND fr.deleted_at IS NULL
-		WHERE v.deleted_at IS NULL 
-		  AND v.is_archived = false
-		  AND fr.refuel_date >= ?
-		  AND fr.refuel_date < ?
-		  AND fr.fuel_efficiency > 0
-		GROUP BY v.id, v.name, v.user_id
-		HAVING COUNT(fr.id) >= 2
-		ORDER BY `+orderClause, groupID, startDate, endDate).Scan(&results).Error
-
-	return results, err
-}
-
-// --- 费用统计看板 ---
-
-// GroupExpenseRow 群组费用按月/年聚合行
-type GroupExpenseRow struct {
-	PeriodLabel   string    `gorm:"column:period_label"`
-	UserID        uuid.UUID `gorm:"column:user_id"`
-	CurrencyCode  string    `gorm:"column:currency_code"`
-	Cost          float64   `gorm:"column:cost"`
-	Fuel          float64   `gorm:"column:fuel"`
-	Distance      float64   `gorm:"column:distance"`
-	AvgEfficiency float64   `gorm:"column:avg_eff"`
-	Records       int       `gorm:"column:records"`
-}
-
-// GetGroupExpenseByMonth 按月聚合群组费用
-func (r *GroupRepository) GetGroupExpenseByMonth(ctx context.Context, groupID uuid.UUID, year int) ([]GroupExpenseRow, error) {
-	var results []GroupExpenseRow
-
-	startDate := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
-	endDate := time.Date(year+1, 1, 1, 0, 0, 0, 0, time.UTC)
-
-	err := r.db.WithContext(ctx).Raw(`
-		SELECT 
-			TO_CHAR(fr.refuel_date, 'YYYY-MM') AS period_label,
-			gm.user_id,
-			fr.currency_code,
-			COALESCE(SUM(fr.total_cost), 0) AS cost,
-			COALESCE(SUM(fr.fuel_amount), 0) AS fuel,
-			COALESCE(SUM(fr.trip_distance), 0) AS distance,
-			COALESCE(AVG(NULLIF(fr.fuel_efficiency, 0)), 0) AS avg_eff,
-			COUNT(fr.id) AS records
-		FROM fuel_records fr
-		JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL AND v.is_archived = false
-		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
-		WHERE fr.deleted_at IS NULL AND fr.refuel_date >= ? AND fr.refuel_date < ?
-		GROUP BY period_label, gm.user_id, fr.currency_code
-		ORDER BY period_label ASC, gm.user_id ASC
-	`, groupID, startDate, endDate).Scan(&results).Error
-
-	return results, err
-}
-
-// GetGroupExpenseByYear 按年聚合群组费用
-func (r *GroupRepository) GetGroupExpenseByYear(ctx context.Context, groupID uuid.UUID) ([]GroupExpenseRow, error) {
-	var results []GroupExpenseRow
-
-	// 限制最近 10 年的数据，避免全表扫描
-	cutoff := time.Now().AddDate(-10, 0, 0)
-
-	err := r.db.WithContext(ctx).Raw(`
-		SELECT 
-			TO_CHAR(fr.refuel_date, 'YYYY') AS period_label,
-			gm.user_id,
-			fr.currency_code,
-			COALESCE(SUM(fr.total_cost), 0) AS cost,
-			COALESCE(SUM(fr.fuel_amount), 0) AS fuel,
-			COALESCE(SUM(fr.trip_distance), 0) AS distance,
-			COALESCE(AVG(NULLIF(fr.fuel_efficiency, 0)), 0) AS avg_eff,
-			COUNT(fr.id) AS records
-		FROM fuel_records fr
-		JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL AND v.is_archived = false
-		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
-		WHERE fr.deleted_at IS NULL AND fr.refuel_date >= ?
-		GROUP BY period_label, gm.user_id, fr.currency_code
-		ORDER BY period_label ASC, gm.user_id ASC
-	`, groupID, cutoff).Scan(&results).Error
-
-	return results, err
-}
-
-// --- 加油站推荐共享 ---
-
-// StationStatsRow 加油站聚合查询结果行
+// StationStatsRow 加油站聚合查询结果行（按 站点 × 币种 × 单价单位 分组）
 type StationStatsRow struct {
 	StationName  string  `gorm:"column:station_name"`
+	PriceUnit    string  `gorm:"column:price_unit"`
 	AvgUnitPrice float64 `gorm:"column:avg_unit_price"`
 	VisitCount   int     `gorm:"column:visit_count"`
 	LatestVisit  string  `gorm:"column:latest_visit"`
@@ -569,13 +437,15 @@ func (r *GroupRepository) GetGroupStationStats(ctx context.Context, groupID uuid
 	query := `
 		SELECT 
 			fr.station_name,
-			AVG(fr.unit_price) AS avg_unit_price,
+			` + stationPriceUnitSQL + ` AS price_unit,
+			AVG(` + stationPriceSQL + `) AS avg_unit_price,
 			COUNT(*) AS visit_count,
 			TO_CHAR(MAX(fr.refuel_date), 'YYYY-MM-DD"T"HH24:MI:SS"Z"') AS latest_visit,
 			fr.currency_code
 		FROM fuel_records fr
 		JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL
-		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
+		JOIN shared_vehicles sv ON sv.vehicle_id = v.id AND sv.group_id = ? AND sv.deleted_at IS NULL
+		JOIN group_members sgm ON sgm.group_id = sv.group_id AND sgm.user_id = sv.shared_by
 		WHERE fr.deleted_at IS NULL
 		  AND fr.station_name IS NOT NULL 
 		  AND fr.station_name != ''
@@ -590,7 +460,7 @@ func (r *GroupRepository) GetGroupStationStats(ctx context.Context, groupID uuid
 	}
 
 	query += `
-		GROUP BY fr.station_name, fr.currency_code
+		GROUP BY fr.station_name, fr.currency_code, price_unit
 		ORDER BY ` + orderClause
 
 	err := r.db.WithContext(ctx).Raw(query, args...).Scan(&results).Error
@@ -620,7 +490,8 @@ func (r *GroupRepository) GetStationVisitors(ctx context.Context, groupID uuid.U
 			COUNT(*) AS count
 		FROM fuel_records fr
 		JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL
-		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
+		JOIN shared_vehicles sv ON sv.vehicle_id = v.id AND sv.group_id = ? AND sv.deleted_at IS NULL
+		JOIN group_members sgm ON sgm.group_id = sv.group_id AND sgm.user_id = sv.shared_by
 		WHERE fr.deleted_at IS NULL AND fr.station_name IN ?
 		  AND fr.refuel_date >= ?
 		GROUP BY fr.station_name, v.user_id
@@ -630,11 +501,13 @@ func (r *GroupRepository) GetStationVisitors(ctx context.Context, groupID uuid.U
 	return results, err
 }
 
-// StationLatestPriceRow 加油站最新油价查询结果行
+// StationLatestPriceRow 加油站最新油价查询结果行（按 站点 × 币种 × 单价单位 分区）
 type StationLatestPriceRow struct {
-	StationName string  `gorm:"column:station_name"`
-	UnitPrice   float64 `gorm:"column:unit_price"`
-	RowNum      int     `gorm:"column:row_num"`
+	StationName  string  `gorm:"column:station_name"`
+	CurrencyCode string  `gorm:"column:currency_code"`
+	PriceUnit    string  `gorm:"column:price_unit"`
+	UnitPrice    float64 `gorm:"column:unit_price"`
+	RowNum       int     `gorm:"column:row_num"`
 }
 
 // GetStationLatestPrices 获取加油站最新两次油价（用于计算趋势）
@@ -647,14 +520,20 @@ func (r *GroupRepository) GetStationLatestPrices(ctx context.Context, groupID uu
 	cutoff := time.Now().AddDate(0, -months, 0)
 
 	err := r.db.WithContext(ctx).Raw(`
-		SELECT station_name, unit_price, row_num FROM (
+		SELECT station_name, currency_code, price_unit, unit_price, row_num FROM (
 			SELECT 
 				fr.station_name,
-				fr.unit_price,
-				ROW_NUMBER() OVER (PARTITION BY fr.station_name ORDER BY fr.refuel_date DESC) AS row_num
+				fr.currency_code,
+				`+stationPriceUnitSQL+` AS price_unit,
+				`+stationPriceSQL+` AS unit_price,
+				ROW_NUMBER() OVER (
+					PARTITION BY fr.station_name, fr.currency_code, `+stationPriceUnitSQL+`
+					ORDER BY fr.refuel_date DESC
+				) AS row_num
 			FROM fuel_records fr
 			JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL
-			JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
+			JOIN shared_vehicles sv ON sv.vehicle_id = v.id AND sv.group_id = ? AND sv.deleted_at IS NULL
+		JOIN group_members sgm ON sgm.group_id = sv.group_id AND sgm.user_id = sv.shared_by
 			WHERE fr.deleted_at IS NULL AND fr.station_name IN ?
 			  AND fr.refuel_date >= ?
 			  AND fr.unit_price > 0
@@ -685,7 +564,8 @@ func (r *GroupRepository) GetStationFuelGrades(ctx context.Context, groupID uuid
 		SELECT DISTINCT fr.station_name, fr.fuel_grade
 		FROM fuel_records fr
 		JOIN vehicles v ON v.id = fr.vehicle_id AND v.deleted_at IS NULL
-		JOIN group_members gm ON gm.user_id = v.user_id AND gm.group_id = ?
+		JOIN shared_vehicles sv ON sv.vehicle_id = v.id AND sv.group_id = ? AND sv.deleted_at IS NULL
+		JOIN group_members sgm ON sgm.group_id = sv.group_id AND sgm.user_id = sv.shared_by
 		WHERE fr.deleted_at IS NULL AND fr.station_name IN ?
 		  AND fr.refuel_date >= ?
 		  AND fr.fuel_grade IS NOT NULL
