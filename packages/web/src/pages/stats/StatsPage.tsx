@@ -61,7 +61,7 @@ export default function StatsPage() {
 
   useEffect(() => {
     fetchVehicles();
-  }, []);
+  }, [fetchVehicles]);
 
   useEffect(() => {
     if (vehicles.length > 0 && !selectedVehicleId) {

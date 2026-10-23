@@ -24,7 +24,7 @@ export default function InstallPrompt() {
   useEffect(() => {
     // 检查是否已安装（standalone 模式下不再显示）
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-      || (navigator as any).standalone === true;
+      || (navigator as Navigator & { standalone?: boolean }).standalone === true;
     if (isStandalone) return;
 
     // 检查是否之前已经关闭过提示

@@ -52,7 +52,7 @@ export default function InviteManagePage() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     fetchInvites();

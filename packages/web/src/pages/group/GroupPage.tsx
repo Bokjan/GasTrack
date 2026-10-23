@@ -183,7 +183,7 @@ export default function GroupPage() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     fetchGroups();

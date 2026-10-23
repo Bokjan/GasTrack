@@ -79,7 +79,7 @@ export default function ReminderPage() {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     fetchData();

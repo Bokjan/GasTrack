@@ -50,7 +50,7 @@ export default function SettingsPage() {
     if (user?.currency_code) {
       fetchRates(user.currency_code);
     }
-  }, [user?.currency_code]);
+  }, [user?.currency_code, fetchRates]);
 
   if (!user) return null;
 

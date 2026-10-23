@@ -19,7 +19,7 @@ export default function VehicleListPage() {
 
   useEffect(() => {
     fetchVehicles();
-  }, []);
+  }, [fetchVehicles]);
 
   const handleDelete = async (id: string) => {
     try {
