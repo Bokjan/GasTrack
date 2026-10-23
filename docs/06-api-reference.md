@@ -189,7 +189,7 @@ POST /api/v1/auth/refresh
 
 响应格式同「2.1 注册」（返回新的 access_token 和 refresh_token）。
 
-> **Token Rotation 机制**：每次刷新时，旧的 refresh token 会被原子性地消费（SELECT FOR UPDATE + DELETE），确保同一个 refresh token 只能使用一次。如果同一 refresh token 被并发使用，只有第一个请求成功，后续请求返回 `401 Unauthorized`。
+> **Token Rotation 机制**：每次刷新时，旧的 refresh token 会被原子性地消费（SELECT FOR UPDATE + DELETE），确保同一个 refresh token 只能使用一次。如果同一 refresh token 被并发使用，只有第一个请求成功，后续请求返回 `401 Unauthorized`。已注销的账号返回 `401`，被停用的账号返回 `403`。
 
 ---
 
@@ -280,9 +280,11 @@ PUT /api/v1/users/me/password
 | 字段 | 类型 | 必填 | 校验 | 说明 |
 |------|------|------|------|------|
 | old_password | string | ✅ | - | 旧密码 |
-| new_password | string | ✅ | 8-72 字符 | 新密码 |
+| new_password | string | ✅ | 8-72 字符，且不超过 72 字节 | 新密码 |
 
-**成功响应** `204 No Content`
+**成功响应** `200 OK`
+
+响应格式同「2.1 注册」。修改成功后该用户**所有设备**的 refresh token 均被吊销，响应中返回当前设备的新 access_token 和 refresh_token，客户端需保存。
 
 ---
 

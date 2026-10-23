@@ -7,6 +7,14 @@ server:
   cors_origins:
     - http://localhost:3000
     - http://localhost:5173
+  # 可信反向代理网段：仅当请求来自这些地址时才采信 X-Real-IP / X-Forwarded-For（限流按真实 IP）
+  trusted_proxies:
+    - 127.0.0.0/8
+    - ::1/128
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - fc00::/7
 
 database:
   host: localhost

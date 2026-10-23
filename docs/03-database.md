@@ -157,12 +157,13 @@ CREATE INDEX idx_shared_vehicles_vehicle ON shared_vehicles(vehicle_id);
 CREATE TABLE refresh_tokens (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token_hash      VARCHAR(255) NOT NULL,
+    token_hash      VARCHAR(255) NOT NULL UNIQUE,
     device_info     VARCHAR(255),
     expires_at      TIMESTAMPTZ NOT NULL,
     created_at      TIMESTAMPTZ DEFAULT NOW()
 );
 CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
+-- 已使用/吊销的 token 直接删除；过期 token 由后端每小时清理
 ```
 
 ### 3.6 invite_codes - 邀请码表

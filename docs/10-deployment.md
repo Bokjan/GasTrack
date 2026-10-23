@@ -237,6 +237,9 @@ chmod +x scripts/restore.sh
 
 后端也支持 `GASTRACK_` 前缀的环境变量覆盖任意 YAML 配置（如 `GASTRACK_DATABASE_HOST`）。
 
+- `JWT_SECRET` 少于 32 字节时后端拒绝启动，请用 `openssl rand -hex 32` 生成。
+- 后端只在请求来自可信代理时才采信 `X-Real-IP` / `X-Forwarded-For`（用于限流），默认信任本机与私有网段（覆盖 Docker 网络内的 Nginx）。如部署拓扑不同，可通过 `GASTRACK_SERVER_TRUSTED_PROXIES`（逗号分隔的 CIDR）调整。
+
 ---
 
 ## 8. 防火墙
