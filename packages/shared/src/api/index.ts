@@ -103,8 +103,9 @@ export const userApi = {
   updateProfile: (data: UpdateUserRequest) =>
     apiClient.patch<ApiResponse<User>>('/users/me', data),
 
+  // 成功后后端吊销所有旧 refresh token，并返回当前设备的新 token 对
   changePassword: (data: ChangePasswordRequest) =>
-    apiClient.put<ApiResponse<null>>('/users/me/password', data),
+    apiClient.put<ApiResponse<AuthResponse>>('/users/me/password', data),
 
   deleteAccount: () =>
     apiClient.delete<ApiResponse<null>>('/users/me'),

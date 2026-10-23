@@ -23,7 +23,7 @@ const { Title, Text } = Typography;
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { user, updateProfile, logout } = useAuthStore();
+  const { user, updateProfile, logout, setTokens } = useAuthStore();
   const { mode: themeMode, setMode: setThemeMode } = useThemeStore();
   const [profileForm] = Form.useForm();
   const [passwordForm] = Form.useForm();
@@ -91,10 +91,12 @@ export default function SettingsPage() {
     }
     setChangingPwd(true);
     try {
-      await userApi.changePassword({
+      const { data } = await userApi.changePassword({
         old_password: values.old_password,
         new_password: values.new_password,
       });
+      // 旧 refresh token 已被吊销，保存新的 token 对以保持当前设备登录
+      setTokens(data.data);
       message.success(t('settings.passwordChanged'));
       passwordForm.resetFields();
     } catch {

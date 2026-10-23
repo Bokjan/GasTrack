@@ -72,6 +72,14 @@ apiClient.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${tokens.access_token}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
+        // refresh token 只能使用一次：若其他标签页已抢先完成轮换，直接改用其写入的新 token
+        const latestRefresh = localStorage.getItem('refresh_token');
+        const latestAccess = localStorage.getItem('access_token');
+        if (latestRefresh && latestRefresh !== refreshToken && latestAccess) {
+          processQueue(null, latestAccess);
+          originalRequest.headers.Authorization = `Bearer ${latestAccess}`;
+          return apiClient(originalRequest);
+        }
         processQueue(refreshError, null);
         localStorage.clear();
         window.location.href = '/login';
