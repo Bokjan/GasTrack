@@ -11,8 +11,7 @@ import {
   LoadingOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore, getApiErrorMessage } from '@gastrack/shared';
-import { authApi, inviteApi } from '@gastrack/shared/src/api';
+import { useAuthStore, getApiErrorMessage, authApi, inviteApi } from '@gastrack/shared';
 import LanguageSwitcher from '../../components/LanguageSwitcher';
 
 const { Text } = Typography;

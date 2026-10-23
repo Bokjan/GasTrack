@@ -1,3 +1,5 @@
+import type { ExpenseCategory, MaintenanceCategory } from '../types';
+
 // ============================================================
 // 常量定义：燃油类型、车辆类型、计量单位、货币、支持的语言
 // ============================================================
@@ -254,3 +256,31 @@ export const TIMEZONES = [
 ] as const;
 
 export const DEFAULT_PAGE_SIZE = 20;
+
+/** 开销分类 */
+export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
+  'maintenance', 'repair', 'insurance', 'parking', 'toll',
+  'car_wash', 'inspection', 'parts', 'fine', 'tax', 'other',
+];
+
+/** 开销分类对应的 Tag 颜色 */
+export const EXPENSE_CATEGORY_COLORS: Record<ExpenseCategory, string> = {
+  maintenance: 'blue',
+  repair: 'red',
+  insurance: 'green',
+  parking: 'orange',
+  toll: 'purple',
+  car_wash: 'cyan',
+  inspection: 'gold',
+  parts: 'geekblue',
+  fine: 'magenta',
+  tax: 'volcano',
+  other: 'default',
+};
+
+/** 保养项目（提醒与保养类开销共用） */
+export const MAINTENANCE_CATEGORIES: MaintenanceCategory[] = [
+  'oil_change', 'tire_rotation', 'brake_pads', 'air_filter',
+  'transmission', 'coolant', 'spark_plugs', 'battery',
+  'tire_replace', 'inspection', 'custom',
+];

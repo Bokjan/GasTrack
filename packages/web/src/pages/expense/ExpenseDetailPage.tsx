@@ -25,25 +25,12 @@ import {
   formatDateTime,
   useAuthStore,
   getApiErrorMessage,
+  EXPENSE_CATEGORY_COLORS,
 } from '@gastrack/shared';
 import type { ExpenseRecord, Vehicle } from '@gastrack/shared';
 import { useIsMobile } from '../../hooks/useIsMobile';
 
 const { Text } = Typography;
-
-const CATEGORY_COLORS: Record<string, string> = {
-  maintenance: 'blue',
-  repair: 'red',
-  insurance: 'green',
-  parking: 'orange',
-  toll: 'purple',
-  car_wash: 'cyan',
-  inspection: 'gold',
-  parts: 'geekblue',
-  fine: 'magenta',
-  tax: 'volcano',
-  other: 'default',
-};
 
 export default function ExpenseDetailPage() {
   const { t } = useTranslation();
@@ -153,7 +140,7 @@ export default function ExpenseDetailPage() {
           size={isMobile ? 'small' : 'middle'}
         >
           <Descriptions.Item label={t('expense.category.label')}>
-            <Tag color={CATEGORY_COLORS[record.category] || 'default'}>
+            <Tag color={EXPENSE_CATEGORY_COLORS[record.category] || 'default'}>
               {t(`expense.category.${record.category}`)}
             </Tag>
           </Descriptions.Item>

@@ -6,8 +6,8 @@ import zhCN from 'antd/locale/zh_CN';
 import enUS from 'antd/locale/en_US';
 import jaJP from 'antd/locale/ja_JP';
 import { useTranslation } from 'react-i18next';
+// 导入共享包即会初始化 i18n
 import { useThemeStore } from '@gastrack/shared';
-import '@gastrack/shared/src/i18n';
 import App from './App';
 import './styles/global.css';
 

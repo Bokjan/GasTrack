@@ -40,6 +40,8 @@ import {
   formatDateTime,
   useAuthStore,
   getApiErrorMessage,
+  EXPENSE_CATEGORIES,
+  EXPENSE_CATEGORY_COLORS,
 } from '@gastrack/shared';
 import type { ExpenseRecord, Vehicle, ExpenseStatsResponse, ExpenseCategory } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
@@ -48,25 +50,6 @@ import UnconvertedNotice from '../../components/UnconvertedNotice';
 import dayjs from 'dayjs';
 
 const { RangePicker } = DatePicker;
-
-const EXPENSE_CATEGORIES: ExpenseCategory[] = [
-  'maintenance', 'repair', 'insurance', 'parking', 'toll',
-  'car_wash', 'inspection', 'parts', 'fine', 'tax', 'other',
-];
-
-const CATEGORY_COLORS: Record<string, string> = {
-  maintenance: 'blue',
-  repair: 'red',
-  insurance: 'green',
-  parking: 'orange',
-  toll: 'purple',
-  car_wash: 'cyan',
-  inspection: 'gold',
-  parts: 'geekblue',
-  fine: 'magenta',
-  tax: 'volcano',
-  other: 'default',
-};
 
 export default function ExpenseListPage() {
   const { t } = useTranslation();
@@ -186,8 +169,8 @@ export default function ExpenseListPage() {
       title: t('expense.category.label'),
       dataIndex: 'category',
       width: 100,
-      render: (v: string) => (
-        <Tag color={CATEGORY_COLORS[v] || 'default'}>
+      render: (v: ExpenseCategory) => (
+        <Tag color={EXPENSE_CATEGORY_COLORS[v] || 'default'}>
           {t(`expense.category.${v}`)}
         </Tag>
       ),
@@ -276,7 +259,7 @@ export default function ExpenseListPage() {
         >
           <div className="card-header">
             <Space>
-              <Tag color={CATEGORY_COLORS[record.category] || 'default'} style={{ margin: 0 }}>
+              <Tag color={EXPENSE_CATEGORY_COLORS[record.category] || 'default'} style={{ margin: 0 }}>
                 {t(`expense.category.${record.category}`)}
               </Tag>
               <span className="date">
@@ -443,7 +426,7 @@ export default function ExpenseListPage() {
               >
                 {EXPENSE_CATEGORIES.map((cat) => (
                   <Select.Option key={cat} value={cat}>
-                    <Tag color={CATEGORY_COLORS[cat]} style={{ margin: 0 }}>{t(`expense.category.${cat}`)}</Tag>
+                    <Tag color={EXPENSE_CATEGORY_COLORS[cat]} style={{ margin: 0 }}>{t(`expense.category.${cat}`)}</Tag>
                   </Select.Option>
                 ))}
               </Select>

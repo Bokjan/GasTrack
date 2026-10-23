@@ -24,12 +24,11 @@ import {
   GiftOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { inviteApi } from '@gastrack/shared/src/api';
 import type { InviteCode, CreateInviteRequest } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { getApiErrorMessage } from '@gastrack/shared';
+import { getApiErrorMessage, inviteApi } from '@gastrack/shared';
 
 const { Text, Paragraph } = Typography;
 

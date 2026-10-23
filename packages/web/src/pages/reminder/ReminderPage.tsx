@@ -18,6 +18,7 @@ import {
   getApiErrorMessage,
   kmToMiles,
   milesToKm,
+  MAINTENANCE_CATEGORIES,
 } from '@gastrack/shared';
 import type { Reminder, Vehicle, CreateReminderRequest } from '@gastrack/shared';
 
@@ -165,11 +166,7 @@ export default function ReminderPage() {
     }
   };
 
-  const categoryOptions = [
-    'oil_change', 'tire_rotation', 'brake_pads', 'air_filter',
-    'transmission', 'coolant', 'spark_plugs', 'battery',
-    'tire_replace', 'inspection', 'custom',
-  ].map((key) => ({
+  const categoryOptions = MAINTENANCE_CATEGORIES.map((key) => ({
     value: key,
     label: `${CATEGORY_CONFIG[key]?.icon || '🔧'} ${t(`reminder.category.${key}`)}`,
   }));

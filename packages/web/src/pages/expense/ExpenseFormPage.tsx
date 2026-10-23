@@ -23,20 +23,11 @@ import {
   getApiErrorMessage,
   toPickerValue,
   fromPickerValue,
+  EXPENSE_CATEGORIES,
+  MAINTENANCE_CATEGORIES,
 } from '@gastrack/shared';
-import type { CreateExpenseRequest, Reminder, ExpenseCategory, MaintenanceCategory } from '@gastrack/shared';
+import type { CreateExpenseRequest, Reminder } from '@gastrack/shared';
 import dayjs from 'dayjs';
-
-const EXPENSE_CATEGORIES: ExpenseCategory[] = [
-  'maintenance', 'repair', 'insurance', 'parking', 'toll',
-  'car_wash', 'inspection', 'parts', 'fine', 'tax', 'other',
-];
-
-const MAINTENANCE_CATEGORIES: MaintenanceCategory[] = [
-  'oil_change', 'tire_rotation', 'brake_pads', 'air_filter',
-  'transmission', 'coolant', 'spark_plugs', 'battery',
-  'tire_replace', 'inspection', 'custom',
-];
 
 export default function ExpenseFormPage() {
   const { t } = useTranslation();

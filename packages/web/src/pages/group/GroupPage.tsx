@@ -49,7 +49,6 @@ import {
   InfoCircleOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { groupApi } from '@gastrack/shared/src/api';
 import type {
   Group,
   CreateGroupRequest,
@@ -69,7 +68,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useLatestRequest } from '../../hooks/useLatestRequest';
-import { useAuthStore, FUEL_GRADES, formatCurrency, formatNumber, convertEfficiencyForDisplay, litersToGallons, kmToMiles, isElectricVehicle, getApiErrorMessage } from '@gastrack/shared';
+import { useAuthStore, FUEL_GRADES, formatCurrency, formatNumber, convertEfficiencyForDisplay, litersToGallons, kmToMiles, isElectricVehicle, getApiErrorMessage, groupApi } from '@gastrack/shared';
 import { useCurrency } from '../../hooks/useCurrency';
 import UnconvertedNotice from '../../components/UnconvertedNotice';
 
