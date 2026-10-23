@@ -35,6 +35,7 @@ import {
   convertAmount,
   getReferenceCurrencies,
   getApiErrorMessage,
+  isElectricVehicle,
 } from '@gastrack/shared';
 import type { FuelRecord, Vehicle } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
@@ -417,7 +418,12 @@ export default function RecordListPage() {
             </span>
             <span>{vehicle.year}</span>
             <Tag style={{ margin: 0 }}>{t(`fuelType.${vehicle.fuel_type}`)}</Tag>
-            <span>{isImperial ? formatNumber(litersToGallons(vehicle.tank_capacity), 1) : vehicle.tank_capacity} {fuelUnit}</span>
+            {vehicle.tank_capacity > 0 && (
+              // 后端油箱容量以升存储；电池容量为 kWh，不做换算
+              isElectricVehicle(vehicle.fuel_type)
+                ? <span>{formatNumber(vehicle.tank_capacity, 1)} kWh</span>
+                : <span>{isImperial ? formatNumber(litersToGallons(vehicle.tank_capacity), 1) : vehicle.tank_capacity} {fuelUnit}</span>
+            )}
             {vehicle.license_plate && <span>{vehicle.license_plate}</span>}
           </Space>
         </Card>

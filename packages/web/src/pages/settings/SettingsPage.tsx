@@ -10,7 +10,7 @@ import {
   userApi,
   CURRENCIES,
   MEASUREMENT_SYSTEMS,
-  EV_MEASUREMENT_SYSTEMS,
+  EV_EFFICIENCY_UNIT_OF,
   SUPPORTED_LOCALES,
   TIMEZONES,
   formatNumber,
@@ -49,8 +49,6 @@ export default function SettingsPage() {
 
   if (!user) return null;
 
-  // 所有油耗/电耗单位合并
-  const efficiencyOptions = [...MEASUREMENT_SYSTEMS, ...EV_MEASUREMENT_SYSTEMS];
 
   const handleSavePreferences = async (values: {
     nickname: string;
@@ -266,9 +264,10 @@ export default function SettingsPage() {
 
             <Form.Item name="fuel_efficiency_unit" label={t('settings.fuelEfficiencyUnit')}>
               <Select
-                options={efficiencyOptions.map((m) => ({
+                // 后端只接受燃油单位；电耗单位由其自动对应（如 L/100km ↔ kWh/100km）
+                options={MEASUREMENT_SYSTEMS.map((m) => ({
                   value: m.unit,
-                  label: `${t(m.label)}`,
+                  label: `${t(m.label)} · ${EV_EFFICIENCY_UNIT_OF[m.unit]}`,
                 }))}
               />
             </Form.Item>

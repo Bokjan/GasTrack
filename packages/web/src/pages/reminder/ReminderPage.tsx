@@ -16,6 +16,8 @@ import {
   vehicleApi,
   useAuthStore,
   getApiErrorMessage,
+  kmToMiles,
+  milesToKm,
 } from '@gastrack/shared';
 import type { Reminder, Vehicle, CreateReminderRequest } from '@gastrack/shared';
 
@@ -55,8 +57,16 @@ export default function ReminderPage() {
   const isImperial = user?.unit_system === 'imperial';
   const distUnit = isImperial ? 'mi' : 'km';
 
+  /** 后端里程一律以 km 存储：显示时按用户单位换算（保留 1 位小数） */
+  const toDisplayDist = (km: number) => (isImperial ? Math.round(kmToMiles(km) * 10) / 10 : km);
+  /** 表单值换回 km；编辑时值未改动则原样回传，避免往返换算的精度漂移 */
+  const toKm = (value: number | undefined, originalKm?: number) => {
+    if (!value) return 0;
+    if (originalKm !== undefined && value === toDisplayDist(originalKm)) return originalKm;
+    return isImperial ? Math.round(milesToKm(value) * 10) / 10 : value;
+  };
+
   const fetchData = useCallback(async () => {
-    setLoading(true);
     try {
       const [remindersRes, vehiclesRes] = await Promise.all([
         reminderApi.list(),
@@ -90,9 +100,9 @@ export default function ReminderPage() {
       title: reminder.title,
       description: reminder.description,
       trigger: reminder.trigger,
-      mileage_interval: reminder.mileage_interval,
+      mileage_interval: reminder.mileage_interval ? toDisplayDist(reminder.mileage_interval) : undefined,
       time_interval_days: reminder.time_interval_days,
-      last_mileage: reminder.last_mileage,
+      last_mileage: reminder.last_mileage ? toDisplayDist(reminder.last_mileage) : undefined,
       last_date: reminder.last_date ? dayjs(reminder.last_date) : undefined,
     });
     setModalOpen(true);
@@ -109,9 +119,9 @@ export default function ReminderPage() {
         title: values.title,
         description: values.description || '',
         trigger: values.trigger,
-        mileage_interval: values.mileage_interval || 0,
+        mileage_interval: toKm(values.mileage_interval, editingReminder?.mileage_interval),
         time_interval_days: values.time_interval_days || 0,
-        last_mileage: values.last_mileage || 0,
+        last_mileage: toKm(values.last_mileage, editingReminder?.last_mileage),
         last_date: values.last_date ? values.last_date.format('YYYY-MM-DD') : '',
       };
 
@@ -166,7 +176,7 @@ export default function ReminderPage() {
 
   const triggerValue = Form.useWatch('trigger', form);
 
-  if (loading) {
+  if (loading && reminders.length === 0) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
         <Spin size="large" />
@@ -254,7 +264,7 @@ export default function ReminderPage() {
                           <DashboardOutlined style={{ marginRight: 4 }} />
                           {t('reminder.nextMileage')}
                         </Text>
-                        <Text>{(reminder.next_mileage ?? 0).toLocaleString()} {distUnit}</Text>
+                        <Text>{toDisplayDist(reminder.next_mileage ?? 0).toLocaleString()} {distUnit}</Text>
                       </div>
                     )}
                     {(reminder.trigger === 'time' || reminder.trigger === 'both') && reminder.next_date && (
@@ -269,7 +279,7 @@ export default function ReminderPage() {
                     {(reminder.mileage_interval ?? 0) > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <Text type="secondary">{t('reminder.interval')}</Text>
-                        <Text>{t('reminder.everyMileage', { value: (reminder.mileage_interval ?? 0).toLocaleString(), unit: distUnit })}</Text>
+                        <Text>{t('reminder.everyMileage', { value: toDisplayDist(reminder.mileage_interval ?? 0).toLocaleString(), unit: distUnit })}</Text>
                       </div>
                     )}
                     {(reminder.time_interval_days ?? 0) > 0 && (

@@ -28,6 +28,8 @@ import {
   isElectricVehicle,
   hasEngineCC,
   getApiErrorMessage,
+  litersToGallons,
+  gallonsToLiters,
 } from '@gastrack/shared';
 import type { CreateVehicleRequest, FuelType } from '@gastrack/shared';
 
@@ -53,8 +55,17 @@ export default function VehicleFormPage() {
       vehicleApi
         .getById(id)
         .then(({ data }) => {
-          form.setFieldsValue(data.data);
-          setFuelType(data.data.fuel_type);
+          const vehicle = data.data;
+          // 后端油箱容量以升存储，按用户单位制展示；电池容量为 kWh
+          const unit = isElectricVehicle(vehicle.fuel_type) ? 'kWh' : defaultCapacityUnit;
+          form.setFieldsValue({
+            ...vehicle,
+            tank_capacity: unit === 'gal' && vehicle.tank_capacity
+              ? Math.round(litersToGallons(vehicle.tank_capacity) * 10) / 10
+              : vehicle.tank_capacity,
+            tank_capacity_unit: unit,
+          });
+          setFuelType(vehicle.fuel_type);
         })
         .catch((err) => message.error(getApiErrorMessage(err)))
         .finally(() => setFetching(false));
@@ -64,8 +75,11 @@ export default function VehicleFormPage() {
   const onFinish = async (values: CreateVehicleRequest & { tank_capacity_unit?: string }) => {
     setLoading(true);
     try {
-      // tank_capacity_unit 仅用于前端 UI 展示，后端不接受该字段
-      const { tank_capacity_unit: _unused, ...payload } = values;
+      // 后端不接受 tank_capacity_unit，油箱容量统一换算为升提交
+      const { tank_capacity_unit: capacityUnit, ...payload } = values;
+      if (capacityUnit === 'gal' && payload.tank_capacity) {
+        payload.tank_capacity = Math.round(gallonsToLiters(payload.tank_capacity) * 100) / 100;
+      }
       if (isEdit) {
         const { data } = await vehicleApi.update(id, payload);
         updateVehicle(data.data);
