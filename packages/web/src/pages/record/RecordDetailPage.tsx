@@ -42,13 +42,12 @@ import {
   FUEL_GRADES,
   isElectricVehicle,
   useAuthStore,
-  useExchangeRateStore,
-  convertAmount,
   getReferenceCurrencies,
   getApiErrorMessage,
 } from '@gastrack/shared';
 import type { FuelRecord, Vehicle, VehicleStats } from '@gastrack/shared';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useCurrency } from '../../hooks/useCurrency';
 
 const { Title, Text } = Typography;
 
@@ -78,7 +77,7 @@ export default function RecordDetailPage() {
   }>();
   const user = useAuthStore((s) => s.user);
   const isMobile = useIsMobile();
-  const { data: ratesData, fetchRates } = useExchangeRateStore();
+  const { convert } = useCurrency();
 
   const [record, setRecord] = useState<FuelRecord | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -96,9 +95,6 @@ export default function RecordDetailPage() {
   useEffect(() => {
     if (vehicleId && recordId) {
       loadData();
-    }
-    if (user?.currency_code) {
-      fetchRates(user.currency_code);
     }
   }, [vehicleId, recordId]);
 
@@ -139,15 +135,25 @@ export default function RecordDetailPage() {
   const insights = useMemo(() => {
     if (!record || !stats) return null;
 
+    // 插混车的充电记录（kWh）与燃油统计口径不同，不做对比
+    const isChargeRecord = record.fuel_unit === 'kWh';
+    const sameEnergy = isChargeRecord === (stats.energy_type === 'electric');
+    const statsVal = (v: number) => (sameEnergy ? v : 0);
+
+    // 统计已换算为用户币种；本次金额按记录币种入账，需换算后再对比（无汇率时不对比）
+    const recordCurrency = record.currency_code || currency;
+    const toStatsCurrency = (v: number) => convert(v, recordCurrency, stats.currency_code || currency);
+
     const efficiency = record.fuel_efficiency;
-    const avgEfficiency = stats.avg_efficiency;
+    const avgEfficiency = statsVal(stats.avg_efficiency);
     const tripDistance = record.trip_distance;
-    const avgDistance = stats.total_distance && stats.total_records
-      ? stats.total_distance / stats.total_records : 0;
-    const totalCost = record.total_cost;
-    const avgCostPerFill = stats.avg_cost_per_fill;
-    const unitPrice = record.unit_price;
-    const avgCostPerKm = stats.avg_cost_per_km;
+    // 首条记录没有区间里程，区间数 = 记录数 - 1
+    const avgDistance = stats.total_distance && stats.total_records > 1
+      ? stats.total_distance / (stats.total_records - 1) : 0;
+    const totalCost = toStatsCurrency(record.total_cost) ?? 0;
+    const avgCostPerFill = totalCost ? statsVal(stats.avg_cost_per_fill) : 0;
+    const unitPrice = record.unit_price != null ? toStatsCurrency(record.unit_price) ?? undefined : undefined;
+    const avgCostPerKm = statsVal(stats.avg_cost_per_km);
 
     // 油耗评级
     const rating = efficiency && avgEfficiency
@@ -155,7 +161,7 @@ export default function RecordDetailPage() {
       : null;
 
     // 单价对比（通过 total_cost / fuel_amount 粗略计算平均单价）
-    const avgUnitPrice = stats.total_fuel && stats.total_cost
+    const avgUnitPrice = sameEnergy && stats.total_fuel && stats.total_cost
       ? stats.total_cost / stats.total_fuel : 0;
 
     // 单次每公里成本
@@ -164,9 +170,11 @@ export default function RecordDetailPage() {
     // 油箱利用率（tank_capacity 后端存的是原始值，需要按用户偏好转换）
     const rawTankCapacity = vehicle?.tank_capacity || 0;
     const tankCapacity = isImperial && !isEv ? litersToGallons(rawTankCapacity) : rawTankCapacity;
-    const tankUsage = tankCapacity > 0 ? record.fuel_amount / tankCapacity : 0;
+    // 插混车的油箱容量与充电量单位不同
+    const tankUsage = tankCapacity > 0 && isChargeRecord === isEv ? record.fuel_amount / tankCapacity : 0;
 
     return {
+      statsCurrency: stats.currency_code || currency,
       efficiency,
       avgEfficiency,
       rating,
@@ -181,7 +189,7 @@ export default function RecordDetailPage() {
       tankUsage,
       tankCapacity,
     };
-  }, [record, stats, vehicle, isLowerBetter]);
+  }, [record, stats, vehicle, isLowerBetter, convert, currency]);
 
   /** 偏差百分比文字 */
   const diffText = (current: number, avg: number) => {
@@ -276,12 +284,11 @@ export default function RecordDetailPage() {
               {record.unit_price != null && (
                 <Descriptions.Item label={t('fuelRecord.pricePerUnit')}>
                   {formatCurrency(record.unit_price, record.currency_code || currency)}/{record.fuel_unit || fuelUnit}
-                  {ratesData?.rates && (() => {
+                  {(() => {
                     const recordCurrency = record.currency_code || currency;
-                    if (ratesData.base !== recordCurrency) return null;
                     const tags = getReferenceCurrencies(recordCurrency, user?.reference_currency)
                       .map((refCode) => {
-                        const refAmount = convertAmount(record.unit_price!, recordCurrency, refCode, ratesData.rates);
+                        const refAmount = convert(record.unit_price!, recordCurrency, refCode);
                         if (refAmount == null) return null;
                         return (
                           <Tag key={refCode} color="default" style={{ margin: 0 }}>
@@ -303,12 +310,11 @@ export default function RecordDetailPage() {
                 <Text strong style={{ fontSize: 18, color: 'var(--ant-color-primary)' }}>
                   {formatCurrency(record.total_cost, record.currency_code || currency)}
                 </Text>
-                {ratesData?.rates && (() => {
+                {(() => {
                   const recordCurrency = record.currency_code || currency;
-                  if (ratesData.base !== recordCurrency) return null;
                   const tags = getReferenceCurrencies(recordCurrency, user?.reference_currency)
                     .map((refCode) => {
-                      const refAmount = convertAmount(record.total_cost, recordCurrency, refCode, ratesData.rates);
+                      const refAmount = convert(record.total_cost, recordCurrency, refCode);
                       if (refAmount == null) return null;
                       return (
                         <Tag key={refCode} color="default" style={{ margin: 0 }}>
@@ -423,9 +429,9 @@ export default function RecordDetailPage() {
                     </Space>
                     <div style={{ marginTop: 4, wordBreak: 'break-word' }}>
                       <Text style={{ fontSize: isMobile ? 12 : 14 }}>
-                        {t('recordDetail.thisTime')}: {formatCurrency(insights.unitPrice, currency)}/{record.fuel_unit || fuelUnit}
+                        {t('recordDetail.thisTime')}: {formatCurrency(insights.unitPrice, insights.statsCurrency)}/{record.fuel_unit || fuelUnit}
                         {isMobile ? <br /> : ' · '}
-                        {t('recordDetail.historical')}: {formatCurrency(insights.avgUnitPrice, currency)}/{record.fuel_unit || fuelUnit}
+                        {t('recordDetail.historical')}: {formatCurrency(insights.avgUnitPrice, insights.statsCurrency)}/{record.fuel_unit || fuelUnit}
                         {' '}
                         <Text style={{ color: diffColor(insights.unitPrice, insights.avgUnitPrice, true) }}>
                           ({diffText(insights.unitPrice, insights.avgUnitPrice)})
@@ -444,9 +450,9 @@ export default function RecordDetailPage() {
                     </Space>
                     <div style={{ marginTop: 4, wordBreak: 'break-word' }}>
                       <Text style={{ fontSize: isMobile ? 12 : 14 }}>
-                        {t('recordDetail.thisTime')}: {formatCurrency(insights.totalCost, currency)}
+                        {t('recordDetail.thisTime')}: {formatCurrency(insights.totalCost, insights.statsCurrency)}
                         {isMobile ? <br /> : ' · '}
-                        {t('recordDetail.avgPerFill')}: {formatCurrency(insights.avgCostPerFill, currency)}
+                        {t('recordDetail.avgPerFill')}: {formatCurrency(insights.avgCostPerFill, insights.statsCurrency)}
                         {' '}
                         <Text style={{ color: diffColor(insights.totalCost, insights.avgCostPerFill, true) }}>
                           ({diffText(insights.totalCost, insights.avgCostPerFill)})
@@ -465,9 +471,9 @@ export default function RecordDetailPage() {
                     </Space>
                     <div style={{ marginTop: 4, wordBreak: 'break-word' }}>
                       <Text style={{ fontSize: isMobile ? 12 : 14 }}>
-                        {t('recordDetail.thisTime')}: {formatCurrency(insights.costPerKm, currency)}/{distanceUnit}
+                        {t('recordDetail.thisTime')}: {formatCurrency(insights.costPerKm, insights.statsCurrency)}/{distanceUnit}
                         {isMobile ? <br /> : ' · '}
-                        {t('recordDetail.historical')}: {formatCurrency(insights.avgCostPerKm, currency)}/{distanceUnit}
+                        {t('recordDetail.historical')}: {formatCurrency(insights.avgCostPerKm, insights.statsCurrency)}/{distanceUnit}
                         {' '}
                         <Text style={{ color: diffColor(insights.costPerKm, insights.avgCostPerKm, true) }}>
                           ({diffText(insights.costPerKm, insights.avgCostPerKm)})

@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import i18n from '../i18n';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -139,31 +140,30 @@ export const FUEL_EFFICIENCY_UNITS = ['L/100km', 'km/L', 'MPG'] as const;
 /** 电动车三种能耗单位 */
 export const EV_EFFICIENCY_UNITS = ['kWh/100km', 'km/kWh', 'mi/kWh'] as const;
 
+/** 数字/金额格式化使用应用当前语言，而非浏览器语言 */
+const appLocale = () => i18n.language || undefined;
+
 /** 格式化数字：添加千分位 */
 export function formatNumber(num: number | undefined | null, decimals = 2): string {
-  if (num == null || isNaN(num)) return (0).toLocaleString(undefined, {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  });
-  return num.toLocaleString(undefined, {
+  const value = num == null || isNaN(num) ? 0 : num;
+  return value.toLocaleString(appLocale(), {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
 }
 
-/** 格式化金额 */
+/**
+ * 格式化金额。使用 Intl 按当前语言选择符号：本地币种显示短符号，
+ * 外币带前缀区分（如中文界面 ¥ / JP¥，英文界面 CN¥ / ¥），避免 CNY 与 JPY 混淆。
+ */
 export function formatCurrency(amount: number | undefined | null, currency: string): string {
-  const symbols: Record<string, string> = {
-    CNY: '¥',
-    USD: '$',
-    EUR: '€',
-    JPY: '¥',
-    GBP: '£',
-    KRW: '₩',
-  };
-  const symbol = symbols[currency] || currency;
-  const decimals = currency === 'JPY' || currency === 'KRW' ? 0 : 2;
-  return `${symbol}${formatNumber(amount ?? 0, decimals)}`;
+  const value = amount == null || isNaN(amount) ? 0 : amount;
+  try {
+    return new Intl.NumberFormat(appLocale(), { style: 'currency', currency }).format(value);
+  } catch {
+    // 非法币种代码时退化为 "XXX 1,234.00"
+    return `${currency} ${formatNumber(value)}`;
+  }
 }
 
 // ============================================================
@@ -171,24 +171,21 @@ export function formatCurrency(amount: number | undefined | null, currency: stri
 // ============================================================
 
 /**
- * 使用汇率数据将金额从一种货币换算为另一种货币。
- * 仅供参考展示，不影响原始数据。
- * @param amount       原始金额
- * @param fromCurrency 原始币种（如 "CNY"）
- * @param toCurrency   目标币种（如 "USD"）
- * @param rates        汇率表（以 fromCurrency 为基准）
- * @returns 换算后的金额，如果无法换算则返回 null
+ * 按汇率表（以 base 为基准，rates[X] 表示 "1 base = X"）在任意两种币种之间换算。
+ * @returns 换算后的金额；缺少任一币种汇率时返回 null
  */
-export function convertAmount(
+export function convertViaBase(
   amount: number,
   fromCurrency: string,
   toCurrency: string,
+  base: string,
   rates: Record<string, number>,
 ): number | null {
   if (fromCurrency === toCurrency) return amount;
-  const rate = rates[toCurrency];
-  if (rate == null || rate <= 0) return null;
-  return amount * rate;
+  const fromRate = fromCurrency === base ? 1 : rates[fromCurrency];
+  const toRate = toCurrency === base ? 1 : rates[toCurrency];
+  if (!fromRate || fromRate <= 0 || !toRate || toRate <= 0) return null;
+  return (amount / fromRate) * toRate;
 }
 
 /**
@@ -212,48 +209,6 @@ export function getReferenceCurrencies(currentCurrency: string, referenceCurrenc
   }
   const all = ['USD', 'EUR', 'CNY', 'JPY', 'GBP', 'KRW'];
   return all.filter((c) => c !== currentCurrency).slice(0, 3);
-}
-
-/**
- * 将按币种分组的费用（costs_by_currency）按汇率换算后汇总为用户偏好币种的总金额。
- * 汇率表以用户偏好币种为 base（即 rates 中的值是 "1 base = X target"），
- * 所以从其他币种换算到 base 需要用 amount / rate。
- *
- * @param costsByCurrency  按原始入账币种分组的费用 { "JPY": 162861, "USD": 500 }
- * @param targetCurrency   用户偏好币种（汇率表的 base）
- * @param rates            汇率表，key 为目标币种，value 为 "1 base = X target"
- * @returns 换算后的总金额（以 targetCurrency 计）；如果无法换算某币种则保留原值
- */
-export function sumConvertedCostsByCurrency(
-  costsByCurrency: Record<string, number> | undefined | null,
-  targetCurrency: string,
-  rates: Record<string, number> | undefined | null,
-): number | null {
-  if (!costsByCurrency || Object.keys(costsByCurrency).length === 0) {
-    return null;
-  }
-
-  let total = 0;
-  for (const [currency, amount] of Object.entries(costsByCurrency)) {
-    if (currency === targetCurrency) {
-      // 同币种，直接累加
-      total += amount;
-    } else if (rates) {
-      // rates 以 targetCurrency 为 base，rates[currency] 表示 "1 targetCurrency = X currency"
-      // 所以从 currency 换算到 targetCurrency: amount / rates[currency]
-      const rate = rates[currency];
-      if (rate != null && rate > 0) {
-        total += amount / rate;
-      } else {
-        // 无汇率数据，无法准确换算
-        return null;
-      }
-    } else {
-      // 无汇率表，无法换算
-      return null;
-    }
-  }
-  return total;
 }
 
 export { getApiErrorMessage } from './apiError';

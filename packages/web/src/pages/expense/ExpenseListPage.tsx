@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Card,
@@ -44,6 +44,7 @@ import {
 import type { ExpenseRecord, Vehicle, ExpenseStatsResponse, ExpenseCategory } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import UnconvertedNotice from '../../components/UnconvertedNotice';
 import dayjs from 'dayjs';
 
 const { RangePicker } = DatePicker;
@@ -83,20 +84,30 @@ export default function ExpenseListPage() {
 
   // 筛选状态
   const [filterCategory, setFilterCategory] = useState<string>('');
+  const [keywordInput, setKeywordInput] = useState('');
   const [filterKeyword, setFilterKeyword] = useState('');
   const [filterDateRange, setFilterDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
   const currency = user?.currency_code || 'CNY';
+  const statsCurrency = stats?.currency_code || currency;
   const userTimezone = user?.timezone;
 
   useEffect(() => {
     if (vehicleId) {
       loadVehicle();
-      loadRecords(1);
       loadStats();
     }
   }, [vehicleId]);
+
+  // 关键词输入防抖 300ms 后再查询
+  useEffect(() => {
+    const timer = window.setTimeout(() => setFilterKeyword(keywordInput.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [keywordInput]);
+
+  /** 仅采用最近一次列表请求的结果，避免乱序响应覆盖 */
+  const requestIdRef = useRef(0);
 
   const loadVehicle = async () => {
     try {
@@ -117,6 +128,7 @@ export default function ExpenseListPage() {
   };
 
   const loadRecords = useCallback(async (p: number) => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     try {
       const params: Record<string, unknown> = { page: p, page_size: 20 };
@@ -127,22 +139,23 @@ export default function ExpenseListPage() {
         params.end_date = filterDateRange[1].format('YYYY-MM-DD');
       }
       const { data: resp } = await expenseApi.list(vehicleId!, params);
+      if (requestId !== requestIdRef.current) return;
       setRecords(resp.data);
       setTotal(resp.meta.total);
       setPage(p);
     } catch (err) {
-      message.error(getApiErrorMessage(err));
+      if (requestId === requestIdRef.current) message.error(getApiErrorMessage(err));
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [vehicleId, filterCategory, filterKeyword, filterDateRange, t]);
+  }, [vehicleId, filterCategory, filterKeyword, filterDateRange]);
 
-  // 筛选条件变更后刷新
+  // 首次进入及筛选条件变更后刷新
   useEffect(() => {
     if (vehicleId) {
       loadRecords(1);
     }
-  }, [filterCategory, filterKeyword, filterDateRange]);
+  }, [loadRecords]);
 
   const handleDelete = async (expenseId: string) => {
     try {
@@ -157,6 +170,7 @@ export default function ExpenseListPage() {
 
   const clearFilters = () => {
     setFilterCategory('');
+    setKeywordInput('');
     setFilterKeyword('');
     setFilterDateRange(null);
   };
@@ -368,17 +382,16 @@ export default function ExpenseListPage() {
         style={{ marginBottom: 16 }}
       />
 
-      {/* 统计摘要 */}
+      {/* 统计摘要（金额已由后端换算为用户币种） */}
+      {stats && <UnconvertedNotice currencies={[stats.unconverted_currencies]} />}
       {stats && (
         <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
           <Col xs={12} sm={6}>
             <Card size="small">
               <Statistic
                 title={t('expense.stats.totalExpense')}
-                value={stats.totals_by_currency?.[0]?.total_amount || 0}
+                value={formatCurrency(stats.total_amount || 0, statsCurrency)}
                 prefix={<DollarOutlined />}
-                precision={2}
-                suffix={stats.totals_by_currency?.[0]?.currency_code || currency}
                 valueStyle={{ fontSize: isMobile ? 16 : 20 }}
               />
             </Card>
@@ -387,9 +400,8 @@ export default function ExpenseListPage() {
             <Card size="small">
               <Statistic
                 title={t('expense.stats.maintenanceCost')}
-                value={stats.category_breakdown?.find(c => c.category === 'maintenance')?.total_amount || 0}
+                value={formatCurrency(stats.category_breakdown?.find(c => c.category === 'maintenance')?.total_amount || 0, statsCurrency)}
                 prefix={<ToolOutlined />}
-                precision={2}
                 valueStyle={{ fontSize: isMobile ? 16 : 20 }}
               />
             </Card>
@@ -398,9 +410,8 @@ export default function ExpenseListPage() {
             <Card size="small">
               <Statistic
                 title={t('expense.stats.repairCost')}
-                value={stats.category_breakdown?.find(c => c.category === 'repair')?.total_amount || 0}
+                value={formatCurrency(stats.category_breakdown?.find(c => c.category === 'repair')?.total_amount || 0, statsCurrency)}
                 prefix={<SettingOutlined />}
-                precision={2}
                 valueStyle={{ fontSize: isMobile ? 16 : 20 }}
               />
             </Card>
@@ -409,10 +420,8 @@ export default function ExpenseListPage() {
             <Card size="small">
               <Statistic
                 title={t('expense.stats.last30Days')}
-                value={stats.last_30_days_amount || 0}
+                value={formatCurrency(stats.last_30_days_amount || 0, stats.last_30_days_currency || statsCurrency)}
                 prefix={<CalendarOutlined />}
-                precision={2}
-                suffix={stats.last_30_days_currency || currency}
                 valueStyle={{ fontSize: isMobile ? 16 : 20 }}
               />
             </Card>
@@ -450,8 +459,8 @@ export default function ExpenseListPage() {
             <Col xs={24} sm={8}>
               <Input.Search
                 placeholder={t('expense.filter.keywordPlaceholder')}
-                value={filterKeyword}
-                onChange={(e) => setFilterKeyword(e.target.value)}
+                value={keywordInput}
+                onChange={(e) => setKeywordInput(e.target.value)}
                 allowClear
               />
             </Col>

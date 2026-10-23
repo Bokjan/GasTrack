@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from 'react';
-import { Row, Col, Card, Statistic, Select, Empty, Spin, Segmented, Space, theme, Tooltip } from 'antd';
+import { useEffect, useState, useMemo, useRef } from 'react';
+import { Row, Col, Card, Statistic, Select, Empty, Spin, Segmented, Space, theme, Tooltip, message } from 'antd';
 import {
   DashboardOutlined,
   DollarOutlined,
@@ -19,10 +19,7 @@ import {
   formatCurrency,
   useAuthStore,
   useThemeStore,
-  useExchangeRateStore,
-  convertAmount,
-  getReferenceCurrency,
-  sumConvertedCostsByCurrency,
+  getApiErrorMessage,
 } from '@gastrack/shared';
 import type {
   VehicleStats,
@@ -33,6 +30,8 @@ import type {
   ExpenseStatsResponse,
 } from '@gastrack/shared';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useCurrency } from '../../hooks/useCurrency';
+import UnconvertedNotice from '../../components/UnconvertedNotice';
 
 type StatsTab = 'fuel' | 'expense' | 'combined';
 
@@ -53,17 +52,15 @@ export default function StatsPage() {
   const [period, setPeriod] = useState<'month' | 'year'>('month');
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [loading, setLoading] = useState(false);
-  const { data: ratesData, fetchRates } = useExchangeRateStore();
-
-  const currency = user?.currency_code || 'CNY';
-  const refCurrency = getReferenceCurrency(currency, user?.reference_currency);
+  const { currency, referenceText } = useCurrency();
+  /** 仅采用最近一次请求的结果，避免快速切换车辆时旧响应覆盖新数据 */
+  const requestIdRef = useRef(0);
   const isImperial = user?.unit_system === 'imperial';
   const fuelUnit = isImperial ? 'gal' : 'L';
   const distanceUnit = isImperial ? 'mi' : 'km';
 
   useEffect(() => {
     fetchVehicles();
-    if (currency) fetchRates(currency);
   }, []);
 
   useEffect(() => {
@@ -78,6 +75,7 @@ export default function StatsPage() {
   }, [selectedVehicleId, period, selectedYear]);
 
   const loadStats = async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     try {
       const [statsRes, periodRes, expPeriodRes, expStatsRes] = await Promise.all([
@@ -86,14 +84,21 @@ export default function StatsPage() {
         statsApi.expensePeriodStats(selectedVehicleId, { period, year: selectedYear }),
         expenseApi.getStats(selectedVehicleId),
       ]);
+      if (requestId !== requestIdRef.current) return;
       setStats(statsRes.data.data);
       setPeriodData(periodRes.data.data);
       setExpensePeriodData(expPeriodRes.data.data);
       setExpenseStats(expStatsRes.data.data);
-    } catch {
-      // ignore
+    } catch (err) {
+      if (requestId !== requestIdRef.current) return;
+      // 不保留上一辆车的数据，避免误读
+      setStats(null);
+      setPeriodData(null);
+      setExpensePeriodData(null);
+      setExpenseStats(null);
+      message.error(getApiErrorMessage(err));
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
   };
 
@@ -209,9 +214,15 @@ export default function StatsPage() {
   };
 
   const buildCombinedCostChart = () => {
-    const fuelSeries = fuelCurrent.map((i) => i.total_cost || 0);
-    const expSeries = expCurrent.map((i) => i.total_amount || 0);
-    const labels = period === 'month' ? monthLabels : fuelCurrent.map((i) => i.period);
+    // 按月时两组数据都已补齐 12 个月；按年时两边年份集合可能不同，需按年份对齐
+    const periods = period === 'month'
+      ? fuelCurrent.map((i) => i.period)
+      : [...new Set([...fuelCurrent, ...expCurrent].map((i) => i.period))].sort();
+    const fuelByPeriod = new Map(fuelCurrent.map((i) => [i.period, i.total_cost || 0]));
+    const expByPeriod = new Map(expCurrent.map((i) => [i.period, i.total_amount || 0]));
+    const fuelSeries = periods.map((p) => fuelByPeriod.get(p) || 0);
+    const expSeries = periods.map((p) => expByPeriod.get(p) || 0);
+    const labels = period === 'month' ? monthLabels : periods;
     return {
       tooltip: { trigger: 'axis' as const },
       legend: { top: 0, textStyle: { color: chartTextColor } },
@@ -256,10 +267,16 @@ export default function StatsPage() {
     </Space>
   );
 
-  // --- Computed totals ---
-  const fuelTotalCost = stats ? (sumConvertedCostsByCurrency(stats.costs_by_currency, currency, ratesData?.rates) ?? stats.total_cost) : 0;
-  const expenseTotalCost = expensePeriodData ? (sumConvertedCostsByCurrency(expensePeriodData.costs_by_currency, currency, ratesData?.rates) ?? (expenseStats?.totals_by_currency?.[0]?.total_amount || 0)) : 0;
+  // --- Computed totals（后端已按参考汇率换算为用户币种） ---
+  const fuelTotalCost = stats?.total_cost || 0;
+  const expenseTotalCost = expenseStats?.total_amount || 0;
   const combinedCost = fuelTotalCost + expenseTotalCost;
+  const unconvertedCurrencies = [
+    stats?.unconverted_currencies,
+    periodData?.unconverted_currencies,
+    expensePeriodData?.unconverted_currencies,
+    expenseStats?.unconverted_currencies,
+  ];
 
   if (vehicles.length === 0) {
     return (
@@ -291,6 +308,8 @@ export default function StatsPage() {
 
       {filtersBar}
 
+      <UnconvertedNotice currencies={unconvertedCurrencies} />
+
       <Segmented
         value={activeTab}
         onChange={(val) => setActiveTab(val as StatsTab)}
@@ -312,10 +331,7 @@ export default function StatsPage() {
                 <Card><Statistic title={t('stats.totalRecords')} value={stats?.total_records || 0} prefix={<FileTextOutlined />} /></Card>
               </Col>
               <Col xs={12} sm={6}>
-                <Tooltip title={stats && ratesData?.rates ? (() => {
-                  const ref = convertAmount(fuelTotalCost, currency, refCurrency, ratesData.rates);
-                  return ref != null ? t('exchangeRate.referenceAmount', { amount: formatCurrency(ref, refCurrency) }) : undefined;
-                })() : undefined}>
+                <Tooltip title={stats ? referenceText(fuelTotalCost) : undefined}>
                   <Card><Statistic title={t('stats.fuelCost')} value={stats ? formatCurrency(fuelTotalCost, currency) : '-'} prefix={<DollarOutlined />} /></Card>
                 </Tooltip>
               </Col>
@@ -364,10 +380,10 @@ export default function StatsPage() {
                 <Card><Statistic title={t('stats.totalExpenseAmount')} value={expenseStats ? formatCurrency(expenseTotalCost, currency) : '-'} prefix={<WalletOutlined />} /></Card>
               </Col>
               <Col xs={12} sm={6}>
-                <Card><Statistic title={t('expense.stats.maintenanceCost')} value={expenseStats?.category_breakdown?.find((c) => c.category === 'maintenance')?.total_amount || 0} prefix={<DollarOutlined />} precision={2} valueStyle={{ fontSize: isMobile ? 16 : 20 }} /></Card>
+                <Card><Statistic title={t('expense.stats.maintenanceCost')} value={expenseStats ? formatCurrency(expenseStats.category_breakdown?.find((c) => c.category === 'maintenance')?.total_amount || 0, currency) : '-'} prefix={<DollarOutlined />} valueStyle={{ fontSize: isMobile ? 16 : 20 }} /></Card>
               </Col>
               <Col xs={12} sm={6}>
-                <Card><Statistic title={t('expense.stats.last30Days')} value={expenseStats?.last_30_days_amount || 0} prefix={<DollarOutlined />} precision={2} suffix={expenseStats?.last_30_days_currency || currency} valueStyle={{ fontSize: isMobile ? 16 : 20 }} /></Card>
+                <Card><Statistic title={t('expense.stats.last30Days')} value={expenseStats ? formatCurrency(expenseStats.last_30_days_amount || 0, expenseStats.last_30_days_currency || currency) : '-'} prefix={<DollarOutlined />} valueStyle={{ fontSize: isMobile ? 16 : 20 }} /></Card>
               </Col>
             </Row>
             <Row gutter={[16, 16]}>
@@ -386,7 +402,7 @@ export default function StatsPage() {
                 </Card>
               </Col>
               <Col xs={24} lg={12}>
-                <Card title={t('stats.categoryBreakdown')}>
+                <Card title={t('stats.categoryBreakdownAllTime')}>
                   {(expenseStats?.category_breakdown?.length || 0) > 0 ? (
                     <ReactECharts option={buildCategoryPieChart()} style={{ height: chartH }} theme={isDark ? 'dark' : undefined} />
                   ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />}
@@ -407,10 +423,7 @@ export default function StatsPage() {
                 <Card><Statistic title={t('stats.expenseCost')} value={expenseStats ? formatCurrency(expenseTotalCost, currency) : '-'} prefix={<span>💸</span>} /></Card>
               </Col>
               <Col xs={24} sm={8}>
-                <Tooltip title={ratesData?.rates ? (() => {
-                  const ref = convertAmount(combinedCost, currency, refCurrency, ratesData.rates);
-                  return ref != null ? t('exchangeRate.referenceAmount', { amount: formatCurrency(ref, refCurrency) }) : undefined;
-                })() : undefined}>
+                <Tooltip title={referenceText(combinedCost)}>
                   <Card><Statistic title={t('stats.combinedCost')} value={formatCurrency(combinedCost, currency)} prefix={<DollarOutlined />} valueStyle={{ color: token.colorPrimary, fontWeight: 600 }} /></Card>
                 </Tooltip>
               </Col>
@@ -418,7 +431,7 @@ export default function StatsPage() {
             <Row gutter={[16, 16]}>
               <Col xs={24}>
                 <Card title={period === 'month' ? t('stats.monthlyCombined') : t('stats.yearlyCombined')}>
-                  {fuelCurrent.length > 0 ? (
+                  {fuelCurrent.length > 0 || expCurrent.length > 0 ? (
                     <ReactECharts option={buildCombinedCostChart()} style={{ height: chartH }} theme={isDark ? 'dark' : undefined} />
                   ) : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />}
                 </Card>

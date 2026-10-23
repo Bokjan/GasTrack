@@ -31,8 +31,6 @@ import {
   litersToGallons,
   FUEL_EFFICIENCY_UNITS,
   useAuthStore,
-  useExchangeRateStore,
-  convertAmount,
   getReferenceCurrencies,
   getApiErrorMessage,
   isElectricVehicle,
@@ -40,6 +38,7 @@ import {
 import type { FuelRecord, Vehicle } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useCurrency } from '../../hooks/useCurrency';
 
 export default function RecordListPage() {
   const { t } = useTranslation();
@@ -48,7 +47,7 @@ export default function RecordListPage() {
   const user = useAuthStore((s) => s.user);
   const isMobile = useIsMobile();
 
-  const { data: ratesData, fetchRates } = useExchangeRateStore();
+  const { convert } = useCurrency();
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [records, setRecords] = useState<FuelRecord[]>([]);
@@ -66,9 +65,6 @@ export default function RecordListPage() {
     if (vehicleId) {
       loadVehicle();
       loadRecords(1);
-    }
-    if (user?.currency_code) {
-      fetchRates(user.currency_code);
     }
   }, [vehicleId]);
 
@@ -110,14 +106,11 @@ export default function RecordListPage() {
 
   const userTimezone = user?.timezone;
 
-  /** 生成汇率换算 Tooltip 文本 */
-  const getRateTooltip = (amount: number, suffix?: string) => {
-    if (!ratesData?.rates) return undefined;
-    const base = ratesData.base;
-    if (base !== currency) return undefined;
-    const lines = getReferenceCurrencies(currency, user?.reference_currency)
+  /** 生成汇率换算 Tooltip 文本（金额以记录自身的币种计） */
+  const getRateTooltip = (amount: number, fromCurrency: string, suffix?: string) => {
+    const lines = getReferenceCurrencies(fromCurrency, user?.reference_currency)
       .map((refCode) => {
-        const refAmount = convertAmount(amount, currency, refCode, ratesData.rates);
+        const refAmount = convert(amount, fromCurrency, refCode);
         return refAmount != null ? `≈ ${formatCurrency(refAmount, refCode)}${suffix || ''}` : null;
       })
       .filter(Boolean);
@@ -155,7 +148,7 @@ export default function RecordListPage() {
       width: 100,
       render: (v: number, record: FuelRecord) => {
         const unit = record.fuel_unit || fuelUnit;
-        const tip = v != null ? getRateTooltip(v, `/${unit}`) : undefined;
+        const tip = v != null ? getRateTooltip(v, record.currency_code || currency, `/${unit}`) : undefined;
         const text = formatCurrency(v, record.currency_code || currency);
         return tip ? (
           <Tooltip title={tip}>
@@ -169,7 +162,7 @@ export default function RecordListPage() {
       dataIndex: 'total_cost',
       width: 110,
       render: (v: number, record: FuelRecord) => {
-        const tip = v != null ? getRateTooltip(v) : undefined;
+        const tip = v != null ? getRateTooltip(v, record.currency_code || currency) : undefined;
         const text = formatCurrency(v, record.currency_code || currency);
         return tip ? (
           <Tooltip title={tip}>
@@ -292,8 +285,8 @@ export default function RecordListPage() {
             <span className="date">
               {formatDateTime(record.refuel_date, userTimezone, 'YYYY-MM-DD')}
             </span>
-            <Tooltip title={getRateTooltip(record.total_cost)}>
-              <span className="cost" style={getRateTooltip(record.total_cost) ? { cursor: 'help' } : undefined}>
+            <Tooltip title={getRateTooltip(record.total_cost, record.currency_code || currency)}>
+              <span className="cost" style={getRateTooltip(record.total_cost, record.currency_code || currency) ? { cursor: 'help' } : undefined}>
                 {formatCurrency(record.total_cost, record.currency_code || currency)}
               </span>
             </Tooltip>

@@ -64,14 +64,29 @@ import type {
   LeaderboardPeriod,
   GroupExpenseStatsResponse,
   GroupStationStatsResponse,
-  GroupTrendItem,
 } from '@gastrack/shared';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { useAuthStore, FUEL_GRADES, formatCurrency, formatNumber, convertEfficiencyForDisplay, convertAmount, litersToGallons, kmToMiles, isElectricVehicle, useExchangeRateStore, getApiErrorMessage } from '@gastrack/shared';
+import { useAuthStore, FUEL_GRADES, formatCurrency, formatNumber, convertEfficiencyForDisplay, litersToGallons, kmToMiles, isElectricVehicle, getApiErrorMessage } from '@gastrack/shared';
+import { useCurrency } from '../../hooks/useCurrency';
+import UnconvertedNotice from '../../components/UnconvertedNotice';
 
 const { Text } = Typography;
+
+/** 金额展示；外币金额（如加油站单价）附带换算为用户币种的参考值 */
+function Money({ amount, currency, reference }: { amount: number; currency: string; reference?: string }) {
+  return (
+    <span>
+      {formatCurrency(amount, currency)}
+      {reference && (
+        <Tooltip title={reference}>
+          <InfoCircleOutlined style={{ marginLeft: 4, fontSize: 12, color: 'var(--gt-text-tertiary)', cursor: 'help' }} />
+        </Tooltip>
+      )}
+    </span>
+  );
+}
 
 export default function GroupPage() {
   const { t } = useTranslation();
@@ -86,42 +101,8 @@ export default function GroupPage() {
   const fuelUnit = isImperial ? 'gal' : 'L';
   const distanceUnit = isImperial ? 'mi' : 'km';
 
-  // --- 汇率 ---
-  const { data: exchangeRateData, fetchRates } = useExchangeRateStore();
-  const rates = exchangeRateData?.rates || {};
-  const rateBase = exchangeRateData?.base || '';
-
-  useEffect(() => {
-    fetchRates(currency);
-  }, [currency, fetchRates]);
-
-  // --- 换算辅助函数 ---
-  /** 将费用金额从源币种换算为用户偏好币种并格式化 */
-  const formatConvertedCost = (amount: number, sourceCurrency?: string): { text: string; converted: boolean } => {
-    const from = sourceCurrency || currency;
-    // 如果源币种和用户偏好币种相同，直接格式化
-    if (from === currency) {
-      return { text: formatCurrency(amount, currency), converted: false };
-    }
-    // 尝试换算
-    if (rateBase === currency && rates) {
-      // rates 是以用户币种为基准的汇率表，要把 from 换算为用户币种
-      const fromRate = rates[from];
-      if (fromRate && fromRate > 0) {
-        const converted = amount / fromRate;
-        return { text: formatCurrency(converted, currency), converted: true };
-      }
-    }
-    // 如果 rateBase 是源币种
-    if (rateBase === from && rates) {
-      const result = convertAmount(amount, from, currency, rates);
-      if (result !== null) {
-        return { text: formatCurrency(result, currency), converted: true };
-      }
-    }
-    // 无法换算，以源币种原样显示
-    return { text: formatCurrency(amount, from), converted: false };
-  };
+  // --- 汇率：群组金额已由后端换算为查看者币种，仅加油站单价保留原币种 ---
+  const { referenceText } = useCurrency();
 
   /** 将后端的加注量（燃油为 L，电动车为 kWh）按用户偏好转换 */
   const fuelDisplay = (amount: number, isEv = false): { value: number; unit: string } =>
@@ -146,57 +127,6 @@ export default function GroupPage() {
   const stationPrice = (price: number, priceUnit?: string): { value: number; unit: string } => {
     if (priceUnit === 'kWh') return { value: price, unit: 'kWh' };
     return isImperial ? { value: price * 3.78541, unit: 'gal' } : { value: price, unit: 'L' };
-  };
-
-  /** 带"经换算"提示的金额展示组件 */
-  const ConvertedCost = ({ amount, sourceCurrency }: { amount: number; sourceCurrency?: string }) => {
-    const { text, converted } = formatConvertedCost(amount, sourceCurrency);
-    return (
-      <span>
-        {text}
-        {converted && (
-          <Tooltip title={t('group.converted')}>
-            <InfoCircleOutlined style={{ marginLeft: 4, fontSize: 12, color: '#999', cursor: 'help' }} />
-          </Tooltip>
-        )}
-      </span>
-    );
-  };
-
-  /** 将多币种费用项分别换算为用户偏好币种后汇总 */
-  const sumConvertedCosts = (items: Array<{ cost: number; currency_code: string }>) => {
-    let total = 0;
-    let anyConverted = false;
-    for (const item of items) {
-      const from = item.currency_code || currency;
-      if (from === currency) {
-        total += item.cost;
-      } else {
-        // 尝试换算
-        let converted = false;
-        if (rateBase === currency && rates) {
-          const fromRate = rates[from];
-          if (fromRate && fromRate > 0) {
-            total += item.cost / fromRate;
-            converted = true;
-          }
-        }
-        if (!converted && rateBase === from && rates) {
-          const result = convertAmount(item.cost, from, currency, rates);
-          if (result !== null) {
-            total += result;
-            converted = true;
-          }
-        }
-        if (converted) {
-          anyConverted = true;
-        } else {
-          // 无法换算，直接加原始金额
-          total += item.cost;
-        }
-      }
-    }
-    return { text: formatCurrency(total, currency), converted: anyConverted };
   };
 
   const [loading, setLoading] = useState(false);
@@ -787,7 +717,7 @@ export default function GroupPage() {
                             dataIndex: 'total_cost',
                             key: 'total_cost',
                             width: 120,
-                            render: (val: number, record: { vehicle_id: string; owner_id: string; currency_code?: string }) => <ConvertedCost amount={val} sourceCurrency={record.currency_code} />,
+                            render: (val: number, record: { vehicle_id: string; owner_id: string; currency_code?: string }) => <Money amount={val} currency={record.currency_code || currency} />,
                           },
                           {
                             title: t('group.totalFuel'),
@@ -937,7 +867,7 @@ export default function GroupPage() {
                       <Text type="secondary">
                         {t('group.groupAvg')}:{' '}
                         {lbMetric === 'cost' ? (
-                          <Text strong><ConvertedCost amount={leaderboard.group_avg} /></Text>
+                          <Text strong><Money amount={leaderboard.group_avg} currency={currency} /></Text>
                         ) : (
                           <>
                             <Text strong>
@@ -1000,7 +930,7 @@ export default function GroupPage() {
                                 <Space size="large">
                                   <Text>
                                     {lbMetric === 'cost' ? (
-                                      <ConvertedCost amount={item.value} />
+                                      <Money amount={item.value} currency={currency} />
                                     ) : (
                                       <>
                                         {lbMetric === 'efficiency'
@@ -1085,27 +1015,20 @@ export default function GroupPage() {
                     <Card loading />
                   ) : expenseStats ? (
                     <>
+                      <UnconvertedNotice currencies={[expenseStats.unconverted_currencies]} />
                       {/* 统计卡片 */}
                       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
                         {[
                           {
                             title: t('group.totalExpense'),
-                            value: (() => {
-                              const r = sumConvertedCosts(
-                                (expenseStats.member_breakdown || []).map((m) => ({
-                                  cost: m.total_cost,
-                                  currency_code: m.currency_code,
-                                }))
-                              );
-                              return { raw: 0, displayText: r.text, isConverted: r.converted };
-                            })(),
+                            value: { raw: 0, displayText: formatCurrency(expenseStats.summary.total_cost, expenseStats.currency_code || currency) },
                             change: expenseStats.summary.cost_change_pct,
                             precision: 2,
                             isCost: true,
                           },
                           {
                             title: t('group.totalFuelAmount'),
-                            value: { raw: convertFuel(expenseStats.summary.total_fuel), displayText: '', isConverted: false },
+                            value: { raw: convertFuel(expenseStats.summary.total_fuel), displayText: '' },
                             change: expenseStats.summary.fuel_change_pct,
                             precision: 2,
                             suffix: fuelUnit,
@@ -1113,7 +1036,7 @@ export default function GroupPage() {
                           },
                           {
                             title: t('group.totalMileage'),
-                            value: { raw: convertDistance(expenseStats.summary.total_distance), displayText: '', isConverted: false },
+                            value: { raw: convertDistance(expenseStats.summary.total_distance), displayText: '' },
                             change: expenseStats.summary.distance_change_pct,
                             precision: 0,
                             suffix: distanceUnit,
@@ -1121,7 +1044,7 @@ export default function GroupPage() {
                           },
                           {
                             title: t('group.avgFuelEfficiency'),
-                            value: { raw: convertEfficiency(expenseStats.summary.avg_efficiency), displayText: '', isConverted: false },
+                            value: { raw: convertEfficiency(expenseStats.summary.avg_efficiency), displayText: '' },
                             change: expenseStats.summary.efficiency_change_pct,
                             precision: 2,
                             suffix: efficiencyUnit,
@@ -1132,7 +1055,7 @@ export default function GroupPage() {
                             ? [
                                 {
                                   title: t('group.totalEnergyAmount'),
-                                  value: { raw: expenseStats.summary.total_energy ?? 0, displayText: '', isConverted: false },
+                                  value: { raw: expenseStats.summary.total_energy ?? 0, displayText: '' },
                                   change: 0,
                                   precision: 2,
                                   suffix: 'kWh',
@@ -1140,7 +1063,7 @@ export default function GroupPage() {
                                 },
                                 {
                                   title: t('group.avgEnergyEfficiency'),
-                                  value: { raw: effDisplay(expenseStats.summary.avg_energy_efficiency ?? 0, true).value, displayText: '', isConverted: false },
+                                  value: { raw: effDisplay(expenseStats.summary.avg_energy_efficiency ?? 0, true).value, displayText: '' },
                                   change: 0,
                                   precision: 2,
                                   suffix: effDisplay(0, true).unit,
@@ -1157,11 +1080,6 @@ export default function GroupPage() {
                                   formatter={() => (
                                     <span>
                                       {card.value.displayText}
-                                      {card.value.isConverted && (
-                                        <Tooltip title={t('group.converted')}>
-                                          <InfoCircleOutlined style={{ marginLeft: 4, fontSize: 12, color: '#999', cursor: 'help' }} />
-                                        </Tooltip>
-                                      )}
                                       {' '}
                                       {card.change !== 0 && (
                                         <Text
@@ -1223,24 +1141,7 @@ export default function GroupPage() {
                                 title: t('group.totalExpense'),
                                 dataIndex: 'total_cost',
                                 key: 'total_cost',
-                                render: (_val: number, record: GroupTrendItem) => {
-                                  const r = sumConvertedCosts(
-                                    (record.by_member || []).map((m) => ({
-                                      cost: m.cost,
-                                      currency_code: m.currency_code,
-                                    }))
-                                  );
-                                  return (
-                                    <span>
-                                      {r.text}
-                                      {r.converted && (
-                                        <Tooltip title={t('group.converted')}>
-                                          <InfoCircleOutlined style={{ marginLeft: 4, fontSize: 12, color: '#999', cursor: 'help' }} />
-                                        </Tooltip>
-                                      )}
-                                    </span>
-                                  );
-                                },
+                                render: (val: number) => formatCurrency(val, expenseStats.currency_code || currency),
                               },
                               {
                                 title: t('group.totalFuelAmount'),
@@ -1279,7 +1180,7 @@ export default function GroupPage() {
                                   title={item.nickname}
                                   description={
                                     <span>
-                                      <ConvertedCost amount={item.total_cost} sourceCurrency={item.currency_code} /> · {formatNumber(convertFuel(item.total_fuel), 2)} {fuelUnit}
+                                      <Money amount={item.total_cost} currency={item.currency_code || currency} /> · {formatNumber(convertFuel(item.total_fuel), 2)} {fuelUnit}
                                     </span>
                                   }
                                 />
@@ -1373,14 +1274,14 @@ export default function GroupPage() {
                                 <Col span={12}>
                                   <Text type="secondary" style={{ fontSize: 12 }}>{t('group.avgPrice')}</Text>
                                   <div>
-                                    <Text strong><ConvertedCost amount={stationPrice(station.avg_unit_price, station.price_unit).value} sourceCurrency={station.currency_code || currency} /></Text>
+                                    <Text strong><Money amount={stationPrice(station.avg_unit_price, station.price_unit).value} currency={station.currency_code || currency} reference={referenceText(stationPrice(station.avg_unit_price, station.price_unit).value, station.currency_code || currency, currency)} /></Text>
                                     <Text type="secondary" style={{ fontSize: 12 }}>/{stationPrice(0, station.price_unit).unit}</Text>
                                   </div>
                                 </Col>
                                 <Col span={12}>
                                   <Text type="secondary" style={{ fontSize: 12 }}>{t('group.latestPrice')}</Text>
                                   <div>
-                                    <Text strong><ConvertedCost amount={stationPrice(station.latest_unit_price, station.price_unit).value} sourceCurrency={station.currency_code || currency} /></Text>
+                                    <Text strong><Money amount={stationPrice(station.latest_unit_price, station.price_unit).value} currency={station.currency_code || currency} reference={referenceText(stationPrice(station.latest_unit_price, station.price_unit).value, station.currency_code || currency, currency)} /></Text>
                                     <Text type="secondary" style={{ fontSize: 12 }}>/{stationPrice(0, station.price_unit).unit} </Text>
                                     <Text
                                       type={station.price_trend === 'up' ? 'danger' : station.price_trend === 'down' ? 'success' : 'secondary'}

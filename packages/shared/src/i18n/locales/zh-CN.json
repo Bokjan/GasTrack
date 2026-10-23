@@ -227,7 +227,8 @@
     "monthlyCombined": "月度综合费用",
     "yearlyCombined": "年度综合费用",
     "fuelPortion": "加油",
-    "expensePortion": "开销"
+    "expensePortion": "开销",
+    "categoryBreakdownAllTime": "分类占比（全部时间）"
   },
   "fuelType": {
     "gasoline": "汽油",
@@ -670,8 +671,7 @@
     "noStationData": "记录加油时别忘了填写加油站名哦！",
     "fuelGrades": "燃油标号",
     "viewRecords": "查看记录",
-    "addRecordForShared": "添加记录",
-    "converted": "经换算"
+    "addRecordForShared": "添加记录"
   },
   "exchangeRate": {
     "title": "汇率参考",
@@ -695,7 +695,8 @@
       "JPY": "日元",
       "GBP": "英镑",
       "KRW": "韩元"
-    }
+    },
+    "unconvertedNotice": "以下币种暂无参考汇率，未计入换算后的总额：{{currencies}}"
   },
   "currency": {
     "CNY": "¥ 人民币",

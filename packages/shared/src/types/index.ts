@@ -358,6 +358,7 @@ export interface ExpensePeriodStatsResponse {
   year?: number;
   currency_code: string;
   costs_by_currency?: Record<string, number>;
+  unconverted_currencies?: string[];
   items: ExpensePeriodStatsItem[];
   prev_items: ExpensePeriodStatsItem[];
 }
@@ -637,6 +638,9 @@ export interface GroupExpenseStatsResponse {
   period: string;
   year?: number;
   summary: GroupExpenseSummary;
+  /** 所有金额换算后的币种（查看者偏好币种） */
+  currency_code: string;
+  unconverted_currencies?: string[];
   member_breakdown: MemberCostBreakdown[];
   trend_items: GroupTrendItem[];
   prev_trend_items?: GroupTrendItem[];
@@ -772,4 +776,9 @@ export interface ExpenseStatsResponse {
   monthly_trend: ExpenseMonthlyTrend[];
   last_30_days_amount: number;
   last_30_days_currency: string;
+  /** 全部开销换算为 currency_code 后的总额（不含 unconverted_currencies） */
+  total_amount: number;
+  /** 分类占比、月度趋势、近 30 天金额、total_amount 的币种（用户偏好币种） */
+  currency_code: string;
+  unconverted_currencies?: string[];
 }

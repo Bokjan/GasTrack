@@ -227,7 +227,8 @@
     "monthlyCombined": "Monthly Combined Cost",
     "yearlyCombined": "Yearly Combined Cost",
     "fuelPortion": "Fuel",
-    "expensePortion": "Expenses"
+    "expensePortion": "Expenses",
+    "categoryBreakdownAllTime": "Category breakdown (all time)"
   },
   "fuelType": {
     "gasoline": "Gasoline",
@@ -670,8 +671,7 @@
     "noStationData": "Don't forget to fill in the station name when recording refuels!",
     "fuelGrades": "Fuel Grades",
     "viewRecords": "View Records",
-    "addRecordForShared": "Add Record",
-    "converted": "Converted"
+    "addRecordForShared": "Add Record"
   },
   "exchangeRate": {
     "title": "Exchange Rates",
@@ -695,7 +695,8 @@
       "JPY": "Japanese Yen",
       "GBP": "British Pound",
       "KRW": "South Korean Won"
-    }
+    },
+    "unconvertedNotice": "No reference rate for these currencies, so they are not included in converted totals: {{currencies}}"
   },
   "currency": {
     "CNY": "¥ CNY",

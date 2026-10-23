@@ -227,7 +227,8 @@
     "monthlyCombined": "月別総合費用",
     "yearlyCombined": "年別総合費用",
     "fuelPortion": "給油",
-    "expensePortion": "経費"
+    "expensePortion": "経費",
+    "categoryBreakdownAllTime": "カテゴリ別内訳（全期間）"
   },
   "fuelType": {
     "gasoline": "ガソリン",
@@ -670,8 +671,7 @@
     "noStationData": "給油記録にスタンド名を入力するのをお忘れなく！",
     "fuelGrades": "燃料グレード",
     "viewRecords": "記録を見る",
-    "addRecordForShared": "記録を追加",
-    "converted": "換算済み"
+    "addRecordForShared": "記録を追加"
   },
   "exchangeRate": {
     "title": "為替レート参考",
@@ -695,7 +695,8 @@
       "JPY": "日本円",
       "GBP": "英ポンド",
       "KRW": "韓国ウォン"
-    }
+    },
+    "unconvertedNotice": "次の通貨は参考レートがないため、換算後の合計に含まれていません：{{currencies}}"
   },
   "currency": {
     "CNY": "¥ 人民元",

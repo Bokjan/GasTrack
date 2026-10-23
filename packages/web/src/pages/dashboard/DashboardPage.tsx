@@ -12,14 +12,12 @@ import {
   formatCurrency,
   formatNumber,
   useAuthStore,
-  useExchangeRateStore,
   isElectricVehicle,
-  convertAmount,
-  getReferenceCurrency,
-  sumConvertedCostsByCurrency,
 } from '@gastrack/shared';
 import type { OverviewStats, VehicleStats, Vehicle } from '@gastrack/shared';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useCurrency } from '../../hooks/useCurrency';
+import UnconvertedNotice from '../../components/UnconvertedNotice';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
@@ -28,15 +26,12 @@ export default function DashboardPage() {
   const isMobile = useIsMobile();
   const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const { data: ratesData, fetchRates } = useExchangeRateStore();
+  const { currency, referenceText } = useCurrency();
   const { t } = useTranslation();
 
   useEffect(() => {
     fetchVehicles();
     loadOverview();
-    if (user?.currency_code) {
-      fetchRates(user.currency_code);
-    }
   }, []);
 
   const loadOverview = async () => {
@@ -51,36 +46,14 @@ export default function DashboardPage() {
     }
   };
 
-  const currency = user?.currency_code || 'CNY';
   const isImperial = user?.unit_system === 'imperial';
   const distanceUnit = isImperial ? 'mi' : 'km';
   const efficiencyUnit = user?.fuel_efficiency_unit || 'L/100km';
 
-  /** 使用 costs_by_currency 按汇率换算后的总费用（用户偏好币种） */
-  const getConvertedCost = (costsByCurrency?: Record<string, number>, fallbackCost?: number): number => {
-    const converted = sumConvertedCostsByCurrency(costsByCurrency, currency, ratesData?.rates);
-    if (converted != null) return converted;
-    // 如果无法换算（缺汇率或无分组数据），回退到原始值
-    return fallbackCost ?? 0;
-  };
-
-  /** 全局概览的换算后总费用 */
-  const overviewConvertedCost = overview
-    ? getConvertedCost(overview.costs_by_currency, overview.total_cost)
-    : 0;
-
-  /** 全局概览的换算后开销总额 */
-  const overviewExpenseCost = overview
-    ? getConvertedCost(overview.expense_costs_by_currency, overview.total_expense_cost)
-    : 0;
-
+  // 金额均已由后端按参考汇率换算为用户币种（缺少汇率的币种见 unconverted_currencies）
+  const overviewConvertedCost = overview?.total_cost || 0;
+  const overviewExpenseCost = overview?.total_expense_cost || 0;
   const overviewCombinedCost = overviewConvertedCost + overviewExpenseCost;
-
-  /** 汇率参考换算：综合总费用 → 另一种参考币种 */
-  const refCurrency = getReferenceCurrency(currency, user?.reference_currency);
-  const refCombinedCost = overviewCombinedCost && ratesData?.rates
-    ? convertAmount(overviewCombinedCost, currency, refCurrency, ratesData.rates)
-    : null;
 
   /** 根据 vehicle_id 找到对应车辆信息 */
   const findVehicle = (vehicleId: string): Vehicle | undefined =>
@@ -89,8 +62,8 @@ export default function DashboardPage() {
   /** 渲染单辆车的统计卡片 */
   const renderVehicleStats = (vs: VehicleStats, vehicle?: Vehicle) => {
     const isEv = vehicle ? isElectricVehicle(vehicle.fuel_type) : false;
-    const vehicleConvertedCost = getConvertedCost(vs.costs_by_currency, vs.total_cost);
-    const vehicleExpenseCost = getConvertedCost(vs.expense_costs_by_currency, vs.total_expense_cost);
+    const vehicleConvertedCost = vs.total_cost || 0;
+    const vehicleExpenseCost = vs.total_expense_cost || 0;
     const vehicleCombinedCost = vehicleConvertedCost + vehicleExpenseCost;
     return (
       <Row gutter={isMobile ? [8, 8] : [16, 16]}>
@@ -162,6 +135,8 @@ export default function DashboardPage() {
         <h2>{t('nav.dashboard')}</h2>
       </div>
 
+      <UnconvertedNotice currencies={[overview?.unconverted_currencies]} />
+
       {/* 统计卡片 — 按车辆维度展示 */}
       {vehicleStatsList.length > 0 && (
         <div style={{ marginBottom: 24 }}>
@@ -198,9 +173,7 @@ export default function DashboardPage() {
                   </Card>
                 </Col>
                 <Col xs={12} sm={6}>
-                  <Tooltip
-                    title={refCombinedCost != null ? t('exchangeRate.referenceAmount', { amount: formatCurrency(refCombinedCost, refCurrency) }) : undefined}
-                  >
+                  <Tooltip title={overviewCombinedCost ? referenceText(overviewCombinedCost) : undefined}>
                     <Card loading={statsLoading} size="small">
                       <Statistic
                         title={t('stats.combinedCost')}
