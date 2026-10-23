@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
@@ -136,23 +137,63 @@ func TestNotificationService_CheckFuelAnomaly(t *testing.T) {
 }
 
 func TestNotificationService_CheckMaintenanceReminders(t *testing.T) {
-	t.Run("mileage trigger reached", func(t *testing.T) {
+	t.Run("mileage reached notifies reminder owner once", func(t *testing.T) {
 		svc, notifRepo, _, reminderRepo := newNotificationService(t)
-		uid := uuid.New()
+		ownerID := uuid.New()
 		vid := uuid.New()
 		remID := uuid.New()
 
 		reminderRepo.EXPECT().ListEnabledByVehicle(gomock.Any(), vid).Return([]model.Reminder{
 			{
 				BaseModel:   model.BaseModel{ID: remID},
-				Title:       "Oil Change",
+				UserID:      ownerID,
+				VehicleID:   vid,
+				Title:       "Oil; Change=1",
 				Trigger:     model.ReminderTriggerMileage,
 				NextMileage: 10000,
 			},
 		}, nil)
-		notifRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+		reminderRepo.EXPECT().MarkDueNotified(gomock.Any(), remID, gomock.Any()).Return(true, nil)
+		notifRepo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, n *model.Notification) error {
+			assert.Equal(t, ownerID, n.UserID)
+			var params map[string]any
+			assert.NoError(t, json.Unmarshal([]byte(n.Message), &params))
+			assert.Equal(t, "Oil; Change=1", params["reminderTitle"])
+			assert.Equal(t, 10500.0, params["currentOdo"])
+			return nil
+		})
 
-		svc.CheckMaintenanceReminders(context.Background(), uid, vid, 10500)
+		svc.CheckMaintenanceReminders(context.Background(), vid, 10500)
+	})
+
+	t.Run("already notified in this cycle - skipped", func(t *testing.T) {
+		svc, _, _, reminderRepo := newNotificationService(t)
+		vid := uuid.New()
+		notifiedAt := time.Now()
+
+		reminderRepo.EXPECT().ListEnabledByVehicle(gomock.Any(), vid).Return([]model.Reminder{
+			{
+				BaseModel:     model.BaseModel{ID: uuid.New()},
+				Trigger:       model.ReminderTriggerBoth,
+				NextMileage:   10000,
+				DueNotifiedAt: &notifiedAt,
+			},
+		}, nil)
+
+		svc.CheckMaintenanceReminders(context.Background(), vid, 12000)
+	})
+
+	t.Run("concurrent check lost the race - no duplicate", func(t *testing.T) {
+		svc, _, _, reminderRepo := newNotificationService(t)
+		vid := uuid.New()
+		remID := uuid.New()
+
+		reminderRepo.EXPECT().ListEnabledByVehicle(gomock.Any(), vid).Return([]model.Reminder{
+			{BaseModel: model.BaseModel{ID: remID}, Trigger: model.ReminderTriggerMileage, NextMileage: 10000},
+		}, nil)
+		reminderRepo.EXPECT().MarkDueNotified(gomock.Any(), remID, gomock.Any()).Return(false, nil)
+
+		svc.CheckMaintenanceReminders(context.Background(), vid, 10500)
 	})
 
 	t.Run("mileage not reached - no notification", func(t *testing.T) {
@@ -167,8 +208,28 @@ func TestNotificationService_CheckMaintenanceReminders(t *testing.T) {
 			},
 		}, nil)
 
-		svc.CheckMaintenanceReminders(context.Background(), uuid.New(), vid, 5000)
+		svc.CheckMaintenanceReminders(context.Background(), vid, 5000)
 	})
+}
+
+func TestNotificationService_CheckTimeReminders(t *testing.T) {
+	svc, notifRepo, _, reminderRepo := newNotificationService(t)
+	ownerID := uuid.New()
+	remID := uuid.New()
+	due := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+
+	reminderRepo.EXPECT().ListDueByDate(gomock.Any(), gomock.Any()).Return([]model.Reminder{
+		{BaseModel: model.BaseModel{ID: remID}, UserID: ownerID, Title: "Inspection", Trigger: model.ReminderTriggerTime, NextDate: &due},
+	}, nil)
+	reminderRepo.EXPECT().MarkDueNotified(gomock.Any(), remID, gomock.Any()).Return(true, nil)
+	notifRepo.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, n *model.Notification) error {
+		assert.Equal(t, ownerID, n.UserID)
+		assert.Equal(t, model.NotificationTypeMaintenance, n.Type)
+		assert.JSONEq(t, `{"reminderTitle":"Inspection","targetDate":"2026-10-01"}`, n.Message)
+		return nil
+	})
+
+	svc.CheckTimeReminders(context.Background())
 }
 
 func TestNotificationService_NotifyInviteUsed(t *testing.T) {

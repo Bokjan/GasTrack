@@ -550,6 +550,7 @@
     "directionHigher": "偏高",
     "directionLower": "偏低",
     "maintenanceDueMsg": "当前里程 {{currentOdo}} {{unit}} 已达到预定保养里程 {{targetOdo}} {{unit}}",
+    "maintenanceDueDateMsg": "已到达预定保养日期 {{targetDate}}",
     "inviteUsedMsg": "用户 {{nickname}} 使用了你的邀请码 {{code}} 注册"
   },
   "group": {

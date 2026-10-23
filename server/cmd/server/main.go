@@ -97,7 +97,7 @@ func main() {
 	exchangeRateHandler := handler.NewExchangeRateHandler(exchangeRateService, logger)
 	expenseRecordHandler := handler.NewExpenseRecordHandler(expenseRecordService, logger)
 
-	// 5c. 后台定时清理过期 refresh token
+	// 5c. 后台定时任务：清理过期 refresh token
 	bgCtx, stopBackground := context.WithCancel(context.Background())
 	defer stopBackground()
 	go runPeriodically(bgCtx, time.Hour, func(ctx context.Context) {
@@ -105,6 +105,8 @@ func main() {
 			logger.Warn("failed to purge expired refresh tokens", zap.Error(err))
 		}
 	})
+	// 按时间触发的保养提醒：每小时检查一次到期提醒并生成通知
+	go runPeriodically(bgCtx, time.Hour, notificationService.CheckTimeReminders)
 
 	// 7. 注册路由
 	mux, err := router.New(

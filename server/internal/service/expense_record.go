@@ -108,23 +108,25 @@ func (s *ExpenseRecordService) Create(ctx context.Context, userID, vehicleID uui
 		ExpenseDate:         expenseDate,
 	}
 
-	// 处理提醒联动
+	// 处理提醒联动：提醒必须属于同一辆车（防止通过 ID 改写他人的提醒）
+	var reminder *model.Reminder
 	if req.ReminderID != "" {
-		reminderID, err := uuid.Parse(req.ReminderID)
+		reminder, err = s.resolveLinkedReminder(ctx, req.ReminderID, vehicleID)
 		if err != nil {
-			return nil, apperror.ErrBadRequest("expense.invalid_reminder_id", "invalid reminder ID")
+			return nil, err
 		}
-		record.ReminderID = &reminderID
-
-		// 更新提醒基准
-		if err := s.updateReminderBaseline(ctx, reminderID, record.Odometer, record.DistanceUnit, expenseDate); err != nil {
-			s.logger.Warn("failed to update reminder baseline", zap.Error(err))
-			// 不阻塞开销记录创建
-		}
+		record.ReminderID = &reminder.ID
 	}
 
 	if err := s.expenseRepo.Create(ctx, record); err != nil {
 		return nil, apperror.ErrInternal("creating expense record", err)
+	}
+
+	// 记录保存成功后再更新提醒基准（失败不阻塞开销记录创建）
+	if reminder != nil {
+		if err := s.updateReminderBaseline(ctx, reminder, record.Odometer, record.DistanceUnit, record.ExpenseDate); err != nil {
+			s.logger.Warn("failed to update reminder baseline", zap.Error(err))
+		}
 	}
 
 	resp := expenseRecordToResponse(record)
@@ -250,21 +252,17 @@ func (s *ExpenseRecordService) Update(ctx context.Context, recordID, vehicleID, 
 		record.ExpenseDate = expenseDate
 	}
 
-	// 处理提醒联动变更
+	// 处理提醒联动变更：提醒必须属于同一辆车
+	var reminder *model.Reminder
 	if req.ReminderID != nil {
 		if *req.ReminderID == "" {
 			record.ReminderID = nil
 		} else {
-			reminderID, err := uuid.Parse(*req.ReminderID)
+			reminder, err = s.resolveLinkedReminder(ctx, *req.ReminderID, vehicleID)
 			if err != nil {
-				return nil, apperror.ErrBadRequest("expense.invalid_reminder_id", "invalid reminder ID")
+				return nil, err
 			}
-			record.ReminderID = &reminderID
-
-			// 更新提醒基准
-			if err := s.updateReminderBaseline(ctx, reminderID, record.Odometer, record.DistanceUnit, record.ExpenseDate); err != nil {
-				s.logger.Warn("failed to update reminder baseline", zap.Error(err))
-			}
+			record.ReminderID = &reminder.ID
 		}
 	}
 
@@ -275,6 +273,13 @@ func (s *ExpenseRecordService) Update(ctx context.Context, recordID, vehicleID, 
 
 	if err := s.expenseRepo.Update(ctx, record); err != nil {
 		return nil, apperror.ErrInternal("updating expense record", err)
+	}
+
+	// 记录保存成功后再更新提醒基准
+	if reminder != nil {
+		if err := s.updateReminderBaseline(ctx, reminder, record.Odometer, record.DistanceUnit, record.ExpenseDate); err != nil {
+			s.logger.Warn("failed to update reminder baseline", zap.Error(err))
+		}
 	}
 
 	resp := expenseRecordToResponse(record)
@@ -404,14 +409,9 @@ func (s *ExpenseRecordService) GetVendorSuggestions(ctx context.Context, userID,
 }
 
 // updateReminderBaseline 更新提醒的上次保养基准并重算下次触发
-func (s *ExpenseRecordService) updateReminderBaseline(ctx context.Context, reminderID uuid.UUID, odometer float64, distUnit string, date time.Time) error {
+func (s *ExpenseRecordService) updateReminderBaseline(ctx context.Context, reminder *model.Reminder, odometer float64, distUnit string, date time.Time) error {
 	if s.reminderRepo == nil {
 		return nil
-	}
-
-	reminder, err := s.reminderRepo.GetByID(ctx, reminderID)
-	if err != nil {
-		return err
 	}
 
 	// 更新上次基准
@@ -431,9 +431,33 @@ func (s *ExpenseRecordService) updateReminderBaseline(ctx context.Context, remin
 	return s.reminderRepo.Update(ctx, reminder)
 }
 
+// resolveLinkedReminder 解析并校验开销记录关联的提醒：提醒必须存在且属于该车辆。
+// 调用方已校验用户对该车辆的访问权限，因此同车提醒（含共享车辆车主的提醒）允许关联。
+func (s *ExpenseRecordService) resolveLinkedReminder(ctx context.Context, rawID string, vehicleID uuid.UUID) (*model.Reminder, error) {
+	invalid := apperror.ErrBadRequest("expense.invalid_reminder_id", "invalid reminder ID")
+	reminderID, err := uuid.Parse(rawID)
+	if err != nil || s.reminderRepo == nil {
+		return nil, invalid
+	}
+	reminder, err := s.reminderRepo.GetByID(ctx, reminderID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, invalid
+		}
+		return nil, apperror.ErrInternal("fetching reminder", err)
+	}
+	if reminder.VehicleID != vehicleID {
+		return nil, invalid
+	}
+	return reminder, nil
+}
+
 // calculateReminderNext 根据上次保养基准计算下次触发里程/日期
 // 复用 ReminderService 的 calculateNext 逻辑
 func (s *ExpenseRecordService) calculateReminderNext(r *model.Reminder) {
+	prevMileage, prevDate := r.NextMileage, r.NextDate
+	defer resetDueNotificationIfRescheduled(r, prevMileage, prevDate)
+
 	// 按里程
 	if r.Trigger == model.ReminderTriggerMileage || r.Trigger == model.ReminderTriggerBoth {
 		if r.MileageInterval > 0 {

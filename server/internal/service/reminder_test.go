@@ -111,16 +111,18 @@ func TestReminderService_List(t *testing.T) {
 
 		reminderRepo.EXPECT().ListByUser(gomock.Any(), uid).Return([]model.Reminder{
 			{BaseModel: model.BaseModel{ID: uuid.New()}, VehicleID: vid, Title: "R1"},
+			{BaseModel: model.BaseModel{ID: uuid.New()}, VehicleID: vid, Title: "R2"},
 		}, nil)
-		vehicleRepo.EXPECT().GetByID(gomock.Any(), vid).Return(&model.Vehicle{
-			BaseModel: model.BaseModel{ID: vid},
-			Name:      "Car",
+		// 同一车辆只查询一次
+		vehicleRepo.EXPECT().GetByIDs(gomock.Any(), []uuid.UUID{vid}).Return(map[uuid.UUID]*model.Vehicle{
+			vid: {BaseModel: model.BaseModel{ID: vid}, Name: "Car"},
 		}, nil)
 
 		result, err := svc.List(context.Background(), uid)
 		assert.NoError(t, err)
-		assert.Len(t, result, 1)
+		assert.Len(t, result, 2)
 		assert.Equal(t, "Car", result[0].VehicleName)
+		assert.Equal(t, "Car", result[1].VehicleName)
 	})
 
 	t.Run("error", func(t *testing.T) {

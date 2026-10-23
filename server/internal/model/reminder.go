@@ -67,6 +67,8 @@ type Reminder struct {
 
 	// 状态
 	IsEnabled bool `gorm:"default:true;not null" json:"is_enabled"`
+	// DueNotifiedAt 本周期已发送到期通知的时间；下次触发里程/日期变化（如完成保养）时清空，避免每次加油重复通知
+	DueNotifiedAt *time.Time `json:"-"`
 
 	// 关联
 	User    User    `gorm:"foreignKey:UserID" json:"-"`

@@ -1799,6 +1799,21 @@ func (mr *MockReminderRepoMockRecorder) ListByVehicle(ctx, vehicleID any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByVehicle", reflect.TypeOf((*MockReminderRepo)(nil).ListByVehicle), ctx, vehicleID)
 }
 
+// ListDueByDate mocks base method.
+func (m *MockReminderRepo) ListDueByDate(ctx context.Context, now time.Time) ([]model.Reminder, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListDueByDate", ctx, now)
+	ret0, _ := ret[0].([]model.Reminder)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListDueByDate indicates an expected call of ListDueByDate.
+func (mr *MockReminderRepoMockRecorder) ListDueByDate(ctx, now any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListDueByDate", reflect.TypeOf((*MockReminderRepo)(nil).ListDueByDate), ctx, now)
+}
+
 // ListEnabledByVehicle mocks base method.
 func (m *MockReminderRepo) ListEnabledByVehicle(ctx context.Context, vehicleID uuid.UUID) ([]model.Reminder, error) {
 	m.ctrl.T.Helper()
@@ -1812,6 +1827,21 @@ func (m *MockReminderRepo) ListEnabledByVehicle(ctx context.Context, vehicleID u
 func (mr *MockReminderRepoMockRecorder) ListEnabledByVehicle(ctx, vehicleID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEnabledByVehicle", reflect.TypeOf((*MockReminderRepo)(nil).ListEnabledByVehicle), ctx, vehicleID)
+}
+
+// MarkDueNotified mocks base method.
+func (m *MockReminderRepo) MarkDueNotified(ctx context.Context, id uuid.UUID, at time.Time) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkDueNotified", ctx, id, at)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// MarkDueNotified indicates an expected call of MarkDueNotified.
+func (mr *MockReminderRepoMockRecorder) MarkDueNotified(ctx, id, at any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkDueNotified", reflect.TypeOf((*MockReminderRepo)(nil).MarkDueNotified), ctx, id, at)
 }
 
 // Update mocks base method.

@@ -169,15 +169,15 @@ func (mr *MockNotificationServicerMockRecorder) CheckFuelAnomaly(ctx, userID, ve
 }
 
 // CheckMaintenanceReminders mocks base method.
-func (m *MockNotificationServicer) CheckMaintenanceReminders(ctx context.Context, userID, vehicleID uuid.UUID, currentOdometer float64) {
+func (m *MockNotificationServicer) CheckMaintenanceReminders(ctx context.Context, vehicleID uuid.UUID, currentOdometer float64) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "CheckMaintenanceReminders", ctx, userID, vehicleID, currentOdometer)
+	m.ctrl.Call(m, "CheckMaintenanceReminders", ctx, vehicleID, currentOdometer)
 }
 
 // CheckMaintenanceReminders indicates an expected call of CheckMaintenanceReminders.
-func (mr *MockNotificationServicerMockRecorder) CheckMaintenanceReminders(ctx, userID, vehicleID, currentOdometer any) *gomock.Call {
+func (mr *MockNotificationServicerMockRecorder) CheckMaintenanceReminders(ctx, vehicleID, currentOdometer any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckMaintenanceReminders", reflect.TypeOf((*MockNotificationServicer)(nil).CheckMaintenanceReminders), ctx, userID, vehicleID, currentOdometer)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckMaintenanceReminders", reflect.TypeOf((*MockNotificationServicer)(nil).CheckMaintenanceReminders), ctx, vehicleID, currentOdometer)
 }
 
 // Delete mocks base method.

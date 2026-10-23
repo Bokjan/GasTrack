@@ -550,6 +550,7 @@
     "directionHigher": "高め",
     "directionLower": "低め",
     "maintenanceDueMsg": "現在の走行距離 {{currentOdo}} {{unit}} が予定メンテナンス距離 {{targetOdo}} {{unit}} に達しました",
+    "maintenanceDueDateMsg": "予定メンテナンス日 {{targetDate}} になりました",
     "inviteUsedMsg": "ユーザー {{nickname}} があなたの招待コード {{code}} を使って登録しました"
   },
   "group": {

@@ -132,14 +132,22 @@ func (s *ReminderService) List(ctx context.Context, userID uuid.UUID) ([]dto.Rem
 	}
 
 	// 获取所有关联车辆名称
-	vehicleNames := make(map[uuid.UUID]string)
+	// 批量查询车辆名称（1 次 SQL 替代 N 次）
+	vehicleIDs := make([]uuid.UUID, 0, len(reminders))
+	seen := make(map[uuid.UUID]bool, len(reminders))
 	for _, r := range reminders {
-		if _, ok := vehicleNames[r.VehicleID]; !ok {
-			v, err := s.vehicleRepo.GetByID(ctx, r.VehicleID)
-			if err == nil {
-				vehicleNames[r.VehicleID] = v.Name
-			}
+		if !seen[r.VehicleID] {
+			seen[r.VehicleID] = true
+			vehicleIDs = append(vehicleIDs, r.VehicleID)
 		}
+	}
+	vehicleNames := make(map[uuid.UUID]string, len(vehicleIDs))
+	if vehicleMap, err := s.vehicleRepo.GetByIDs(ctx, vehicleIDs); err == nil {
+		for id, v := range vehicleMap {
+			vehicleNames[id] = v.Name
+		}
+	} else {
+		s.logger.Warn("failed to batch fetch reminder vehicles", zap.Error(err))
 	}
 
 	result := make([]dto.ReminderResponse, len(reminders))
@@ -249,6 +257,9 @@ func (s *ReminderService) Delete(ctx context.Context, id, userID uuid.UUID) erro
 
 // calculateNext 根据上次保养基准计算下次触发里程/日期
 func (s *ReminderService) calculateNext(r *model.Reminder) {
+	prevMileage, prevDate := r.NextMileage, r.NextDate
+	defer resetDueNotificationIfRescheduled(r, prevMileage, prevDate)
+
 	// 按里程
 	if r.Trigger == model.ReminderTriggerMileage || r.Trigger == model.ReminderTriggerBoth {
 		if r.MileageInterval > 0 {
@@ -272,6 +283,15 @@ func (s *ReminderService) calculateNext(r *model.Reminder) {
 }
 
 // reminderToResponse 将 model 转为 DTO
+// resetDueNotificationIfRescheduled 下次触发里程/日期发生变化（如完成保养、修改间隔）时开启新的通知周期
+func resetDueNotificationIfRescheduled(r *model.Reminder, prevMileage float64, prevDate *time.Time) {
+	sameDate := (prevDate == nil && r.NextDate == nil) ||
+		(prevDate != nil && r.NextDate != nil && prevDate.Equal(*r.NextDate))
+	if r.NextMileage != prevMileage || !sameDate {
+		r.DueNotifiedAt = nil
+	}
+}
+
 func (s *ReminderService) reminderToResponse(r *model.Reminder, vehicleName string) dto.ReminderResponse {
 	resp := dto.ReminderResponse{
 		ID:               r.ID.String(),

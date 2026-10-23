@@ -29,10 +29,18 @@ dayjs.extend(relativeTime);
 const { Text } = Typography;
 
 /**
- * 解析后端结构化通知参数："k1=v1;k2=v2"
- * 不含 '=' 的片段视为上一个值中的 ';'（如提醒标题本身含分号）
+ * 解析后端结构化通知参数：新版为 JSON 对象，旧版为 "k1=v1;k2=v2"
+ * 旧版中不含 '=' 的片段视为上一个值中的 ';'（如提醒标题本身含分号）
  */
 function parseParams(raw: string): Record<string, string> {
+  if (raw.startsWith('{')) {
+    try {
+      const obj = JSON.parse(raw) as Record<string, unknown>;
+      return Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, String(v)]));
+    } catch {
+      // 非法 JSON 时按旧格式解析
+    }
+  }
   const params: Record<string, string> = {};
   let lastKey: string | null = null;
   for (const seg of raw.split(';')) {
@@ -189,6 +197,14 @@ export default function NotificationBell() {
         };
       }
       case 'maintenance_due':
+        // 按时间到期的提醒只有目标日期
+        if (params.targetDate) {
+          return {
+            title: params.reminderTitle || t(item.title),
+            message: t('notification.maintenanceDueDateMsg', { targetDate: params.targetDate }),
+            showTag: !!params.reminderTitle,
+          };
+        }
         return {
           title: params.reminderTitle || t(item.title),
           // 后端里程统一为 km

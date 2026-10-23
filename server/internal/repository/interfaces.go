@@ -148,6 +148,8 @@ type ReminderRepo interface {
 	ListByUser(ctx context.Context, userID uuid.UUID) ([]model.Reminder, error)
 	ListByVehicle(ctx context.Context, vehicleID uuid.UUID) ([]model.Reminder, error)
 	ListEnabledByVehicle(ctx context.Context, vehicleID uuid.UUID) ([]model.Reminder, error)
+	ListDueByDate(ctx context.Context, now time.Time) ([]model.Reminder, error)
+	MarkDueNotified(ctx context.Context, id uuid.UUID, at time.Time) (bool, error)
 	Update(ctx context.Context, reminder *model.Reminder) error
 	Delete(ctx context.Context, id, userID uuid.UUID) error
 }

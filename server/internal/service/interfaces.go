@@ -27,7 +27,7 @@ type NotificationServicer interface {
 	MarkAllAsRead(ctx context.Context, userID uuid.UUID) error
 	Delete(ctx context.Context, id, userID uuid.UUID) error
 	CheckFuelAnomaly(ctx context.Context, userID, vehicleID uuid.UUID, recordID uuid.UUID, currentEfficiency float64)
-	CheckMaintenanceReminders(ctx context.Context, userID, vehicleID uuid.UUID, currentOdometer float64)
+	CheckMaintenanceReminders(ctx context.Context, vehicleID uuid.UUID, currentOdometer float64)
 	NotifyInviteUsed(ctx context.Context, inviteCreatorID uuid.UUID, inviteCode string, newUserNickname string)
 }
 

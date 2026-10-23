@@ -108,7 +108,7 @@ func (s *FuelRecordService) Create(ctx context.Context, userID, vehicleID uuid.U
 		if convert.DistanceUnit(record.DistanceUnit) == convert.UnitMile {
 			odometerKm = record.Odometer * convert.MileToKm
 		}
-		go s.notificationService.CheckMaintenanceReminders(asyncCtx, vehicle.UserID, vehicleID, odometerKm)
+		go s.notificationService.CheckMaintenanceReminders(asyncCtx, vehicleID, odometerKm)
 	}
 
 	prefs := s.getUserUnits(ctx, userID)

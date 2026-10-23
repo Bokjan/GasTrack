@@ -2,8 +2,9 @@ package service
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 	"math"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -117,10 +118,12 @@ func (s *NotificationService) CheckFuelAnomaly(ctx context.Context, userID, vehi
 
 	// 存储结构化数据，前端根据 type 和 message 参数渲染本地化文本
 	title := "notification.anomalyFuel"
-	message := fmt.Sprintf(
-		"current=%.1f;avg=%.1f;direction=%s;pct=%d",
-		currentEfficiency, avgEfficiency, direction, deviationPct,
-	)
+	message := encodeParams(map[string]any{
+		"current":   math.Round(currentEfficiency*10) / 10,
+		"avg":       math.Round(avgEfficiency*10) / 10,
+		"direction": direction,
+		"pct":       deviationPct,
+	})
 
 	notification := &model.Notification{
 		UserID:    userID,
@@ -139,42 +142,74 @@ func (s *NotificationService) CheckFuelAnomaly(ctx context.Context, userID, vehi
 	}
 }
 
-// CheckMaintenanceReminders 检查保养提醒（根据当前里程触发）
-// 在创建加油记录后调用（因为加油时会更新里程）
-func (s *NotificationService) CheckMaintenanceReminders(ctx context.Context, userID, vehicleID uuid.UUID, currentOdometer float64) {
+// CheckMaintenanceReminders 检查按里程触发的保养提醒（在创建加油记录后调用，因为加油时会更新里程）
+// 通知发给提醒的所有者；每个保养周期只通知一次（完成保养、更新基准后才会再次触发）
+func (s *NotificationService) CheckMaintenanceReminders(ctx context.Context, vehicleID uuid.UUID, currentOdometer float64) {
 	reminders, err := s.reminderRepo.ListEnabledByVehicle(ctx, vehicleID)
 	if err != nil {
 		s.logger.Error("failed to list reminders for maintenance check", zap.Error(err))
 		return
 	}
 
-	for _, r := range reminders {
-		if r.Trigger == model.ReminderTriggerMileage || r.Trigger == model.ReminderTriggerBoth {
-			if r.NextMileage > 0 && currentOdometer >= r.NextMileage {
-				// 里程已达到，生成保养提醒通知（结构化数据）
-				title := "notification.maintenanceDue"
-				message := fmt.Sprintf(
-					"reminderTitle=%s;currentOdo=%.0f;targetOdo=%.0f",
-					r.Title, currentOdometer, r.NextMileage,
-				)
-
-				notification := &model.Notification{
-					UserID:     userID,
-					VehicleID:  &vehicleID,
-					Type:       model.NotificationTypeMaintenance,
-					Title:      title,
-					Message:    message,
-					ReminderID: &r.ID,
-				}
-
-				if err := s.notificationRepo.Create(ctx, notification); err != nil {
-					s.logger.Error("failed to create maintenance notification",
-						zap.Error(err),
-						zap.String("reminder_id", r.ID.String()),
-					)
-				}
-			}
+	for i := range reminders {
+		r := &reminders[i]
+		if r.Trigger != model.ReminderTriggerMileage && r.Trigger != model.ReminderTriggerBoth {
+			continue
 		}
+		if r.NextMileage <= 0 || currentOdometer < r.NextMileage || r.DueNotifiedAt != nil {
+			continue
+		}
+		s.notifyReminderDue(ctx, r, map[string]any{
+			"reminderTitle": r.Title,
+			"currentOdo":    math.Round(currentOdometer),
+			"targetOdo":     math.Round(r.NextMileage),
+		})
+	}
+}
+
+// CheckTimeReminders 检查按时间触发且已到期的保养提醒（由后台定时任务调用）
+func (s *NotificationService) CheckTimeReminders(ctx context.Context) {
+	reminders, err := s.reminderRepo.ListDueByDate(ctx, time.Now())
+	if err != nil {
+		s.logger.Error("failed to list due reminders", zap.Error(err))
+		return
+	}
+
+	for i := range reminders {
+		r := &reminders[i]
+		s.notifyReminderDue(ctx, r, map[string]any{
+			"reminderTitle": r.Title,
+			"targetDate":    r.NextDate.Format("2006-01-02"),
+		})
+	}
+}
+
+// notifyReminderDue 原子地标记提醒已通知，标记成功才创建通知，保证并发下也只通知一次
+func (s *NotificationService) notifyReminderDue(ctx context.Context, r *model.Reminder, params map[string]any) {
+	marked, err := s.reminderRepo.MarkDueNotified(ctx, r.ID, time.Now())
+	if err != nil {
+		s.logger.Error("failed to mark reminder notified", zap.Error(err), zap.String("reminder_id", r.ID.String()))
+		return
+	}
+	if !marked {
+		return
+	}
+
+	vehicleID := r.VehicleID
+	notification := &model.Notification{
+		UserID:     r.UserID,
+		VehicleID:  &vehicleID,
+		Type:       model.NotificationTypeMaintenance,
+		Title:      "notification.maintenanceDue",
+		Message:    encodeParams(params),
+		ReminderID: &r.ID,
+	}
+
+	if err := s.notificationRepo.Create(ctx, notification); err != nil {
+		s.logger.Error("failed to create maintenance notification",
+			zap.Error(err),
+			zap.String("reminder_id", r.ID.String()),
+		)
 	}
 }
 
@@ -182,7 +217,7 @@ func (s *NotificationService) CheckMaintenanceReminders(ctx context.Context, use
 func (s *NotificationService) NotifyInviteUsed(ctx context.Context, inviteCreatorID uuid.UUID, inviteCode string, newUserNickname string) {
 	// 结构化数据，前端根据 type 渲染本地化文本
 	title := "notification.inviteUsed"
-	message := fmt.Sprintf("nickname=%s;code=%s", newUserNickname, inviteCode)
+	message := encodeParams(map[string]any{"nickname": newUserNickname, "code": inviteCode})
 
 	notification := &model.Notification{
 		UserID:  inviteCreatorID,
@@ -198,6 +233,15 @@ func (s *NotificationService) NotifyInviteUsed(ctx context.Context, inviteCreato
 			zap.String("creator_id", inviteCreatorID.String()),
 		)
 	}
+}
+
+// encodeParams 将通知参数编码为 JSON，前端据此渲染本地化文本（取代易被标题中的 ";" "=" 破坏的 k=v 格式）
+func encodeParams(params map[string]any) string {
+	b, err := json.Marshal(params)
+	if err != nil {
+		return "{}"
+	}
+	return string(b)
 }
 
 // notificationToResponse 将 model 转为 DTO

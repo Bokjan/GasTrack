@@ -550,6 +550,7 @@
     "directionHigher": "higher",
     "directionLower": "lower",
     "maintenanceDueMsg": "Current odometer {{currentOdo}} {{unit}} has reached the scheduled service mileage {{targetOdo}} {{unit}}",
+    "maintenanceDueDateMsg": "The scheduled service date {{targetDate}} has been reached",
     "inviteUsedMsg": "User {{nickname}} registered using your invite code {{code}}"
   },
   "group": {

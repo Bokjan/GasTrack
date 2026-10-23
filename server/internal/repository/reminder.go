@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -71,6 +72,27 @@ func (r *ReminderRepository) ListEnabledByVehicle(ctx context.Context, vehicleID
 		Where("vehicle_id = ? AND is_enabled = ?", vehicleID, true).
 		Find(&reminders).Error
 	return reminders, err
+}
+
+// ListDueByDate 查询按时间触发且已到期、本周期尚未通知的提醒（车辆未删除）
+func (r *ReminderRepository) ListDueByDate(ctx context.Context, now time.Time) ([]model.Reminder, error) {
+	var reminders []model.Reminder
+	err := r.db.WithContext(ctx).
+		Joins("JOIN vehicles v ON v.id = reminders.vehicle_id AND v.deleted_at IS NULL").
+		Where("reminders.is_enabled = ? AND reminders.trigger IN ?", true,
+			[]model.ReminderTrigger{model.ReminderTriggerTime, model.ReminderTriggerBoth}).
+		Where("reminders.next_date IS NOT NULL AND reminders.next_date <= ?", now).
+		Where("reminders.due_notified_at IS NULL").
+		Find(&reminders).Error
+	return reminders, err
+}
+
+// MarkDueNotified 原子地标记提醒本周期已通知；返回 false 表示已被其他流程标记过（不应重复通知）
+func (r *ReminderRepository) MarkDueNotified(ctx context.Context, id uuid.UUID, at time.Time) (bool, error) {
+	res := r.db.WithContext(ctx).Model(&model.Reminder{}).
+		Where("id = ? AND due_notified_at IS NULL", id).
+		UpdateColumn("due_notified_at", at)
+	return res.RowsAffected == 1, res.Error
 }
 
 // Update 更新提醒

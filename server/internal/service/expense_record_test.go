@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -50,6 +51,70 @@ func TestExpenseRecordService_Create(t *testing.T) {
 		})
 		assert.NoError(t, err)
 		assert.Equal(t, "Oil Change", resp.Title)
+	})
+
+	t.Run("reminder of another vehicle is rejected", func(t *testing.T) {
+		svc, _, vehicleRepo, _, reminderRepo := newExpenseRecordService(t)
+		uid := uuid.New()
+		vid := uuid.New()
+		foreignReminder := uuid.New()
+
+		vehicleRepo.EXPECT().GetByIDAndUser(gomock.Any(), vid, uid).Return(&model.Vehicle{BaseModel: model.BaseModel{ID: vid}, UserID: uid}, nil)
+		reminderRepo.EXPECT().GetByID(gomock.Any(), foreignReminder).Return(&model.Reminder{
+			BaseModel: model.BaseModel{ID: foreignReminder},
+			VehicleID: uuid.New(), // 别人的车
+		}, nil)
+		// 不允许出现 expenseRepo.Create / reminderRepo.Update 调用
+
+		_, err := svc.Create(context.Background(), uid, vid, &dto.CreateExpenseRequest{
+			Title:               "Oil Change",
+			Category:            "maintenance",
+			MaintenanceCategory: "oil_change",
+			Amount:              350,
+			CurrencyCode:        "CNY",
+			ExpenseDate:         "2026-03-15",
+			ReminderID:          foreignReminder.String(),
+		})
+		assert.Equal(t, 400, err.(*apperror.AppError).Code)
+	})
+
+	t.Run("linked reminder baseline updated after create and renotification re-armed", func(t *testing.T) {
+		svc, expenseRepo, vehicleRepo, _, reminderRepo := newExpenseRecordService(t)
+		uid := uuid.New()
+		vid := uuid.New()
+		remID := uuid.New()
+		notifiedAt := time.Now()
+
+		vehicleRepo.EXPECT().GetByIDAndUser(gomock.Any(), vid, uid).Return(&model.Vehicle{BaseModel: model.BaseModel{ID: vid}, UserID: uid}, nil)
+		reminderRepo.EXPECT().GetByID(gomock.Any(), remID).Return(&model.Reminder{
+			BaseModel:       model.BaseModel{ID: remID},
+			VehicleID:       vid,
+			Trigger:         model.ReminderTriggerMileage,
+			MileageInterval: 5000,
+			LastMileage:     5000,
+			NextMileage:     10000,
+			DueNotifiedAt:   &notifiedAt,
+		}, nil)
+		gomock.InOrder(
+			expenseRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil),
+			reminderRepo.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(func(_ context.Context, r *model.Reminder) error {
+				assert.Equal(t, 15500.0, r.NextMileage)
+				assert.Nil(t, r.DueNotifiedAt)
+				return nil
+			}),
+		)
+
+		_, err := svc.Create(context.Background(), uid, vid, &dto.CreateExpenseRequest{
+			Title:               "Oil Change",
+			Category:            "maintenance",
+			MaintenanceCategory: "oil_change",
+			Amount:              350,
+			CurrencyCode:        "CNY",
+			Odometer:            10500,
+			ExpenseDate:         "2026-03-15",
+			ReminderID:          remID.String(),
+		})
+		assert.NoError(t, err)
 	})
 
 	t.Run("vehicle not found", func(t *testing.T) {
