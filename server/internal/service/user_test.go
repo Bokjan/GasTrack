@@ -162,12 +162,23 @@ func TestUserService_ChangePassword(t *testing.T) {
 	})
 }
 
+func TestUserService_PurgeSoftDeletedUsers(t *testing.T) {
+	svc, mockRepo := newUserService(t)
+	ids := []uuid.UUID{uuid.New(), uuid.New()}
+	mockRepo.EXPECT().ListSoftDeletedIDs(gomock.Any(), "").Return(ids, nil)
+	mockRepo.EXPECT().PurgeAccount(gomock.Any(), ids[0]).Return(nil)
+	mockRepo.EXPECT().PurgeAccount(gomock.Any(), ids[1]).Return(nil)
+
+	n, err := svc.PurgeSoftDeletedUsers(context.Background())
+	assert.NoError(t, err)
+	assert.Equal(t, 2, n)
+}
+
 func TestUserService_DeleteAccount(t *testing.T) {
-	t.Run("success revokes tokens", func(t *testing.T) {
-		svc, mockRepo, tokens := newUserServiceWithTokens(t)
+	t.Run("success purges account", func(t *testing.T) {
+		svc, mockRepo := newUserService(t)
 		uid := uuid.New()
-		mockRepo.EXPECT().Delete(gomock.Any(), uid).Return(nil)
-		tokens.EXPECT().RevokeAllTokens(gomock.Any(), uid).Return(nil)
+		mockRepo.EXPECT().PurgeAccount(gomock.Any(), uid).Return(nil)
 
 		err := svc.DeleteAccount(context.Background(), uid)
 		assert.NoError(t, err)
@@ -176,7 +187,7 @@ func TestUserService_DeleteAccount(t *testing.T) {
 	t.Run("error", func(t *testing.T) {
 		svc, mockRepo := newUserService(t)
 		uid := uuid.New()
-		mockRepo.EXPECT().Delete(gomock.Any(), uid).Return(errors.New("db error"))
+		mockRepo.EXPECT().PurgeAccount(gomock.Any(), uid).Return(errors.New("db error"))
 
 		err := svc.DeleteAccount(context.Background(), uid)
 		assert.Error(t, err)

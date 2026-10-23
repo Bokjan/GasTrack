@@ -59,20 +59,6 @@ func (mr *MockUserRepoMockRecorder) Create(ctx, user any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockUserRepo)(nil).Create), ctx, user)
 }
 
-// Delete mocks base method.
-func (m *MockUserRepo) Delete(ctx context.Context, id uuid.UUID) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, id)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete.
-func (mr *MockUserRepoMockRecorder) Delete(ctx, id any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockUserRepo)(nil).Delete), ctx, id)
-}
-
 // ExistsByEmail mocks base method.
 func (m *MockUserRepo) ExistsByEmail(ctx context.Context, email string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -131,6 +117,35 @@ func (m *MockUserRepo) GetByIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.
 func (mr *MockUserRepoMockRecorder) GetByIDs(ctx, ids any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockUserRepo)(nil).GetByIDs), ctx, ids)
+}
+
+// ListSoftDeletedIDs mocks base method.
+func (m *MockUserRepo) ListSoftDeletedIDs(ctx context.Context, email string) ([]uuid.UUID, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSoftDeletedIDs", ctx, email)
+	ret0, _ := ret[0].([]uuid.UUID)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListSoftDeletedIDs indicates an expected call of ListSoftDeletedIDs.
+func (mr *MockUserRepoMockRecorder) ListSoftDeletedIDs(ctx, email any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSoftDeletedIDs", reflect.TypeOf((*MockUserRepo)(nil).ListSoftDeletedIDs), ctx, email)
+}
+
+// PurgeAccount mocks base method.
+func (m *MockUserRepo) PurgeAccount(ctx context.Context, id uuid.UUID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PurgeAccount", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PurgeAccount indicates an expected call of PurgeAccount.
+func (mr *MockUserRepoMockRecorder) PurgeAccount(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PurgeAccount", reflect.TypeOf((*MockUserRepo)(nil).PurgeAccount), ctx, id)
 }
 
 // Update mocks base method.

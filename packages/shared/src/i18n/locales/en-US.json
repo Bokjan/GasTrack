@@ -309,7 +309,7 @@
     "timezone": "Timezone",
     "timezonePlaceholder": "Select timezone",
     "deleteAccount": "Delete Account",
-    "deleteAccountConfirm": "Are you sure you want to delete your account? This action is irreversible and all data will be permanently deleted.",
+    "deleteAccountConfirm": "Are you sure you want to delete your account? This cannot be undone and all your data will be permanently deleted. Groups you own will be handed to a random remaining member (or dissolved if you are the only member); records you added to other people's shared vehicles stay with the vehicle owner.",
     "deleteAccountWarning": "Danger Zone",
     "dataPrivacy": "Data & Privacy",
     "exportData": "Export My Data",

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -137,10 +138,24 @@ func (s *UserService) ChangePassword(ctx context.Context, userID uuid.UUID, req 
 	return s.tokens.IssueTokenPair(ctx, user)
 }
 
-// DeleteAccount 注销账号（软删除），并吊销所有 refresh token
+// DeleteAccount 注销账号：彻底删除用户及其数据（含 refresh token），详见 UserRepo.PurgeAccount
 func (s *UserService) DeleteAccount(ctx context.Context, userID uuid.UUID) error {
-	if err := s.userRepo.Delete(ctx, userID); err != nil {
+	if err := s.userRepo.PurgeAccount(ctx, userID); err != nil {
 		return apperror.ErrInternal("deleting user", err)
 	}
-	return s.tokens.RevokeAllTokens(ctx, userID)
+	return nil
+}
+
+// PurgeSoftDeletedUsers 彻底清除旧版本软删除遗留的账号（运维命令调用），返回清除数量
+func (s *UserService) PurgeSoftDeletedUsers(ctx context.Context) (int, error) {
+	ids, err := s.userRepo.ListSoftDeletedIDs(ctx, "")
+	if err != nil {
+		return 0, err
+	}
+	for i, id := range ids {
+		if err := s.userRepo.PurgeAccount(ctx, id); err != nil {
+			return i, fmt.Errorf("purging user %s: %w", id, err)
+		}
+	}
+	return len(ids), nil
 }

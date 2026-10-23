@@ -309,7 +309,7 @@
     "timezone": "时区",
     "timezonePlaceholder": "选择时区",
     "deleteAccount": "注销账号",
-    "deleteAccountConfirm": "确定要注销账号吗？此操作不可逆，所有数据将被永久删除。",
+    "deleteAccountConfirm": "确定要注销账号吗？此操作不可逆，所有数据将被永久删除。你担任群主的群组将随机转让给其他成员（无其他成员则解散）；你在他人共享车辆上录入的记录会保留给车主。",
     "deleteAccountWarning": "危险操作",
     "dataPrivacy": "数据与隐私",
     "exportData": "导出我的数据",

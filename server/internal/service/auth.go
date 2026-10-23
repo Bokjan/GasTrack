@@ -100,6 +100,17 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		return nil, apperror.ErrConflict("auth.email_exists", "email already registered")
 	}
 
+	// 旧版本注销为软删除，遗留账号仍占用邮箱唯一索引：彻底清除后允许重新注册
+	staleIDs, err := s.userRepo.ListSoftDeletedIDs(ctx, req.Email)
+	if err != nil {
+		return nil, apperror.ErrInternal("checking deleted accounts", err)
+	}
+	for _, id := range staleIDs {
+		if err := s.userRepo.PurgeAccount(ctx, id); err != nil {
+			return nil, apperror.ErrInternal("purging deleted account", err)
+		}
+	}
+
 	// 3. 密码哈希（bcrypt, cost=12）
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcryptCost)
 	if err != nil {

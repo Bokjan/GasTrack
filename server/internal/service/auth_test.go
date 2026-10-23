@@ -53,6 +53,7 @@ func TestAuthService_Register(t *testing.T) {
 		svc, userRepo, tokenRepo, _, _ := newAuthService(t, "open")
 
 		userRepo.EXPECT().ExistsByEmail(gomock.Any(), "new@example.com").Return(false, nil)
+		userRepo.EXPECT().ListSoftDeletedIDs(gomock.Any(), "new@example.com").Return(nil, nil)
 		userRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 		tokenRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 
@@ -96,6 +97,7 @@ func TestAuthService_Register(t *testing.T) {
 		notified := make(chan struct{})
 
 		userRepo.EXPECT().ExistsByEmail(gomock.Any(), "invited@example.com").Return(false, nil)
+		userRepo.EXPECT().ListSoftDeletedIDs(gomock.Any(), "invited@example.com").Return(nil, nil)
 		// 用户必须通过邀请码事务创建，而不是直接 Create
 		inviteSvc.EXPECT().CreateUserWithInvite(gomock.Any(), gomock.Any(), "GT-ABC123").Return(&model.InviteCode{
 			BaseModel: model.BaseModel{ID: uuid.New()},
@@ -129,6 +131,7 @@ func TestAuthService_Register(t *testing.T) {
 		svc, userRepo, _, inviteSvc, _ := newAuthService(t, "invite_only")
 
 		userRepo.EXPECT().ExistsByEmail(gomock.Any(), "x@example.com").Return(false, nil)
+		userRepo.EXPECT().ListSoftDeletedIDs(gomock.Any(), "x@example.com").Return(nil, nil)
 		inviteSvc.EXPECT().CreateUserWithInvite(gomock.Any(), gomock.Any(), "bogus").
 			Return(nil, apperror.ErrBadRequest("invite.invalid", "invite code is invalid or expired"))
 		// 不允许出现 userRepo.Create / tokenRepo.Create 调用（gomock 会因意外调用而失败）
@@ -146,6 +149,7 @@ func TestAuthService_Register(t *testing.T) {
 		svc, userRepo, _, _, _ := newAuthService(t, "open")
 
 		userRepo.EXPECT().ExistsByEmail(gomock.Any(), "race@example.com").Return(false, nil)
+		userRepo.EXPECT().ListSoftDeletedIDs(gomock.Any(), "race@example.com").Return(nil, nil)
 		userRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(gorm.ErrDuplicatedKey)
 
 		_, err := svc.Register(context.Background(), &dto.RegisterRequest{
@@ -165,6 +169,24 @@ func TestAuthService_Register(t *testing.T) {
 			Nickname: "Long",
 		})
 		assert.Equal(t, 400, err.(*apperror.AppError).Code)
+	})
+
+	t.Run("legacy soft-deleted account with same email is purged first", func(t *testing.T) {
+		svc, userRepo, tokenRepo, _, _ := newAuthService(t, "open")
+		staleID := uuid.New()
+
+		userRepo.EXPECT().ExistsByEmail(gomock.Any(), "back@example.com").Return(false, nil)
+		gomock.InOrder(
+			userRepo.EXPECT().ListSoftDeletedIDs(gomock.Any(), "back@example.com").Return([]uuid.UUID{staleID}, nil),
+			userRepo.EXPECT().PurgeAccount(gomock.Any(), staleID).Return(nil),
+			userRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil),
+		)
+		tokenRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+
+		_, err := svc.Register(context.Background(), &dto.RegisterRequest{
+			Email: "Back@example.com", Password: "password123", Nickname: "Back",
+		})
+		assert.NoError(t, err)
 	})
 
 	t.Run("email already exists", func(t *testing.T) {

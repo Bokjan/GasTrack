@@ -18,7 +18,8 @@ type UserRepo interface {
 	Update(ctx context.Context, user *model.User) error
 	UpdateFields(ctx context.Context, id uuid.UUID, fields map[string]any) error
 	UpdateLastLogin(ctx context.Context, id uuid.UUID) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	PurgeAccount(ctx context.Context, id uuid.UUID) error
+	ListSoftDeletedIDs(ctx context.Context, email string) ([]uuid.UUID, error)
 	ExistsByEmail(ctx context.Context, email string) (bool, error)
 	GetByIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*model.User, error)
 }

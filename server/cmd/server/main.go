@@ -78,6 +78,14 @@ func main() {
 	groupService := service.NewGroupService(groupRepo, userRepo, vehicleRepo, logger)
 	expenseRecordService := service.NewExpenseRecordService(expenseRecordRepo, vehicleRepo, groupRepo, reminderRepo, logger)
 
+	// 运维命令：gastrack-server <command>，执行完毕即退出，不启动 HTTP 服务
+	if len(os.Args) > 1 {
+		if err := runMaintenance(context.Background(), os.Args[1], userService, logger); err != nil {
+			logger.Fatal("maintenance command failed", zap.String("command", os.Args[1]), zap.Error(err))
+		}
+		return
+	}
+
 	// 5b. 创建汇率参考服务（无需数据库，纯 API 缓存）
 	exchangeRateService := service.NewExchangeRateService(cfg.ExchangeRate, logger)
 	exchangeRateService.Start()
@@ -174,6 +182,22 @@ func main() {
 	}
 
 	logger.Info("GasTrack server stopped gracefully")
+}
+
+// runMaintenance 执行一次性运维命令（需由运维人员手动触发）
+func runMaintenance(ctx context.Context, command string, userService *service.UserService, logger *zap.Logger) error {
+	switch command {
+	case "purge-deleted-users":
+		// 彻底清除旧版本"软删除"注销遗留的账号及其数据
+		n, err := userService.PurgeSoftDeletedUsers(ctx)
+		if err != nil {
+			return err
+		}
+		logger.Info("purged soft-deleted users", zap.Int("count", n))
+		return nil
+	default:
+		return fmt.Errorf("unknown command %q (available: purge-deleted-users)", command)
+	}
 }
 
 // runPeriodically 立即执行一次 fn，之后每隔 interval 执行一次，直到 ctx 取消
