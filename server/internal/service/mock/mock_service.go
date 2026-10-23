@@ -157,15 +157,15 @@ func (m *MockNotificationServicer) EXPECT() *MockNotificationServicerMockRecorde
 }
 
 // CheckFuelAnomaly mocks base method.
-func (m *MockNotificationServicer) CheckFuelAnomaly(ctx context.Context, userID, vehicleID, recordID uuid.UUID, currentEfficiency float64) {
+func (m *MockNotificationServicer) CheckFuelAnomaly(ctx context.Context, userID, vehicleID, recordID uuid.UUID, currentEfficiency float64, fuelUnit string) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "CheckFuelAnomaly", ctx, userID, vehicleID, recordID, currentEfficiency)
+	m.ctrl.Call(m, "CheckFuelAnomaly", ctx, userID, vehicleID, recordID, currentEfficiency, fuelUnit)
 }
 
 // CheckFuelAnomaly indicates an expected call of CheckFuelAnomaly.
-func (mr *MockNotificationServicerMockRecorder) CheckFuelAnomaly(ctx, userID, vehicleID, recordID, currentEfficiency any) *gomock.Call {
+func (mr *MockNotificationServicerMockRecorder) CheckFuelAnomaly(ctx, userID, vehicleID, recordID, currentEfficiency, fuelUnit any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckFuelAnomaly", reflect.TypeOf((*MockNotificationServicer)(nil).CheckFuelAnomaly), ctx, userID, vehicleID, recordID, currentEfficiency)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckFuelAnomaly", reflect.TypeOf((*MockNotificationServicer)(nil).CheckFuelAnomaly), ctx, userID, vehicleID, recordID, currentEfficiency, fuelUnit)
 }
 
 // CheckMaintenanceReminders mocks base method.

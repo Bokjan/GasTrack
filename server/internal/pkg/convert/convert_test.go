@@ -356,3 +356,26 @@ func TestRoundTripConversions(t *testing.T) {
 		assert.InDelta(t, original, back, 0.02)
 	})
 }
+
+func TestConvertEnergyEfficiency(t *testing.T) {
+	cases := []struct {
+		unit     FuelEfficiencyUnit
+		wantUnit string
+		want     float64
+	}{
+		{UnitL100km, "kWh/100km", 15},
+		{UnitKmL, "km/kWh", 6.67},
+		{UnitMPG, "mi/kWh", 4.14},
+	}
+	for _, c := range cases {
+		if got := EnergyEfficiencyUnitFor(c.unit); got != c.wantUnit {
+			t.Errorf("EnergyEfficiencyUnitFor(%s) = %s, want %s", c.unit, got, c.wantUnit)
+		}
+		if got := ConvertEnergyEfficiency(15, c.unit); got != c.want {
+			t.Errorf("ConvertEnergyEfficiency(15, %s) = %v, want %v", c.unit, got, c.want)
+		}
+	}
+	if got := ConvertEnergyEfficiency(0, UnitMPG); got != 0 {
+		t.Errorf("zero input should stay 0, got %v", got)
+	}
+}

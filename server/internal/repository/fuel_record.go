@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -65,7 +64,7 @@ func (r *FuelRecordRepository) ListByVehicle(ctx context.Context, vehicleID uuid
 	return records, total, err
 }
 
-// RecomputeDerived 重算某车辆所有记录的派生字段（行驶距离、油耗）。
+// RecomputeDerived 重算某车辆所有记录的派生字段（行驶距离、油耗、油耗区间里程）。
 // 在事务内锁定车辆行，串行化同一车辆的并发重算；按时间升序加载全部记录交给 compute，
 // compute 原地修改派生字段并返回发生变化的下标，仅这些记录会被写回（不更新 updated_at）。
 // 返回重算后的全部记录（升序）。
@@ -92,8 +91,9 @@ func (r *FuelRecordRepository) RecomputeDerived(ctx context.Context, vehicleID u
 			if err := tx.Model(&model.FuelRecord{}).
 				Where("id = ?", records[i].ID).
 				UpdateColumns(map[string]any{
-					"trip_distance":   records[i].TripDistance,
-					"fuel_efficiency": records[i].FuelEfficiency,
+					"trip_distance":       records[i].TripDistance,
+					"fuel_efficiency":     records[i].FuelEfficiency,
+					"efficiency_distance": records[i].EfficiencyDistance,
 				}).Error; err != nil {
 				return err
 			}
@@ -148,93 +148,14 @@ func (r *FuelRecordRepository) ListAllByUser(ctx context.Context, userID uuid.UU
 	return records, err
 }
 
-// --- 统计查询 ---
-
-// StatsResult 统计查询结果
-type StatsResult struct {
-	TotalRecords      int64   `json:"total_records"`
-	EfficiencyRecords int64   `json:"efficiency_records"` // 有有效油耗的记录数（满油到满油区间）
-	TotalFuel       float64 `json:"total_fuel"`
-	TotalCost       float64 `json:"total_cost"`
-	TotalDistance   float64 `json:"total_distance"`
-	AvgEfficiency   float64 `json:"avg_efficiency"`
-	BestEfficiency  float64 `json:"best_efficiency"`
-	WorstEfficiency float64 `json:"worst_efficiency"`
+// ListVehicleIDsWithRecords 列出所有有加油记录的车辆 ID（用于批量重算）
+func (r *FuelRecordRepository) ListVehicleIDsWithRecords(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).Distinct("vehicle_id").Pluck("vehicle_id", &ids).Error
+	return ids, err
 }
 
-// GetVehicleStats 获取车辆的汇总统计
-func (r *FuelRecordRepository) GetVehicleStats(ctx context.Context, vehicleID uuid.UUID) (*StatsResult, error) {
-	var result StatsResult
-
-	err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
-		Select(`
-			COUNT(*) as total_records,
-			COUNT(*) FILTER (WHERE fuel_efficiency > 0) as efficiency_records,
-			COALESCE(SUM(fuel_amount), 0) as total_fuel,
-			COALESCE(SUM(total_cost), 0) as total_cost,
-			COALESCE(SUM(trip_distance), 0) as total_distance,
-			COALESCE(AVG(fuel_efficiency) FILTER (WHERE fuel_efficiency > 0), 0) as avg_efficiency,
-			COALESCE(MIN(fuel_efficiency) FILTER (WHERE fuel_efficiency > 0), 0) as best_efficiency,
-			COALESCE(MAX(fuel_efficiency) FILTER (WHERE fuel_efficiency > 0), 0) as worst_efficiency
-		`).
-		Where("vehicle_id = ?", vehicleID).
-		Scan(&result).Error
-
-	return &result, err
-}
-
-// CostByCurrencyResult 按币种分组的费用统计结果
-type CostByCurrencyResult struct {
-	CurrencyCode string  `json:"currency_code"`
-	TotalCost    float64 `json:"total_cost"`
-}
-
-// GetCostByCurrency 按币种分组统计某车辆的总费用
-func (r *FuelRecordRepository) GetCostByCurrency(ctx context.Context, vehicleID uuid.UUID) ([]CostByCurrencyResult, error) {
-	var results []CostByCurrencyResult
-
-	err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
-		Select(`
-			currency_code,
-			COALESCE(SUM(total_cost), 0) as total_cost
-		`).
-		Where("vehicle_id = ?", vehicleID).
-		Group("currency_code").
-		Scan(&results).Error
-
-	return results, err
-}
-
-// ExpenseByPeriod 按时间段统计费用
-type ExpenseByPeriod struct {
-	Period    string  `json:"period"`
-	TotalCost float64 `json:"total_cost"`
-	FuelCount int     `json:"fuel_count"`
-	TotalFuel float64 `json:"total_fuel"`
-}
-
-// GetExpensesByMonth 按月统计费用
-func (r *FuelRecordRepository) GetExpensesByMonth(ctx context.Context, userID uuid.UUID, vehicleID *uuid.UUID, start, end time.Time) ([]ExpenseByPeriod, error) {
-	var results []ExpenseByPeriod
-
-	query := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
-		Select(`
-			TO_CHAR(refuel_date, 'YYYY-MM') as period,
-			SUM(total_cost) as total_cost,
-			COUNT(*) as fuel_count,
-			SUM(fuel_amount) as total_fuel
-		`).
-		Where("user_id = ? AND refuel_date BETWEEN ? AND ?", userID, start, end)
-
-	if vehicleID != nil {
-		query = query.Where("vehicle_id = ?", *vehicleID)
-	}
-
-	err := query.Group("period").Order("period ASC").Scan(&results).Error
-	return results, err
-}
-
-// GetEfficiencyTrend 获取油耗趋势
+// GetEfficiencyTrend 获取油耗趋势（最近 limit 条有油耗的记录，按时间倒序）
 func (r *FuelRecordRepository) GetEfficiencyTrend(ctx context.Context, vehicleID uuid.UUID, limit int) ([]model.FuelRecord, error) {
 	var records []model.FuelRecord
 	err := r.db.WithContext(ctx).
@@ -243,140 +164,4 @@ func (r *FuelRecordRepository) GetEfficiencyTrend(ctx context.Context, vehicleID
 		Limit(limit).
 		Find(&records).Error
 	return records, err
-}
-
-// PeriodStatsResult 按时段聚合统计结果
-type PeriodStatsResult struct {
-	Period        string  `json:"period"`
-	TotalRecords  int     `json:"total_records"`
-	TotalFuel     float64 `json:"total_fuel"`
-	TotalCost     float64 `json:"total_cost"`
-	TotalDistance float64 `json:"total_distance"`
-	AvgEfficiency float64 `json:"avg_efficiency"`
-}
-
-// GetStatsByMonth 按月聚合某年的统计数据
-func (r *FuelRecordRepository) GetStatsByMonth(ctx context.Context, vehicleID uuid.UUID, year int) ([]PeriodStatsResult, error) {
-	var results []PeriodStatsResult
-
-	start := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
-	end := time.Date(year+1, 1, 1, 0, 0, 0, 0, time.UTC)
-
-	err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
-		Select(`
-			TO_CHAR(refuel_date, 'YYYY-MM') as period,
-			COUNT(*) as total_records,
-			COALESCE(SUM(fuel_amount), 0) as total_fuel,
-			COALESCE(SUM(total_cost), 0) as total_cost,
-			COALESCE(SUM(trip_distance), 0) as total_distance,
-			COALESCE(AVG(NULLIF(fuel_efficiency, 0)), 0) as avg_efficiency
-		`).
-		Where("vehicle_id = ? AND refuel_date >= ? AND refuel_date < ?", vehicleID, start, end).
-		Group("period").
-		Order("period ASC").
-		Scan(&results).Error
-	return results, err
-}
-
-// GetStatsByYear 按年聚合全部年份的统计数据
-func (r *FuelRecordRepository) GetStatsByYear(ctx context.Context, vehicleID uuid.UUID) ([]PeriodStatsResult, error) {
-	var results []PeriodStatsResult
-
-	err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
-		Select(`
-			TO_CHAR(refuel_date, 'YYYY') as period,
-			COUNT(*) as total_records,
-			COALESCE(SUM(fuel_amount), 0) as total_fuel,
-			COALESCE(SUM(total_cost), 0) as total_cost,
-			COALESCE(SUM(trip_distance), 0) as total_distance,
-			COALESCE(AVG(NULLIF(fuel_efficiency, 0)), 0) as avg_efficiency
-		`).
-		Where("vehicle_id = ?", vehicleID).
-		Group("period").
-		Order("period ASC").
-		Scan(&results).Error
-	return results, err
-}
-
-// MultiVehicleStatsResult 批量车辆统计结果（按 vehicle_id 分组）
-type MultiVehicleStatsResult struct {
-	VehicleID         uuid.UUID `json:"vehicle_id" gorm:"column:vehicle_id"`
-	TotalRecords      int64     `json:"total_records"`
-	EfficiencyRecords int64     `json:"efficiency_records"`
-	TotalFuel       float64   `json:"total_fuel"`
-	TotalCost       float64   `json:"total_cost"`
-	TotalDistance   float64   `json:"total_distance"`
-	AvgEfficiency   float64   `json:"avg_efficiency"`
-	BestEfficiency  float64   `json:"best_efficiency"`
-	WorstEfficiency float64   `json:"worst_efficiency"`
-}
-
-// GetMultiVehicleStats 批量获取多辆车的汇总统计（1 次 SQL 替代 N 次）
-func (r *FuelRecordRepository) GetMultiVehicleStats(ctx context.Context, vehicleIDs []uuid.UUID) (map[uuid.UUID]*MultiVehicleStatsResult, error) {
-	result := make(map[uuid.UUID]*MultiVehicleStatsResult, len(vehicleIDs))
-	if len(vehicleIDs) == 0 {
-		return result, nil
-	}
-
-	var rows []MultiVehicleStatsResult
-	err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
-		Select(`
-			vehicle_id,
-			COUNT(*) as total_records,
-			COUNT(*) FILTER (WHERE fuel_efficiency > 0) as efficiency_records,
-			COALESCE(SUM(fuel_amount), 0) as total_fuel,
-			COALESCE(SUM(total_cost), 0) as total_cost,
-			COALESCE(SUM(trip_distance), 0) as total_distance,
-			COALESCE(AVG(fuel_efficiency) FILTER (WHERE fuel_efficiency > 0), 0) as avg_efficiency,
-			COALESCE(MIN(fuel_efficiency) FILTER (WHERE fuel_efficiency > 0), 0) as best_efficiency,
-			COALESCE(MAX(fuel_efficiency) FILTER (WHERE fuel_efficiency > 0), 0) as worst_efficiency
-		`).
-		Where("vehicle_id IN ?", vehicleIDs).
-		Group("vehicle_id").
-		Scan(&rows).Error
-	if err != nil {
-		return nil, err
-	}
-
-	for i := range rows {
-		result[rows[i].VehicleID] = &rows[i]
-	}
-	return result, nil
-}
-
-// MultiVehicleCostByCurrencyResult 批量车辆按币种费用结果
-type MultiVehicleCostByCurrencyResult struct {
-	VehicleID    uuid.UUID `json:"vehicle_id" gorm:"column:vehicle_id"`
-	CurrencyCode string   `json:"currency_code"`
-	TotalCost    float64  `json:"total_cost"`
-}
-
-// GetMultiVehicleCostByCurrency 批量获取多辆车按币种分组的费用（1 次 SQL 替代 N 次）
-func (r *FuelRecordRepository) GetMultiVehicleCostByCurrency(ctx context.Context, vehicleIDs []uuid.UUID) (map[uuid.UUID][]CostByCurrencyResult, error) {
-	result := make(map[uuid.UUID][]CostByCurrencyResult, len(vehicleIDs))
-	if len(vehicleIDs) == 0 {
-		return result, nil
-	}
-
-	var rows []MultiVehicleCostByCurrencyResult
-	err := r.db.WithContext(ctx).Model(&model.FuelRecord{}).
-		Select(`
-			vehicle_id,
-			currency_code,
-			COALESCE(SUM(total_cost), 0) as total_cost
-		`).
-		Where("vehicle_id IN ?", vehicleIDs).
-		Group("vehicle_id, currency_code").
-		Scan(&rows).Error
-	if err != nil {
-		return nil, err
-	}
-
-	for _, row := range rows {
-		result[row.VehicleID] = append(result[row.VehicleID], CostByCurrencyResult{
-			CurrencyCode: row.CurrencyCode,
-			TotalCost:    row.TotalCost,
-		})
-	}
-	return result, nil
 }

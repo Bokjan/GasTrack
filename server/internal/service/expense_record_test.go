@@ -25,7 +25,7 @@ func newExpenseRecordService(t *testing.T) (*ExpenseRecordService, *mockrepo.Moc
 	vehicleRepo := mockrepo.NewMockVehicleRepo(ctrl)
 	groupRepo := mockrepo.NewMockGroupRepo(ctrl)
 	reminderRepo := mockrepo.NewMockReminderRepo(ctrl)
-	svc := NewExpenseRecordService(expenseRepo, vehicleRepo, groupRepo, reminderRepo, zap.NewNop())
+	svc := NewExpenseRecordService(expenseRepo, vehicleRepo, groupRepo, reminderRepo, nil, nil, zap.NewNop())
 	return svc, expenseRepo, vehicleRepo, groupRepo, reminderRepo
 }
 
@@ -193,26 +193,47 @@ func TestExpenseRecordService_Delete(t *testing.T) {
 }
 
 func TestExpenseRecordService_GetStats(t *testing.T) {
-	svc, expenseRepo, vehicleRepo, _, _ := newExpenseRecordService(t)
+	ctrl := gomock.NewController(t)
+	expenseRepo := mockrepo.NewMockExpenseRecordRepo(ctrl)
+	vehicleRepo := mockrepo.NewMockVehicleRepo(ctrl)
+	userRepo := mockrepo.NewMockUserRepo(ctrl)
+	svc := NewExpenseRecordService(expenseRepo, vehicleRepo, nil, nil, userRepo, fakeRates{}, zap.NewNop())
 	uid := uuid.New()
 	vid := uuid.New()
 
 	vehicleRepo.EXPECT().GetByIDAndUser(gomock.Any(), vid, uid).Return(&model.Vehicle{
 		BaseModel: model.BaseModel{ID: vid},
 	}, nil)
+	userRepo.EXPECT().GetByID(gomock.Any(), uid).Return(&model.User{CurrencyCode: "CNY"}, nil)
 	expenseRepo.EXPECT().GetTotalsByCurrency(gomock.Any(), vid).Return([]repository.ExpenseStatsByCurrency{
 		{CurrencyCode: "CNY", TotalAmount: 5000, RecordCount: 10},
 	}, nil)
 	expenseRepo.EXPECT().GetBreakdownByCategory(gomock.Any(), vid).Return([]repository.ExpenseStatsByCategory{
-		{Category: "maintenance", TotalAmount: 3000, RecordCount: 5},
+		{Category: "maintenance", CurrencyCode: "CNY", TotalAmount: 300, RecordCount: 2},
+		{Category: "maintenance", CurrencyCode: "USD", TotalAmount: 14, RecordCount: 1}, // = 100 CNY
+		{Category: "insurance", CurrencyCode: "CNY", TotalAmount: 600, RecordCount: 1},
+		{Category: "parking", CurrencyCode: "EUR", TotalAmount: 9, RecordCount: 1}, // 无汇率
 	}, nil)
-	expenseRepo.EXPECT().GetMonthlyTrend(gomock.Any(), vid).Return([]repository.ExpenseStatsByMonth{}, nil)
-	expenseRepo.EXPECT().GetLast30DaysTotal(gomock.Any(), vid).Return(float64(800), "CNY", nil)
+	expenseRepo.EXPECT().GetMonthlyTrend(gomock.Any(), vid).Return([]repository.ExpenseStatsByMonth{
+		{Period: "2026-01", CurrencyCode: "CNY", TotalAmount: 100, RecordCount: 1},
+		{Period: "2026-01", CurrencyCode: "JPY", TotalAmount: 2000, RecordCount: 1}, // = 100 CNY
+	}, nil)
+	expenseRepo.EXPECT().GetLast30DaysByCurrency(gomock.Any(), vid).Return([]repository.ExpenseStatsByCurrency{
+		{CurrencyCode: "CNY", TotalAmount: 800}, {CurrencyCode: "USD", TotalAmount: 14},
+	}, nil)
 	expenseRepo.EXPECT().GetTotalRecords(gomock.Any(), vid).Return(int64(10), nil)
 
 	resp, err := svc.GetStats(context.Background(), uid, vid)
 	assert.NoError(t, err)
-	assert.NotNil(t, resp)
+	assert.Equal(t, "CNY", resp.CurrencyCode)
+	assert.Equal(t, []string{"EUR"}, resp.UnconvertedCurrencies)
+	assert.Equal(t, "insurance", resp.CategoryBreakdown[0].Category) // 按换算后金额降序
+	assert.InDelta(t, 400, resp.CategoryBreakdown[1].TotalAmount, 0.001)
+	assert.Equal(t, 3, resp.CategoryBreakdown[1].RecordCount)
+	assert.InDelta(t, 40, resp.CategoryBreakdown[1].Percentage, 0.001) // 400 / 1000
+	assert.Len(t, resp.MonthlyTrend, 1)
+	assert.InDelta(t, 200, resp.MonthlyTrend[0].TotalAmount, 0.001)
+	assert.InDelta(t, 900, resp.Last30DaysAmount, 0.001)
 }
 
 func TestExpenseRecordService_GetVendorSuggestions(t *testing.T) {

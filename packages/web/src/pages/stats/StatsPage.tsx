@@ -323,7 +323,7 @@ export default function StatsPage() {
                 <Card><Statistic title={t('stats.avgConsumption')} value={stats ? `${formatNumber(stats.avg_efficiency)} ${efficiencyUnit}` : '-'} prefix={<DashboardOutlined />} /></Card>
               </Col>
               <Col xs={12} sm={6}>
-                <Card><Statistic title={t('stats.totalFuel')} value={stats ? `${formatNumber(stats.total_fuel)} ${fuelUnit}` : '-'} prefix={<ThunderboltOutlined />} /></Card>
+                <Card><Statistic title={t('stats.totalFuel')} value={stats ? `${formatNumber(stats.total_fuel)} ${stats.volume_unit || fuelUnit}` : '-'} prefix={<ThunderboltOutlined />} /></Card>
               </Col>
             </Row>
             {fuelCurrent.length > 0 ? (

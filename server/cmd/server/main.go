@@ -66,6 +66,8 @@ func main() {
 	expenseRecordRepo := repository.NewExpenseRecordRepository(db)
 
 	// 5. 创建 Service 层
+	// 汇率参考服务（无需数据库，纯 API 缓存）：统计中的多币种金额按其换算为用户币种
+	exchangeRateService := service.NewExchangeRateService(cfg.ExchangeRate, logger)
 	inviteService := service.NewInviteService(inviteCodeRepo, userRepo, logger)
 	reminderService := service.NewReminderService(reminderRepo, vehicleRepo, groupRepo, logger)
 	notificationService := service.NewNotificationService(notificationRepo, fuelRecordRepo, reminderRepo, logger)
@@ -73,21 +75,20 @@ func main() {
 	userService := service.NewUserService(userRepo, authService, logger)
 	vehicleService := service.NewVehicleService(vehicleRepo, groupRepo, logger)
 	fuelRecordService := service.NewFuelRecordService(fuelRecordRepo, vehicleRepo, userRepo, groupRepo, logger, notificationService)
-	statsService := service.NewStatsService(fuelRecordRepo, vehicleRepo, userRepo, groupRepo, expenseRecordRepo, logger)
+	statsService := service.NewStatsService(fuelRecordRepo, vehicleRepo, userRepo, groupRepo, expenseRecordRepo, exchangeRateService, logger)
 	exportService := service.NewExportService(userRepo, vehicleRepo, fuelRecordRepo, expenseRecordRepo, reminderRepo, notificationRepo, inviteCodeRepo, groupRepo, logger)
 	groupService := service.NewGroupService(groupRepo, userRepo, vehicleRepo, logger)
-	expenseRecordService := service.NewExpenseRecordService(expenseRecordRepo, vehicleRepo, groupRepo, reminderRepo, logger)
+	expenseRecordService := service.NewExpenseRecordService(expenseRecordRepo, vehicleRepo, groupRepo, reminderRepo, userRepo, exchangeRateService, logger)
 
 	// 运维命令：gastrack-server <command>，执行完毕即退出，不启动 HTTP 服务
 	if len(os.Args) > 1 {
-		if err := runMaintenance(context.Background(), os.Args[1], userService, logger); err != nil {
+		if err := runMaintenance(context.Background(), os.Args[1], userService, fuelRecordService, logger); err != nil {
 			logger.Fatal("maintenance command failed", zap.String("command", os.Args[1]), zap.Error(err))
 		}
 		return
 	}
 
-	// 5b. 创建汇率参考服务（无需数据库，纯 API 缓存）
-	exchangeRateService := service.NewExchangeRateService(cfg.ExchangeRate, logger)
+	// 5b. 启动汇率定时刷新
 	exchangeRateService.Start()
 	defer exchangeRateService.Stop()
 
@@ -185,7 +186,7 @@ func main() {
 }
 
 // runMaintenance 执行一次性运维命令（需由运维人员手动触发）
-func runMaintenance(ctx context.Context, command string, userService *service.UserService, logger *zap.Logger) error {
+func runMaintenance(ctx context.Context, command string, userService *service.UserService, fuelRecordService *service.FuelRecordService, logger *zap.Logger) error {
 	switch command {
 	case "purge-deleted-users":
 		// 彻底清除旧版本"软删除"注销遗留的账号及其数据
@@ -195,8 +196,16 @@ func runMaintenance(ctx context.Context, command string, userService *service.Us
 		}
 		logger.Info("purged soft-deleted users", zap.Int("count", n))
 		return nil
+	case "recompute-fuel-stats":
+		// 按当前算法（满油到满油、按里程加权）重算所有加油记录的行驶距离、油耗与区间里程
+		n, err := fuelRecordService.RecomputeAllVehicles(ctx)
+		if err != nil {
+			return err
+		}
+		logger.Info("recomputed fuel record derived fields", zap.Int("vehicles", n))
+		return nil
 	default:
-		return fmt.Errorf("unknown command %q (available: purge-deleted-users)", command)
+		return fmt.Errorf("unknown command %q (available: purge-deleted-users, recompute-fuel-stats)", command)
 	}
 }
 

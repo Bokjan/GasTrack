@@ -60,6 +60,7 @@ type FuelRecordResponse struct {
 	ReceiptURL     string    `json:"receipt_url,omitempty"`
 	TripDistance   float64   `json:"trip_distance,omitempty"`
 	FuelEfficiency float64   `json:"fuel_efficiency,omitempty"`
+	EfficiencyUnit string    `json:"efficiency_unit"` // 油耗/电耗单位，如 L/100km、MPG、kWh/100km、mi/kWh
 	RefuelDate     time.Time `json:"refuel_date"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`

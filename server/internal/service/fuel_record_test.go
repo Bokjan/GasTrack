@@ -34,6 +34,29 @@ func TestComputeDerivedFields(t *testing.T) {
 		assert.Equal(t, 0.0, records[1].FuelEfficiency)
 		assert.Equal(t, 300.0, records[2].TripDistance)
 		assert.Equal(t, 8.0, records[2].FuelEfficiency)
+		assert.Equal(t, 500.0, records[2].EfficiencyDistance) // 满油到满油区间
+	})
+
+	t.Run("plug-in hybrid keeps fuel and charging chains separate", func(t *testing.T) {
+		charge := func(odo, kwh float64, full bool) model.FuelRecord {
+			r := fuelRec(odo, kwh, full)
+			r.FuelUnit = "kWh"
+			return r
+		}
+		records := []model.FuelRecord{
+			fuelRec(1000, 40, true),
+			charge(1100, 10, true),
+			charge(1300, 30, true),  // 电：30 kWh / 200 km = 15 kWh/100km
+			fuelRec(1500, 20, true), // 油：20 L / 500 km = 4 L/100km（充电量不计入）
+		}
+		computeDerivedFields(records)
+
+		assert.Equal(t, 0.0, records[1].FuelEfficiency)
+		assert.Equal(t, 15.0, records[2].FuelEfficiency)
+		assert.Equal(t, 200.0, records[2].EfficiencyDistance)
+		assert.Equal(t, 4.0, records[3].FuelEfficiency)
+		assert.Equal(t, 500.0, records[3].EfficiencyDistance)
+		assert.Equal(t, 200.0, records[3].TripDistance) // 行驶距离仍按相邻记录计算
 	})
 
 	t.Run("partial fills before first full tank are ignored", func(t *testing.T) {

@@ -100,4 +100,8 @@ type VehicleExpenseStatsResponse struct {
 	MonthlyTrend       []ExpenseMonthlyTrend      `json:"monthly_trend"`
 	Last30DaysAmount   float64                    `json:"last_30_days_amount"`
 	Last30DaysCurrency string                     `json:"last_30_days_currency"`
+	// CurrencyCode 分类占比、月度趋势、近 30 天金额均按参考汇率换算为该币种（用户偏好币种）
+	CurrencyCode string `json:"currency_code"`
+	// UnconvertedCurrencies 无参考汇率、未计入上述换算金额的币种（原币金额见 totals_by_currency）
+	UnconvertedCurrencies []string `json:"unconverted_currencies,omitempty"`
 }

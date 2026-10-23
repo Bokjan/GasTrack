@@ -212,6 +212,8 @@ export interface FuelRecord {
   receipt_url?: string;
   trip_distance?: number;
   fuel_efficiency?: number;
+  /** 油耗/电耗单位（如 L/100km、MPG、kWh/100km、mi/kWh） */
+  efficiency_unit?: string;
   refuel_date: string;
   created_at: string;
   updated_at: string;
@@ -243,8 +245,12 @@ export type UpdateFuelRecordRequest = Partial<CreateFuelRecordRequest>;
 export interface VehicleStats {
   vehicle_id: string;
   vehicle_name: string;
+  /** fuel / electric：电动车只统计充电记录 */
+  energy_type?: 'fuel' | 'electric';
   total_records: number;
   total_fuel: number;
+  /** total_fuel 的单位：L / gal / kWh */
+  volume_unit?: string;
   total_cost: number;
   total_distance: number;
   avg_efficiency: number;
@@ -256,6 +262,8 @@ export interface VehicleStats {
   fuel_efficiency_unit: string;
   /** 按原始入账币种分组的费用明细 */
   costs_by_currency?: Record<string, number>;
+  /** 无参考汇率、未计入 total_cost 的币种 */
+  unconverted_currencies?: string[];
   /** 其他开销总额 */
   total_expense_cost?: number;
   /** 按原始入账币种分组的开销明细 */
@@ -266,10 +274,20 @@ export interface VehicleStats {
 export interface OverviewStats {
   total_vehicles: number;
   total_records: number;
+  /** 燃油总量（不含充电），单位见 volume_unit */
   total_fuel: number;
+  volume_unit?: string;
+  /** 充电总量（kWh） */
+  total_energy?: number;
   total_cost: number;
   total_distance: number;
+  /** 燃油车平均油耗（总油量 / 总里程） */
   avg_consumption: number;
+  fuel_efficiency_unit?: string;
+  /** 电动车平均电耗（总电量 / 总里程） */
+  avg_energy_consumption?: number;
+  energy_efficiency_unit?: string;
+  unconverted_currencies?: string[];
   currency_code: string;
   /** 按原始入账币种分组的总费用明细 */
   costs_by_currency?: Record<string, number>;
@@ -315,6 +333,9 @@ export interface PeriodStatsResponse {
   year?: number;
   currency_code: string;
   fuel_efficiency_unit: string;
+  /** total_fuel 的单位：L / gal / kWh */
+  volume_unit?: string;
+  unconverted_currencies?: string[];
   items: PeriodStatsItem[];
   prev_items: PeriodStatsItem[];
 }

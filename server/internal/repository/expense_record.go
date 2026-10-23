@@ -166,11 +166,12 @@ func (r *ExpenseRecordRepository) GetTotalsByCurrency(ctx context.Context, vehic
 	return results, err
 }
 
-// ExpenseStatsByCategory 按分类汇总
+// ExpenseStatsByCategory 按分类 × 币种汇总
 type ExpenseStatsByCategory struct {
-	Category    string  `json:"category"`
-	TotalAmount float64 `json:"total_amount"`
-	RecordCount int     `json:"record_count"`
+	Category     string  `json:"category"`
+	CurrencyCode string  `json:"currency_code"`
+	TotalAmount  float64 `json:"total_amount"`
+	RecordCount  int     `json:"record_count"`
 }
 
 // GetBreakdownByCategory 按分类统计
@@ -179,21 +180,23 @@ func (r *ExpenseRecordRepository) GetBreakdownByCategory(ctx context.Context, ve
 	err := r.db.WithContext(ctx).Model(&model.ExpenseRecord{}).
 		Select(`
 			category,
+			currency_code,
 			COALESCE(SUM(amount), 0) as total_amount,
 			COUNT(*) as record_count
 		`).
 		Where("vehicle_id = ?", vehicleID).
-		Group("category").
+		Group("category, currency_code").
 		Order("total_amount DESC").
 		Scan(&results).Error
 	return results, err
 }
 
-// ExpenseStatsByMonth 按月汇总
+// ExpenseStatsByMonth 按月 × 币种汇总
 type ExpenseStatsByMonth struct {
-	Period      string  `json:"period"`
-	TotalAmount float64 `json:"total_amount"`
-	RecordCount int     `json:"record_count"`
+	Period       string  `json:"period"`
+	CurrencyCode string  `json:"currency_code"`
+	TotalAmount  float64 `json:"total_amount"`
+	RecordCount  int     `json:"record_count"`
 }
 
 // GetMonthlyTrend 获取月度趋势（最近12个月）
@@ -205,44 +208,30 @@ func (r *ExpenseRecordRepository) GetMonthlyTrend(ctx context.Context, vehicleID
 	err := r.db.WithContext(ctx).Model(&model.ExpenseRecord{}).
 		Select(`
 			TO_CHAR(expense_date, 'YYYY-MM') as period,
+			currency_code,
 			COALESCE(SUM(amount), 0) as total_amount,
 			COUNT(*) as record_count
 		`).
 		Where("vehicle_id = ? AND expense_date >= ?", vehicleID, start).
-		Group("period").
+		Group("period, currency_code").
 		Order("period ASC").
 		Scan(&results).Error
 	return results, err
 }
 
-// GetLast30DaysTotal 获取最近30天总开销（取使用最多的币种）
-func (r *ExpenseRecordRepository) GetLast30DaysTotal(ctx context.Context, vehicleID uuid.UUID) (float64, string, error) {
-	since := time.Now().AddDate(0, 0, -30)
-
-	// 先找主要币种
-	var mainCurrency struct {
-		CurrencyCode string
-	}
+// GetLast30DaysByCurrency 按币种统计最近 30 天开销
+func (r *ExpenseRecordRepository) GetLast30DaysByCurrency(ctx context.Context, vehicleID uuid.UUID) ([]ExpenseStatsByCurrency, error) {
+	var results []ExpenseStatsByCurrency
 	err := r.db.WithContext(ctx).Model(&model.ExpenseRecord{}).
-		Select("currency_code").
-		Where("vehicle_id = ? AND expense_date >= ?", vehicleID, since).
+		Select(`
+			currency_code,
+			COALESCE(SUM(amount), 0) as total_amount,
+			COUNT(*) as record_count
+		`).
+		Where("vehicle_id = ? AND expense_date >= ?", vehicleID, time.Now().AddDate(0, 0, -30)).
 		Group("currency_code").
-		Order("COUNT(*) DESC").
-		Limit(1).
-		Scan(&mainCurrency).Error
-	if err != nil || mainCurrency.CurrencyCode == "" {
-		return 0, "", err
-	}
-
-	// 查该币种30天总额
-	var total struct {
-		Amount float64
-	}
-	err = r.db.WithContext(ctx).Model(&model.ExpenseRecord{}).
-		Select("COALESCE(SUM(amount), 0) as amount").
-		Where("vehicle_id = ? AND expense_date >= ? AND currency_code = ?", vehicleID, since, mainCurrency.CurrencyCode).
-		Scan(&total).Error
-	return total.Amount, mainCurrency.CurrencyCode, err
+		Scan(&results).Error
+	return results, err
 }
 
 // GetTotalRecords 获取车辆开销记录总数
@@ -254,9 +243,10 @@ func (r *ExpenseRecordRepository) GetTotalRecords(ctx context.Context, vehicleID
 	return total, err
 }
 
-// ExpensePeriodStatsResult 按时段聚合开销统计结果
+// ExpensePeriodStatsResult 按时段 × 币种聚合开销统计结果
 type ExpensePeriodStatsResult struct {
 	Period       string  `json:"period"`
+	CurrencyCode string  `json:"currency_code"`
 	TotalRecords int     `json:"total_records"`
 	TotalAmount  float64 `json:"total_amount"`
 }
@@ -271,11 +261,12 @@ func (r *ExpenseRecordRepository) GetExpenseStatsByMonth(ctx context.Context, ve
 	err := r.db.WithContext(ctx).Model(&model.ExpenseRecord{}).
 		Select(`
 			TO_CHAR(expense_date, 'YYYY-MM') as period,
+			currency_code,
 			COUNT(*) as total_records,
 			COALESCE(SUM(amount), 0) as total_amount
 		`).
 		Where("vehicle_id = ? AND expense_date >= ? AND expense_date < ?", vehicleID, start, end).
-		Group("period").
+		Group("period, currency_code").
 		Order("period ASC").
 		Scan(&results).Error
 	return results, err
@@ -288,11 +279,12 @@ func (r *ExpenseRecordRepository) GetExpenseStatsByYear(ctx context.Context, veh
 	err := r.db.WithContext(ctx).Model(&model.ExpenseRecord{}).
 		Select(`
 			TO_CHAR(expense_date, 'YYYY') as period,
+			currency_code,
 			COUNT(*) as total_records,
 			COALESCE(SUM(amount), 0) as total_amount
 		`).
 		Where("vehicle_id = ?", vehicleID).
-		Group("period").
+		Group("period, currency_code").
 		Order("period ASC").
 		Scan(&results).Error
 	return results, err

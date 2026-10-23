@@ -193,21 +193,22 @@ export default function RecordListPage() {
       title: t('fuelRecord.consumption'),
       dataIndex: 'fuel_efficiency',
       width: 130,
-      render: (v?: number) => {
+      render: (v: number | undefined, record: FuelRecord) => {
         if (!v) return <Tag>-</Tag>;
 
-        // 判断是否为电动车单位（不参与油耗互转）
-        const isEvUnit = ['kWh/100km', 'km/kWh', 'mi/kWh'].includes(efficiencyUnit);
+        // 后端按记录类型返回单位：充电记录为电耗单位（kWh/100km、km/kWh、mi/kWh）
+        const unit = record.efficiency_unit || efficiencyUnit;
+        const isEvUnit = ['kWh/100km', 'km/kWh', 'mi/kWh'].includes(unit);
 
         if (isEvUnit) {
-          return <Tag color="blue">{formatNumber(v)} {efficiencyUnit}</Tag>;
+          return <Tag color="blue">{formatNumber(v)} {unit}</Tag>;
         }
 
         // 构建其他两种单位的换算值
         const otherUnits = FUEL_EFFICIENCY_UNITS
-          .filter((u) => u !== efficiencyUnit)
+          .filter((u) => u !== unit)
           .map((u) => {
-            const converted = convertFuelEfficiency(v, efficiencyUnit, u);
+            const converted = convertFuelEfficiency(v, unit, u);
             return `${formatNumber(converted)} ${u}`;
           });
 
@@ -217,7 +218,7 @@ export default function RecordListPage() {
             styles={{ body: { whiteSpace: 'pre-line' } }}
           >
             <Tag color="blue" style={{ cursor: 'pointer' }}>
-              {formatNumber(v)} {efficiencyUnit}
+              {formatNumber(v)} {unit}
             </Tag>
           </Tooltip>
         );
@@ -318,7 +319,7 @@ export default function RecordListPage() {
               <span className="label">{t('fuelRecord.consumption')}</span>
               <span className="value">
                 <Tag color="blue" style={{ margin: 0 }}>
-                  {formatNumber(record.fuel_efficiency)} {efficiencyUnit}
+                  {formatNumber(record.fuel_efficiency)} {record.efficiency_unit || efficiencyUnit}
                 </Tag>
               </span>
             </div>

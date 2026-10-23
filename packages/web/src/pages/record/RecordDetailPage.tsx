@@ -88,7 +88,8 @@ export default function RecordDetailPage() {
   const isImperial = user?.unit_system === 'imperial';
   const fuelUnit = isImperial ? 'gal' : 'L';
   const distanceUnit = isImperial ? 'mi' : 'km';
-  const efficiencyUnit = user?.fuel_efficiency_unit || 'L/100km';
+  // 记录自带单位（电动车为 kWh/100km、km/kWh、mi/kWh），旧接口无该字段时回退到用户偏好
+  const efficiencyUnit = record?.efficiency_unit || stats?.fuel_efficiency_unit || user?.fuel_efficiency_unit || 'L/100km';
   const userTimezone = user?.timezone;
 
   useEffect(() => {

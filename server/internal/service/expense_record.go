@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -22,6 +23,8 @@ type ExpenseRecordService struct {
 	vehicleRepo  repository.VehicleRepo
 	groupRepo    repository.GroupRepo
 	reminderRepo repository.ReminderRepo
+	userRepo     repository.UserRepo
+	rates        RateProvider
 	logger       *zap.Logger
 }
 
@@ -31,6 +34,8 @@ func NewExpenseRecordService(
 	vehicleRepo repository.VehicleRepo,
 	groupRepo repository.GroupRepo,
 	reminderRepo repository.ReminderRepo,
+	userRepo repository.UserRepo,
+	rates RateProvider,
 	logger *zap.Logger,
 ) *ExpenseRecordService {
 	return &ExpenseRecordService{
@@ -38,8 +43,21 @@ func NewExpenseRecordService(
 		vehicleRepo:  vehicleRepo,
 		groupRepo:    groupRepo,
 		reminderRepo: reminderRepo,
+		userRepo:     userRepo,
+		rates:        rates,
 		logger:       logger,
 	}
+}
+
+// userConverter 按用户偏好币种创建金额换算器
+func (s *ExpenseRecordService) userConverter(ctx context.Context, userID uuid.UUID) *moneyConverter {
+	currency := ""
+	if s.userRepo != nil {
+		if u, err := s.userRepo.GetByID(ctx, userID); err == nil {
+			currency = u.CurrencyCode
+		}
+	}
+	return newMoneyConverter(s.rates, currency)
 }
 
 // verifyVehicleAccess 验证用户对车辆的访问权限（所有权或共享访问）
@@ -339,58 +357,78 @@ func (s *ExpenseRecordService) GetStats(ctx context.Context, userID, vehicleID u
 		}
 	}
 
-	// 按分类统计
+	conv := s.userConverter(ctx, userID)
+
+	// 按分类统计：各币种换算为用户币种后合并，再计算占比
 	catBreakdown, err := s.expenseRepo.GetBreakdownByCategory(ctx, vehicleID)
 	if err != nil {
 		return nil, apperror.ErrInternal("getting expense category breakdown", err)
 	}
-	// 计算总额以得到百分比
+	catIndex := make(map[string]int)
+	dtoCats := make([]dto.ExpenseCategoryBreakdown, 0, len(catBreakdown))
 	var grandTotal float64
 	for _, cb := range catBreakdown {
-		grandTotal += cb.TotalAmount
+		i, ok := catIndex[cb.Category]
+		if !ok {
+			i = len(dtoCats)
+			catIndex[cb.Category] = i
+			dtoCats = append(dtoCats, dto.ExpenseCategoryBreakdown{Category: cb.Category})
+		}
+		dtoCats[i].RecordCount += cb.RecordCount
+		if amount, ok := conv.convert(cb.TotalAmount, cb.CurrencyCode); ok {
+			dtoCats[i].TotalAmount += amount
+			grandTotal += amount
+		}
 	}
-	dtoCats := make([]dto.ExpenseCategoryBreakdown, len(catBreakdown))
-	for i, cb := range catBreakdown {
-		pct := float64(0)
+	for i := range dtoCats {
 		if grandTotal > 0 {
-			pct = cb.TotalAmount / grandTotal * 100
-		}
-		dtoCats[i] = dto.ExpenseCategoryBreakdown{
-			Category:    cb.Category,
-			TotalAmount: cb.TotalAmount,
-			RecordCount: cb.RecordCount,
-			Percentage:  pct,
+			dtoCats[i].Percentage = dtoCats[i].TotalAmount / grandTotal * 100
 		}
 	}
+	sort.SliceStable(dtoCats, func(a, b int) bool { return dtoCats[a].TotalAmount > dtoCats[b].TotalAmount })
 
-	// 月度趋势
+	// 月度趋势：同月各币种换算后合并
 	monthlyTrend, err := s.expenseRepo.GetMonthlyTrend(ctx, vehicleID)
 	if err != nil {
 		return nil, apperror.ErrInternal("getting expense monthly trend", err)
 	}
-	dtoMonthly := make([]dto.ExpenseMonthlyTrend, len(monthlyTrend))
-	for i, mt := range monthlyTrend {
-		dtoMonthly[i] = dto.ExpenseMonthlyTrend{
-			Period:      mt.Period,
-			TotalAmount: mt.TotalAmount,
-			RecordCount: mt.RecordCount,
+	monthIndex := make(map[string]int)
+	dtoMonthly := make([]dto.ExpenseMonthlyTrend, 0, len(monthlyTrend))
+	for _, mt := range monthlyTrend {
+		i, ok := monthIndex[mt.Period]
+		if !ok {
+			i = len(dtoMonthly)
+			monthIndex[mt.Period] = i
+			dtoMonthly = append(dtoMonthly, dto.ExpenseMonthlyTrend{Period: mt.Period})
+		}
+		dtoMonthly[i].RecordCount += mt.RecordCount
+		if amount, ok := conv.convert(mt.TotalAmount, mt.CurrencyCode); ok {
+			dtoMonthly[i].TotalAmount += amount
 		}
 	}
 
 	// 近30天开销
-	last30Amount, last30Currency, err := s.expenseRepo.GetLast30DaysTotal(ctx, vehicleID)
+	last30, err := s.expenseRepo.GetLast30DaysByCurrency(ctx, vehicleID)
 	if err != nil {
 		return nil, apperror.ErrInternal("getting expense last 30 days", err)
 	}
+	var last30Amount float64
+	for _, c := range last30 {
+		if amount, ok := conv.convert(c.TotalAmount, c.CurrencyCode); ok {
+			last30Amount += amount
+		}
+	}
 
 	return &dto.VehicleExpenseStatsResponse{
-		VehicleID:          vehicleID.String(),
-		TotalRecords:       totalRecords,
-		TotalsByCurrency:   dtoTotals,
-		CategoryBreakdown:  dtoCats,
-		MonthlyTrend:       dtoMonthly,
-		Last30DaysAmount:   last30Amount,
-		Last30DaysCurrency: last30Currency,
+		VehicleID:             vehicleID.String(),
+		TotalRecords:          totalRecords,
+		TotalsByCurrency:      dtoTotals,
+		CategoryBreakdown:     dtoCats,
+		MonthlyTrend:          dtoMonthly,
+		Last30DaysAmount:      last30Amount,
+		Last30DaysCurrency:    conv.base,
+		CurrencyCode:          conv.base,
+		UnconvertedCurrencies: conv.unconvertedCurrencies(),
 	}, nil
 }
 

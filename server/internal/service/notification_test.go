@@ -97,42 +97,36 @@ func TestNotificationService_CheckFuelAnomaly(t *testing.T) {
 		vid := uuid.New()
 		rid := uuid.New()
 
-		fuelRepo.EXPECT().GetVehicleStats(gomock.Any(), vid).Return(&repository.StatsResult{
-			TotalRecords:      10,
-			EfficiencyRecords: 10,
-			AvgEfficiency:     8.0,
+		fuelRepo.EXPECT().Aggregate(gomock.Any(), gomock.Any()).Return([]repository.FuelAggregateRow{
+			{CurrencyCode: "CNY", FuelAggregate: repository.FuelAggregate{Records: 10, LiquidEffRecords: 10, LiquidEffSum: 8.0 * 100, LiquidEffWeight: 100}},
 		}, nil)
 		notifRepo.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
 
 		// 12 L/100km is 50% above 8.0 avg => anomaly
-		svc.CheckFuelAnomaly(context.Background(), uid, vid, rid, 12.0)
+		svc.CheckFuelAnomaly(context.Background(), uid, vid, rid, 12.0, "L")
 	})
 
 	t.Run("no anomaly - within threshold", func(t *testing.T) {
 		svc, _, fuelRepo, _ := newNotificationService(t)
 		vid := uuid.New()
 
-		fuelRepo.EXPECT().GetVehicleStats(gomock.Any(), vid).Return(&repository.StatsResult{
-			TotalRecords:      10,
-			EfficiencyRecords: 10,
-			AvgEfficiency:     8.0,
+		fuelRepo.EXPECT().Aggregate(gomock.Any(), gomock.Any()).Return([]repository.FuelAggregateRow{
+			{CurrencyCode: "CNY", FuelAggregate: repository.FuelAggregate{Records: 10, LiquidEffRecords: 10, LiquidEffSum: 8.0 * 100, LiquidEffWeight: 100}},
 		}, nil)
 		// No Create call expected
 
-		svc.CheckFuelAnomaly(context.Background(), uuid.New(), vid, uuid.New(), 8.5)
+		svc.CheckFuelAnomaly(context.Background(), uuid.New(), vid, uuid.New(), 8.5, "L")
 	})
 
 	t.Run("too few records - skips", func(t *testing.T) {
 		svc, _, fuelRepo, _ := newNotificationService(t)
 		vid := uuid.New()
 
-		fuelRepo.EXPECT().GetVehicleStats(gomock.Any(), vid).Return(&repository.StatsResult{
-			TotalRecords:      2,
-			EfficiencyRecords: 2,
-			AvgEfficiency:     8.0,
+		fuelRepo.EXPECT().Aggregate(gomock.Any(), gomock.Any()).Return([]repository.FuelAggregateRow{
+			{CurrencyCode: "CNY", FuelAggregate: repository.FuelAggregate{Records: 2, LiquidEffRecords: 2, LiquidEffSum: 8.0 * 100, LiquidEffWeight: 100}},
 		}, nil)
 
-		svc.CheckFuelAnomaly(context.Background(), uuid.New(), vid, uuid.New(), 20.0)
+		svc.CheckFuelAnomaly(context.Background(), uuid.New(), vid, uuid.New(), 20.0, "L")
 	})
 }
 

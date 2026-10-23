@@ -154,6 +154,40 @@ func ConvertFuelEfficiency(value float64, from, to FuelEfficiencyUnit) float64 {
 	}
 }
 
+// --- 电耗换算 ---
+// 电车能耗存储基准为 kWh/100km；展示单位按用户的油耗单位偏好映射为同类形式：
+// L/100km → kWh/100km，km/L → km/kWh，MPG → mi/kWh
+
+// UnitKWh 电量单位
+const UnitKWh VolumeUnit = "kWh"
+
+// EnergyEfficiencyUnitFor 返回与油耗单位对应的电耗单位
+func EnergyEfficiencyUnitFor(fuelUnit FuelEfficiencyUnit) string {
+	switch fuelUnit {
+	case UnitKmL:
+		return "km/kWh"
+	case UnitMPG:
+		return "mi/kWh"
+	default:
+		return "kWh/100km"
+	}
+}
+
+// ConvertEnergyEfficiency 将 kWh/100km 转为与 fuelUnit 对应的电耗单位
+func ConvertEnergyEfficiency(kwhPer100km float64, fuelUnit FuelEfficiencyUnit) float64 {
+	if kwhPer100km <= 0 {
+		return 0
+	}
+	switch fuelUnit {
+	case UnitKmL:
+		return round(100/kwhPer100km, 2)
+	case UnitMPG:
+		return round(100/kwhPer100km*KmToMile, 2)
+	default:
+		return round(kwhPer100km, 2)
+	}
+}
+
 // NormalizeToMetric 将任意单位的油量和距离统一转为公制（升/公里）
 // 用于统计计算前的标准化
 func NormalizeToMetric(fuelAmount float64, fuelUnit VolumeUnit, distance float64, distUnit DistanceUnit) (liters, km float64) {

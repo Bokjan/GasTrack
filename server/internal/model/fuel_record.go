@@ -37,6 +37,8 @@ type FuelRecord struct {
 	// 计算字段（冗余存储，提高查询性能）
 	TripDistance   float64 `gorm:"type:decimal(10,1)" json:"trip_distance,omitempty"`   // 本次行驶距离
 	FuelEfficiency float64 `gorm:"type:decimal(10,2)" json:"fuel_efficiency,omitempty"` // 油耗/电耗（L/100km 或 kWh/100km 存储基准，满油到满油区间计算）
+	// 油耗区间里程（km）：本次加满与上一次加满之间的里程，用于按里程加权求平均油耗
+	EfficiencyDistance float64 `gorm:"type:decimal(10,1)" json:"-"`
 
 	RefuelDate time.Time `gorm:"not null;index:idx_fuel_records_vehicle;index:idx_fuel_records_user" json:"refuel_date"`
 

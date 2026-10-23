@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"time"
 
@@ -101,7 +102,7 @@ func (s *FuelRecordService) Create(ctx context.Context, userID, vehicleID uuid.U
 	if s.notificationService != nil {
 		asyncCtx := context.WithoutCancel(ctx)
 		if record.FuelEfficiency > 0 {
-			go s.notificationService.CheckFuelAnomaly(asyncCtx, vehicle.UserID, vehicleID, record.ID, record.FuelEfficiency)
+			go s.notificationService.CheckFuelAnomaly(asyncCtx, vehicle.UserID, vehicleID, record.ID, record.FuelEfficiency, record.FuelUnit)
 		}
 		// 将里程转为 km 后检查保养提醒
 		odometerKm := record.Odometer
@@ -367,15 +368,35 @@ func (s *FuelRecordService) recomputeDerived(ctx context.Context, vehicleID uuid
 	}
 }
 
-// computeDerivedFields 按时间升序计算每条记录的派生字段，返回发生变化的记录下标。
-//   - 行驶距离：与上一条记录（不论是否加满）的里程差，统一为 km
-//   - 油耗：满油到满油法。当前记录加满时，取上一次加满以来（不含上次加满本身）所有加油量之和，
-//     除以两次加满之间的里程差，得到 L/100km（电车为 kWh/100km）；未加满或无上一次加满时为 0
-func computeDerivedFields(records []model.FuelRecord) []int {
-	var changed []int
-	lastFullKm := -1.0 // 上一次加满时的里程（km），-1 表示尚未出现加满记录
-	fuelSinceFull := 0.0
+// RecomputeAllVehicles 按当前算法重算所有车辆的派生字段（运维命令调用），返回处理的车辆数
+func (s *FuelRecordService) RecomputeAllVehicles(ctx context.Context) (int, error) {
+	ids, err := s.recordRepo.ListVehicleIDsWithRecords(ctx)
+	if err != nil {
+		return 0, err
+	}
+	for i, id := range ids {
+		if _, err := s.recordRepo.RecomputeDerived(ctx, id, computeDerivedFields); err != nil {
+			return i, fmt.Errorf("recomputing vehicle %s: %w", id, err)
+		}
+	}
+	return len(ids), nil
+}
 
+// computeDerivedFields 按时间升序计算每条记录的派生字段，返回发生变化的记录下标。
+//   - 行驶距离：与上一条记录（不论是否加满、燃油或电）的里程差，统一为 km
+//   - 油耗：满油到满油法。当前记录加满时，取同一能源类别上一次加满以来（不含上次加满本身）
+//     所有加注量之和，除以两次加满之间的里程差，得到 L/100km（电为 kWh/100km）；
+//     燃油与充电各自成链（插混车两者互不混算）；未加满或无上一次加满时为 0
+//   - 油耗区间里程：上述两次加满之间的里程差，用于按里程加权求平均油耗
+func computeDerivedFields(records []model.FuelRecord) []int {
+	type chain struct {
+		lastFullKm    float64
+		hasFull       bool
+		fuelSinceFull float64
+	}
+	chains := map[energyKind]*chain{energyLiquid: {}, energyElectric: {}}
+
+	var changed []int
 	for i := range records {
 		r := &records[i]
 		liters, km := convert.NormalizeToMetric(r.FuelAmount, convert.VolumeUnit(r.FuelUnit), r.Odometer, convert.DistanceUnit(r.DistanceUnit))
@@ -389,21 +410,24 @@ func computeDerivedFields(records []model.FuelRecord) []int {
 			}
 		}
 
-		efficiency := 0.0
-		fuelSinceFull += liters
+		efficiency, segment := 0.0, 0.0
+		c := chains[recordEnergyKind(r.FuelUnit)]
+		c.fuelSinceFull += liters
 		if r.IsFullTank {
-			if lastFullKm >= 0 {
-				if dist := km - lastFullKm; dist > 0 {
-					efficiency = convert.CalcL100km(fuelSinceFull, dist)
+			if c.hasFull {
+				if dist := km - c.lastFullKm; dist > 0 {
+					efficiency = convert.CalcL100km(c.fuelSinceFull, dist)
+					segment = math.Round(dist*10) / 10
 				}
 			}
-			lastFullKm = km
-			fuelSinceFull = 0
+			c.lastFullKm, c.hasFull, c.fuelSinceFull = km, true, 0
 		}
 
-		if math.Abs(r.TripDistance-tripDistance) > 1e-6 || math.Abs(r.FuelEfficiency-efficiency) > 1e-6 {
+		if math.Abs(r.TripDistance-tripDistance) > 1e-6 || math.Abs(r.FuelEfficiency-efficiency) > 1e-6 ||
+			math.Abs(r.EfficiencyDistance-segment) > 1e-6 {
 			r.TripDistance = tripDistance
 			r.FuelEfficiency = efficiency
+			r.EfficiencyDistance = segment
 			changed = append(changed, i)
 		}
 	}
@@ -412,11 +436,8 @@ func computeDerivedFields(records []model.FuelRecord) []int {
 
 // fuelRecordToResponse 将 model 转为 DTO，按用户偏好转换所有单位
 func fuelRecordToResponse(r *model.FuelRecord, prefs userUnitPrefs) dto.FuelRecordResponse {
-	// 油耗转换
-	efficiency := r.FuelEfficiency
-	if efficiency > 0 && prefs.efficiencyUnit != "" {
-		efficiency = convert.ConvertFuelEfficiency(efficiency, convert.UnitL100km, prefs.efficiencyUnit)
-	}
+	// 油耗/电耗转换：充电记录的基准为 kWh/100km，按用户偏好映射为对应的电耗单位
+	efficiency, efficiencyUnit := unitPrefs{effUnit: prefs.efficiencyUnit}.efficiency(r.FuelEfficiency, recordEnergyKind(r.FuelUnit))
 
 	// 加油量转换（从记录原始单位 → 用户偏好单位）
 	fuelAmount := r.FuelAmount
@@ -468,6 +489,7 @@ func fuelRecordToResponse(r *model.FuelRecord, prefs userUnitPrefs) dto.FuelReco
 		ReceiptURL:     r.ReceiptURL,
 		TripDistance:    tripDistance,
 		FuelEfficiency: efficiency,
+		EfficiencyUnit: efficiencyUnit,
 		RefuelDate:     r.RefuelDate,
 		CreatedAt:      r.CreatedAt,
 		UpdatedAt:      r.UpdatedAt,

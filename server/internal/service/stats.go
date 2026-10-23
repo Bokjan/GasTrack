@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -11,7 +12,6 @@ import (
 	"gastrack/internal/dto"
 	"gastrack/internal/model"
 	"gastrack/internal/pkg/apperror"
-	"gastrack/internal/pkg/convert"
 	"gastrack/internal/repository"
 )
 
@@ -22,6 +22,7 @@ type StatsService struct {
 	userRepo    repository.UserRepo
 	groupRepo   repository.GroupRepo
 	expenseRepo repository.ExpenseRecordRepo
+	rates       RateProvider
 	logger      *zap.Logger
 }
 
@@ -32,6 +33,7 @@ func NewStatsService(
 	userRepo repository.UserRepo,
 	groupRepo repository.GroupRepo,
 	expenseRepo repository.ExpenseRecordRepo,
+	rates RateProvider,
 	logger *zap.Logger,
 ) *StatsService {
 	return &StatsService{
@@ -40,6 +42,7 @@ func NewStatsService(
 		userRepo:    userRepo,
 		groupRepo:   groupRepo,
 		expenseRepo: expenseRepo,
+		rates:       rates,
 		logger:      logger,
 	}
 }
@@ -70,6 +73,51 @@ func (s *StatsService) verifyVehicleAccess(ctx context.Context, vehicleID, userI
 	return nil, apperror.ErrNotFound("vehicle.not_found", "vehicle not found")
 }
 
+// buildVehicleStats 将车辆的加油合计转为展示用统计（单位换算、费用换汇）
+// 电动车只统计充电记录，燃油/混动车只统计燃油记录，两类能源不混算
+func buildVehicleStats(v *model.Vehicle, t *fuelTotals, prefs unitPrefs, conv *moneyConverter) dto.VehicleStatsResponse {
+	kind := vehicleEnergyKind(v)
+	fuel, volumeUnit := prefs.amount(t.amount(kind), kind)
+	avgEff, effUnit := prefs.efficiency(t.avgEfficiency(kind), kind)
+	bestBase, worstBase := t.bestWorst(kind)
+	best, _ := prefs.efficiency(bestBase, kind)
+	worst, _ := prefs.efficiency(worstBase, kind)
+	distance := prefs.distance(t.Distance)
+
+	totalCost := conv.sum(t.costs)
+	var avgCostPerKm, avgCostPerFill float64
+	if distance > 0 {
+		avgCostPerKm = totalCost / distance
+	}
+	if t.Records > 0 {
+		avgCostPerFill = totalCost / float64(t.Records)
+	}
+
+	energyType := "fuel"
+	if kind == energyElectric {
+		energyType = "electric"
+	}
+
+	return dto.VehicleStatsResponse{
+		VehicleID:       v.ID.String(),
+		VehicleName:     v.Name,
+		EnergyType:      energyType,
+		TotalRecords:    t.Records,
+		TotalFuel:       fuel,
+		VolumeUnit:      volumeUnit,
+		TotalCost:       totalCost,
+		TotalDistance:   distance,
+		AvgEfficiency:   avgEff,
+		BestEfficiency:  best,
+		WorstEfficiency: worst,
+		AvgCostPerKm:    avgCostPerKm,
+		AvgCostPerFill:  avgCostPerFill,
+		CurrencyCode:    conv.base,
+		FuelUnit:        effUnit,
+		CostsByCurrency: t.costs,
+	}
+}
+
 // GetVehicleStats 获取车辆统计
 func (s *StatsService) GetVehicleStats(ctx context.Context, vehicleID, userID uuid.UUID) (*dto.VehicleStatsResponse, error) {
 	// 验证车辆访问权限（所有权或共享）
@@ -78,67 +126,25 @@ func (s *StatsService) GetVehicleStats(ctx context.Context, vehicleID, userID uu
 		return nil, err
 	}
 
-	// 获取用户偏好（用于单位换算）
+	// 获取用户偏好（用于单位换算与换汇）
 	user, err := s.userRepo.GetByID(ctx, userID)
 	if err != nil {
 		return nil, apperror.ErrInternal("fetching user", err)
 	}
 
-	stats, err := s.recordRepo.GetVehicleStats(ctx, vehicleID)
+	rows, err := s.recordRepo.Aggregate(ctx, repository.FuelAggregateQuery{VehicleIDs: []uuid.UUID{vehicleID}})
 	if err != nil {
 		return nil, apperror.ErrInternal("fetching vehicle stats", err)
 	}
-
-	// 获取按币种分组的费用明细
-	costsByCurrency, err := s.recordRepo.GetCostByCurrency(ctx, vehicleID)
-	if err != nil {
-		return nil, apperror.ErrInternal("fetching costs by currency", err)
-	}
-	costMap := make(map[string]float64, len(costsByCurrency))
-	for _, c := range costsByCurrency {
-		costMap[c.CurrencyCode] = c.TotalCost
+	totals := newFuelTotals()
+	for _, row := range rows {
+		totals.add(row)
 	}
 
-	// 根据用户偏好换算油耗单位
-	targetUnit := convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
-	avgEff := convert.ConvertFuelEfficiency(stats.AvgEfficiency, convert.UnitL100km, targetUnit)
-	bestEff := convert.ConvertFuelEfficiency(stats.BestEfficiency, convert.UnitL100km, targetUnit)
-	worstEff := convert.ConvertFuelEfficiency(stats.WorstEfficiency, convert.UnitL100km, targetUnit)
-
-	// 根据用户偏好换算容量和距离单位
-	isImperial := user.UnitSystem == "imperial"
-	totalFuel := stats.TotalFuel
-	totalDist := stats.TotalDistance
-	if isImperial {
-		totalFuel = convert.ConvertVolume(totalFuel, convert.UnitLiter, convert.UnitGallon)
-		totalDist = convert.ConvertDistance(totalDist, convert.UnitKm, convert.UnitMile)
-	}
-
-	// 计算每公里/英里费用
-	var avgCostPerKm, avgCostPerFill float64
-	if totalDist > 0 {
-		avgCostPerKm = stats.TotalCost / totalDist
-	}
-	if stats.TotalRecords > 0 {
-		avgCostPerFill = stats.TotalCost / float64(stats.TotalRecords)
-	}
-
-	return &dto.VehicleStatsResponse{
-		VehicleID:       vehicleID.String(),
-		VehicleName:     vehicle.Name,
-		TotalRecords:    stats.TotalRecords,
-		TotalFuel:       totalFuel,
-		TotalCost:       stats.TotalCost,
-		TotalDistance:   totalDist,
-		AvgEfficiency:   avgEff,
-		BestEfficiency:  bestEff,
-		WorstEfficiency: worstEff,
-		AvgCostPerKm:    avgCostPerKm,
-		AvgCostPerFill:  avgCostPerFill,
-		CurrencyCode:    user.CurrencyCode,
-		FuelUnit:        user.FuelEfficiencyUnit,
-		CostsByCurrency: costMap,
-	}, nil
+	conv := newMoneyConverter(s.rates, user.CurrencyCode)
+	resp := buildVehicleStats(vehicle, totals, prefsOf(user), conv)
+	resp.UnconvertedCurrencies = conv.unconvertedCurrencies()
+	return &resp, nil
 }
 
 // GetOverview 获取全局统计总览
@@ -153,121 +159,81 @@ func (s *StatsService) GetOverview(ctx context.Context, userID uuid.UUID) (*dto.
 		return nil, apperror.ErrInternal("listing vehicles", err)
 	}
 
-	// 批量获取所有车辆的统计数据和按币种费用（2 次 SQL 替代 2N 次）
+	// 1 次 SQL 获取所有车辆按币种分组的聚合
 	vehicleIDs := make([]uuid.UUID, len(vehicles))
 	for i, v := range vehicles {
 		vehicleIDs[i] = v.ID
 	}
-
-	allStats, err := s.recordRepo.GetMultiVehicleStats(ctx, vehicleIDs)
+	rows, err := s.recordRepo.Aggregate(ctx, repository.FuelAggregateQuery{VehicleIDs: vehicleIDs})
 	if err != nil {
 		return nil, apperror.ErrInternal("batch fetching vehicle stats", err)
 	}
+	byVehicle := totalsByVehicle(rows)
 
-	allCosts, err := s.recordRepo.GetMultiVehicleCostByCurrency(ctx, vehicleIDs)
-	if err != nil {
-		return nil, apperror.ErrInternal("batch fetching vehicle costs by currency", err)
-	}
-
-	var totalRecords int64
-	var totalCost float64
-	var totalFuel float64
-	var totalDistance float64
+	prefs := prefsOf(user)
+	conv := newMoneyConverter(s.rates, user.CurrencyCode)
+	overall := newFuelTotals()
 	var totalExpenseCost float64
-	overallCostsByCurrency := make(map[string]float64)
 	overallExpenseCostsByCurrency := make(map[string]float64)
 	vehicleStats := make([]dto.VehicleStatsResponse, 0, len(vehicles))
 
-	isImperial := user.UnitSystem == "imperial"
-	targetUnit := convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
-
-	for _, v := range vehicles {
-		stats, ok := allStats[v.ID]
+	for i := range vehicles {
+		v := &vehicles[i]
+		totals, ok := byVehicle[v.ID.String()]
 		if !ok {
-			continue
-		}
-
-		// 从批量结果中获取该车辆的按币种分组费用
-		vehicleCostMap := make(map[string]float64)
-		if costs, costOk := allCosts[v.ID]; costOk {
-			for _, c := range costs {
-				vehicleCostMap[c.CurrencyCode] = c.TotalCost
-				overallCostsByCurrency[c.CurrencyCode] += c.TotalCost
-			}
+			totals = newFuelTotals()
 		}
 
 		// 获取该车辆的开销统计
 		vehicleExpenseCostMap := make(map[string]float64)
-		var vehicleExpenseTotal float64
 		expenseCosts, err := s.expenseRepo.GetExpenseCostByCurrency(ctx, v.ID)
 		if err == nil {
 			for _, c := range expenseCosts {
 				vehicleExpenseCostMap[c.CurrencyCode] = c.TotalAmount
 				overallExpenseCostsByCurrency[c.CurrencyCode] += c.TotalAmount
-				vehicleExpenseTotal += c.TotalAmount
 			}
 		}
-		totalExpenseCost += vehicleExpenseTotal
 
-		totalRecords += stats.TotalRecords
-		totalCost += stats.TotalCost
-		totalFuel += stats.TotalFuel
-		totalDistance += stats.TotalDistance
-
-		vFuel := stats.TotalFuel
-		vDist := stats.TotalDistance
-		if isImperial {
-			vFuel = convert.ConvertVolume(vFuel, convert.UnitLiter, convert.UnitGallon)
-			vDist = convert.ConvertDistance(vDist, convert.UnitKm, convert.UnitMile)
+		// 既无加油记录也无开销的车辆不出现在总览中
+		if totals.Records == 0 && len(vehicleExpenseCostMap) == 0 {
+			continue
 		}
-		vehicleStats = append(vehicleStats, dto.VehicleStatsResponse{
-			VehicleID:              v.ID.String(),
-			VehicleName:            v.Name,
-			TotalRecords:           stats.TotalRecords,
-			TotalFuel:              vFuel,
-			TotalCost:              stats.TotalCost,
-			TotalDistance:           vDist,
-			AvgEfficiency:          convert.ConvertFuelEfficiency(stats.AvgEfficiency, convert.UnitL100km, targetUnit),
-			CurrencyCode:           user.CurrencyCode,
-			FuelUnit:               user.FuelEfficiencyUnit,
-			CostsByCurrency:        vehicleCostMap,
-			TotalExpenseCost:       vehicleExpenseTotal,
-			ExpenseCostsByCurrency: vehicleExpenseCostMap,
-		})
+		overall.merge(totals)
+
+		vs := buildVehicleStats(v, totals, prefs, conv)
+		vs.TotalExpenseCost = conv.sum(vehicleExpenseCostMap)
+		vs.ExpenseCostsByCurrency = vehicleExpenseCostMap
+		totalExpenseCost += vs.TotalExpenseCost
+		vehicleStats = append(vehicleStats, vs)
 	}
 
-	// 计算平均油耗 (L/100km 基准，再转为用户偏好单位)
-	var avgConsumption float64
-	if totalDistance > 0 {
-		avgConsumption = totalFuel / totalDistance * 100
-		targetUnit := convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
-		avgConsumption = convert.ConvertFuelEfficiency(avgConsumption, convert.UnitL100km, targetUnit)
-	}
-
-	// 转换总计的容量和距离
-	overviewFuel := totalFuel
-	overviewDist := totalDistance
-	if isImperial {
-		overviewFuel = convert.ConvertVolume(overviewFuel, convert.UnitLiter, convert.UnitGallon)
-		overviewDist = convert.ConvertDistance(overviewDist, convert.UnitKm, convert.UnitMile)
-	}
+	// 燃油与电分别汇总：总量、按里程加权的平均油耗/电耗
+	totalFuel, volumeUnit := prefs.amount(overall.Liters, energyLiquid)
+	avgConsumption, fuelUnit := prefs.efficiency(overall.LiquidEfficiency(), energyLiquid)
+	avgEnergy, energyUnit := prefs.efficiency(overall.ElectricEfficiency(), energyElectric)
 
 	return &dto.OverviewStatsResponse{
 		TotalVehicles:          int64(len(vehicles)),
-		TotalRecords:           totalRecords,
-		TotalFuel:              overviewFuel,
-		TotalCost:              totalCost,
-		TotalDistance:           overviewDist,
+		TotalRecords:           overall.Records,
+		TotalFuel:              totalFuel,
+		VolumeUnit:             volumeUnit,
+		TotalEnergy:            overall.Kwh,
+		TotalCost:              conv.sum(overall.costs),
+		TotalDistance:          prefs.distance(overall.Distance),
 		AvgConsumption:         avgConsumption,
-		CurrencyCode:           user.CurrencyCode,
-		CostsByCurrency:        overallCostsByCurrency,
+		FuelUnit:               fuelUnit,
+		AvgEnergyConsumption:   avgEnergy,
+		EnergyUnit:             energyUnit,
+		CurrencyCode:           conv.base,
+		CostsByCurrency:        overall.costs,
 		Vehicles:               vehicleStats,
 		TotalExpenseCost:       totalExpenseCost,
 		ExpenseCostsByCurrency: overallExpenseCostsByCurrency,
+		UnconvertedCurrencies:  conv.unconvertedCurrencies(),
 	}, nil
 }
 
-// GetEfficiencyTrend 获取油耗趋势
+// GetEfficiencyTrend 获取油耗/电耗趋势（只包含与车辆能源类别一致的记录）
 func (s *StatsService) GetEfficiencyTrend(ctx context.Context, vehicleID, userID uuid.UUID, limit int) (*dto.FuelEfficiencyTrendResponse, error) {
 	vehicle, err := s.verifyVehicleAccess(ctx, vehicleID, userID)
 	if err != nil {
@@ -284,27 +250,34 @@ func (s *StatsService) GetEfficiencyTrend(ctx context.Context, vehicleID, userID
 		return nil, apperror.ErrInternal("fetching efficiency trend", err)
 	}
 
-	targetUnit := convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
-	isImperial := user.UnitSystem == "imperial"
-	items := make([]dto.FuelEfficiencyTrendItem, len(records))
-	for i, r := range records {
-		tripDist := r.TripDistance
-		if isImperial {
-			tripDist = convert.ConvertDistance(tripDist, convert.UnitKm, convert.UnitMile)
+	prefs := prefsOf(user)
+	kind := vehicleEnergyKind(vehicle)
+	items := make([]dto.FuelEfficiencyTrendItem, 0, len(records))
+	for _, r := range records {
+		if recordEnergyKind(r.FuelUnit) != kind {
+			continue
 		}
-		items[i] = dto.FuelEfficiencyTrendItem{
+		eff, _ := prefs.efficiency(r.FuelEfficiency, kind)
+		items = append(items, dto.FuelEfficiencyTrendItem{
 			Date:           r.RefuelDate.Format("2006-01-02"),
-			FuelEfficiency: convert.ConvertFuelEfficiency(r.FuelEfficiency, convert.UnitL100km, targetUnit),
-			TripDistance:   tripDist,
-		}
+			FuelEfficiency: eff,
+			TripDistance:   prefs.distance(r.TripDistance),
+		})
 	}
 
 	return &dto.FuelEfficiencyTrendResponse{
 		VehicleID:      vehicleID.String(),
 		VehicleName:    vehicle.Name,
-		EfficiencyUnit: user.FuelEfficiencyUnit,
+		EfficiencyUnit: prefs.efficiencyUnit(kind),
 		Items:          items,
 	}, nil
+}
+
+// yearRange 返回某年的 [1 月 1 日, 次年 1 月 1 日)
+func yearRange(year int) (*time.Time, *time.Time) {
+	start := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := start.AddDate(1, 0, 0)
+	return &start, &end
 }
 
 // GetPeriodStats 获取按时段（月/年）聚合的统计数据 + 往年同比
@@ -319,65 +292,65 @@ func (s *StatsService) GetPeriodStats(ctx context.Context, vehicleID, userID uui
 		return nil, apperror.ErrInternal("fetching user", err)
 	}
 
-	targetUnit := convert.FuelEfficiencyUnit(user.FuelEfficiencyUnit)
-	isImperial := user.UnitSystem == "imperial"
+	prefs := prefsOf(user)
+	conv := newMoneyConverter(s.rates, user.CurrencyCode)
+	kind := vehicleEnergyKind(vehicle)
 
-	convertItems := func(raw []repository.PeriodStatsResult) []dto.PeriodStatsItem {
-		items := make([]dto.PeriodStatsItem, len(raw))
-		for i, r := range raw {
-			totalFuel := r.TotalFuel
-			totalDist := r.TotalDistance
-			if isImperial {
-				totalFuel = convert.ConvertVolume(totalFuel, convert.UnitLiter, convert.UnitGallon)
-				totalDist = convert.ConvertDistance(totalDist, convert.UnitKm, convert.UnitMile)
-			}
-			items[i] = dto.PeriodStatsItem{
-				Period:        r.Period,
-				TotalRecords:  r.TotalRecords,
-				TotalFuel:     totalFuel,
-				TotalCost:     r.TotalCost,
-				TotalDistance:  totalDist,
-				AvgEfficiency: convert.ConvertFuelEfficiency(r.AvgEfficiency, convert.UnitL100km, targetUnit),
-			}
+	load := func(q repository.FuelAggregateQuery) ([]dto.PeriodStatsItem, error) {
+		q.VehicleIDs = []uuid.UUID{vehicleID}
+		rows, err := s.recordRepo.Aggregate(ctx, q)
+		if err != nil {
+			return nil, err
 		}
-		return items
+		byPeriod, order := totalsByPeriod(rows)
+		items := make([]dto.PeriodStatsItem, 0, len(order))
+		for _, p := range order {
+			t := byPeriod[p]
+			fuel, _ := prefs.amount(t.amount(kind), kind)
+			eff, _ := prefs.efficiency(t.avgEfficiency(kind), kind)
+			items = append(items, dto.PeriodStatsItem{
+				Period:        p,
+				TotalRecords:  int(t.Records),
+				TotalFuel:     fuel,
+				TotalCost:     conv.sum(t.costs),
+				TotalDistance: prefs.distance(t.Distance),
+				AvgEfficiency: eff,
+			})
+		}
+		return items, nil
 	}
 
 	var items, prevItems []dto.PeriodStatsItem
-
 	if period == "month" {
 		// 按月聚合：当年 + 上一年同比
-		raw, err := s.recordRepo.GetStatsByMonth(ctx, vehicleID, year)
-		if err != nil {
+		start, end := yearRange(year)
+		if items, err = load(repository.FuelAggregateQuery{PeriodFormat: repository.PeriodMonth, Start: start, End: end}); err != nil {
 			return nil, apperror.ErrInternal("fetching monthly stats", err)
 		}
-		items = convertItems(raw)
-
-		rawPrev, err := s.recordRepo.GetStatsByMonth(ctx, vehicleID, year-1)
-		if err != nil {
+		start, end = yearRange(year - 1)
+		if prevItems, err = load(repository.FuelAggregateQuery{PeriodFormat: repository.PeriodMonth, Start: start, End: end}); err != nil {
 			return nil, apperror.ErrInternal("fetching prev year monthly stats", err)
 		}
-		prevItems = convertItems(rawPrev)
 	} else {
-		// 按年聚合：全部年份
-		raw, err := s.recordRepo.GetStatsByYear(ctx, vehicleID)
-		if err != nil {
+		// 按年聚合：全部年份；按年模式没有 "上一周期"，prevItems 为空
+		if items, err = load(repository.FuelAggregateQuery{PeriodFormat: repository.PeriodYear}); err != nil {
 			return nil, apperror.ErrInternal("fetching yearly stats", err)
 		}
-		items = convertItems(raw)
-		// 按年模式没有 "上一周期"，prevItems 为空
 		prevItems = []dto.PeriodStatsItem{}
 	}
 
+	_, volumeUnit := prefs.amount(0, kind)
 	return &dto.PeriodStatsResponse{
-		VehicleID:    vehicleID.String(),
-		VehicleName:  vehicle.Name,
-		Period:       period,
-		Year:         year,
-		CurrencyCode: user.CurrencyCode,
-		FuelUnit:     user.FuelEfficiencyUnit,
-		Items:        items,
-		PrevItems:    prevItems,
+		VehicleID:             vehicleID.String(),
+		VehicleName:           vehicle.Name,
+		Period:                period,
+		Year:                  year,
+		CurrencyCode:          conv.base,
+		FuelUnit:              prefs.efficiencyUnit(kind),
+		VolumeUnit:            volumeUnit,
+		UnconvertedCurrencies: conv.unconvertedCurrencies(),
+		Items:                 items,
+		PrevItems:             prevItems,
 	}, nil
 }
 
@@ -392,14 +365,22 @@ func (s *StatsService) GetExpensePeriodStats(ctx context.Context, vehicleID, use
 	if err != nil {
 		return nil, apperror.ErrInternal("fetching user", err)
 	}
+	conv := newMoneyConverter(s.rates, user.CurrencyCode)
 
+	// 同一时段的不同币种换算为用户币种后合并
 	convertItems := func(raw []repository.ExpensePeriodStatsResult) []dto.ExpensePeriodStatsItem {
-		items := make([]dto.ExpensePeriodStatsItem, len(raw))
-		for i, r := range raw {
-			items[i] = dto.ExpensePeriodStatsItem{
-				Period:       r.Period,
-				TotalRecords: r.TotalRecords,
-				TotalAmount:  r.TotalAmount,
+		index := make(map[string]int)
+		items := make([]dto.ExpensePeriodStatsItem, 0, len(raw))
+		for _, r := range raw {
+			i, ok := index[r.Period]
+			if !ok {
+				i = len(items)
+				index[r.Period] = i
+				items = append(items, dto.ExpensePeriodStatsItem{Period: r.Period})
+			}
+			items[i].TotalRecords += r.TotalRecords
+			if amount, ok := conv.convert(r.TotalAmount, r.CurrencyCode); ok {
+				items[i].TotalAmount += amount
 			}
 		}
 		return items
@@ -439,13 +420,14 @@ func (s *StatsService) GetExpensePeriodStats(ctx context.Context, vehicleID, use
 	}
 
 	return &dto.ExpensePeriodStatsResponse{
-		VehicleID:       vehicleID.String(),
-		VehicleName:     vehicle.Name,
-		Period:          period,
-		Year:            year,
-		CurrencyCode:    user.CurrencyCode,
-		CostsByCurrency: costMap,
-		Items:           items,
-		PrevItems:       prevItems,
+		VehicleID:             vehicleID.String(),
+		VehicleName:           vehicle.Name,
+		Period:                period,
+		Year:                  year,
+		CurrencyCode:          conv.base,
+		CostsByCurrency:       costMap,
+		UnconvertedCurrencies: conv.unconvertedCurrencies(),
+		Items:                 items,
+		PrevItems:             prevItems,
 	}, nil
 }

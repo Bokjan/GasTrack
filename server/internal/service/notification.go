@@ -90,15 +90,24 @@ func (s *NotificationService) Delete(ctx context.Context, id, userID uuid.UUID) 
 
 // CheckFuelAnomaly 检查油耗异常并生成通知
 // 在创建加油记录后调用，检测本次油耗是否偏离历史均值超过阈值
-func (s *NotificationService) CheckFuelAnomaly(ctx context.Context, userID, vehicleID uuid.UUID, recordID uuid.UUID, currentEfficiency float64) {
-	// 获取车辆统计数据
-	stats, err := s.fuelRecordRepo.GetVehicleStats(ctx, vehicleID)
-	if err != nil || stats.EfficiencyRecords < 3 {
+// fuelUnit 为本次记录的加注单位，用于只与同一能源类别（燃油或电）的历史均值比较
+func (s *NotificationService) CheckFuelAnomaly(ctx context.Context, userID, vehicleID uuid.UUID, recordID uuid.UUID, currentEfficiency float64, fuelUnit string) {
+	rows, err := s.fuelRecordRepo.Aggregate(ctx, repository.FuelAggregateQuery{VehicleIDs: []uuid.UUID{vehicleID}})
+	if err != nil {
+		return
+	}
+	totals := newFuelTotals()
+	for _, row := range rows {
+		totals.add(row)
+	}
+	kind := recordEnergyKind(fuelUnit)
+	if totals.efficiencyRecords(kind) < 3 {
 		// 至少 3 条有油耗的记录才能做有意义的异常检测
 		return
 	}
 
-	avgEfficiency := stats.AvgEfficiency
+	// 历史均值按里程加权（总油量 / 总里程）
+	avgEfficiency := totals.avgEfficiency(kind)
 	if avgEfficiency <= 0 || currentEfficiency <= 0 {
 		return
 	}

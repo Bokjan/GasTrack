@@ -52,14 +52,9 @@ type FuelRecordRepo interface {
 	Delete(ctx context.Context, id, vehicleID uuid.UUID) error
 	GetDistinctStationNames(ctx context.Context, userID uuid.UUID, vehicleID *uuid.UUID, limit int) ([]string, error)
 	ListAllByUser(ctx context.Context, userID uuid.UUID) ([]model.FuelRecord, error)
-	GetVehicleStats(ctx context.Context, vehicleID uuid.UUID) (*StatsResult, error)
-	GetCostByCurrency(ctx context.Context, vehicleID uuid.UUID) ([]CostByCurrencyResult, error)
-	GetExpensesByMonth(ctx context.Context, userID uuid.UUID, vehicleID *uuid.UUID, start, end time.Time) ([]ExpenseByPeriod, error)
+	Aggregate(ctx context.Context, q FuelAggregateQuery) ([]FuelAggregateRow, error)
+	ListVehicleIDsWithRecords(ctx context.Context) ([]uuid.UUID, error)
 	GetEfficiencyTrend(ctx context.Context, vehicleID uuid.UUID, limit int) ([]model.FuelRecord, error)
-	GetStatsByMonth(ctx context.Context, vehicleID uuid.UUID, year int) ([]PeriodStatsResult, error)
-	GetStatsByYear(ctx context.Context, vehicleID uuid.UUID) ([]PeriodStatsResult, error)
-	GetMultiVehicleStats(ctx context.Context, vehicleIDs []uuid.UUID) (map[uuid.UUID]*MultiVehicleStatsResult, error)
-	GetMultiVehicleCostByCurrency(ctx context.Context, vehicleIDs []uuid.UUID) (map[uuid.UUID][]CostByCurrencyResult, error)
 }
 
 // GroupRepo 群组数据访问接口
@@ -111,7 +106,7 @@ type ExpenseRecordRepo interface {
 	GetTotalsByCurrency(ctx context.Context, vehicleID uuid.UUID) ([]ExpenseStatsByCurrency, error)
 	GetBreakdownByCategory(ctx context.Context, vehicleID uuid.UUID) ([]ExpenseStatsByCategory, error)
 	GetMonthlyTrend(ctx context.Context, vehicleID uuid.UUID) ([]ExpenseStatsByMonth, error)
-	GetLast30DaysTotal(ctx context.Context, vehicleID uuid.UUID) (float64, string, error)
+	GetLast30DaysByCurrency(ctx context.Context, vehicleID uuid.UUID) ([]ExpenseStatsByCurrency, error)
 	GetTotalRecords(ctx context.Context, vehicleID uuid.UUID) (int64, error)
 	GetDistinctVendorNames(ctx context.Context, userID uuid.UUID, vehicleID *uuid.UUID, limit int) ([]string, error)
 	GetExpenseStatsByMonth(ctx context.Context, vehicleID uuid.UUID, year int) ([]ExpensePeriodStatsResult, error)
