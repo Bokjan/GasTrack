@@ -1,27 +1,30 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@gastrack/shared';
 import MainLayout from './layouts/MainLayout';
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
-import DashboardPage from './pages/dashboard/DashboardPage';
-import VehicleListPage from './pages/vehicle/VehicleListPage';
-import VehicleFormPage from './pages/vehicle/VehicleFormPage';
-import RecordListPage from './pages/record/RecordListPage';
-import RecordFormPage from './pages/record/RecordFormPage';
-import RecordDetailPage from './pages/record/RecordDetailPage';
-import StatsPage from './pages/stats/StatsPage';
-import SettingsPage from './pages/settings/SettingsPage';
-import InviteManagePage from './pages/invite/InviteManagePage';
-import ReminderPage from './pages/reminder/ReminderPage';
-import GroupPage from './pages/group/GroupPage';
-import ExpenseListPage from './pages/expense/ExpenseListPage';
-import ExpenseFormPage from './pages/expense/ExpenseFormPage';
-import ExpenseDetailPage from './pages/expense/ExpenseDetailPage';
-import PrivacyPolicyPage from './pages/legal/PrivacyPolicyPage';
-import TermsOfServicePage from './pages/legal/TermsOfServicePage';
 import PWAUpdatePrompt from './components/PWAUpdatePrompt';
 import InstallPrompt from './components/InstallPrompt';
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
+import PageFallback from './components/PageFallback';
+
+// 页面按路由拆分打包，首屏只加载当前页面
+const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'));
+const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
+const VehicleListPage = lazy(() => import('./pages/vehicle/VehicleListPage'));
+const VehicleFormPage = lazy(() => import('./pages/vehicle/VehicleFormPage'));
+const RecordListPage = lazy(() => import('./pages/record/RecordListPage'));
+const RecordFormPage = lazy(() => import('./pages/record/RecordFormPage'));
+const RecordDetailPage = lazy(() => import('./pages/record/RecordDetailPage'));
+const StatsPage = lazy(() => import('./pages/stats/StatsPage'));
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
+const InviteManagePage = lazy(() => import('./pages/invite/InviteManagePage'));
+const ReminderPage = lazy(() => import('./pages/reminder/ReminderPage'));
+const GroupPage = lazy(() => import('./pages/group/GroupPage'));
+const ExpenseListPage = lazy(() => import('./pages/expense/ExpenseListPage'));
+const ExpenseFormPage = lazy(() => import('./pages/expense/ExpenseFormPage'));
+const ExpenseDetailPage = lazy(() => import('./pages/expense/ExpenseDetailPage'));
+const PrivacyPolicyPage = lazy(() => import('./pages/legal/PrivacyPolicyPage'));
+const TermsOfServicePage = lazy(() => import('./pages/legal/TermsOfServicePage'));
 
 /** 需要认证的路由守卫 */
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -50,6 +53,7 @@ export default function App() {
     <>
       <PWAUpdatePrompt />
       <InstallPrompt />
+      <Suspense fallback={<PageFallback />}>
       <Routes>
       {/* 公开路由 */}
       <Route path="/login" element={<GuestOnly><LoginPage /></GuestOnly>} />
@@ -89,6 +93,7 @@ export default function App() {
       {/* 404 重定向 */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+      </Suspense>
     </>
   );
 }

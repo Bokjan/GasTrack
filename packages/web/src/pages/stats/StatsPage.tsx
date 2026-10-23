@@ -10,7 +10,7 @@ import {
   WalletOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import ReactECharts from 'echarts-for-react';
+import ReactECharts from '../../components/Chart';
 import {
   useVehicleStore,
   statsApi,

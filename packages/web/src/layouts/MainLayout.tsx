@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import PageFallback from '../components/PageFallback';
 import { Layout, Menu, Avatar, Dropdown, Typography, theme, Drawer, Grid } from 'antd';
 import {
   DashboardOutlined,
@@ -238,7 +239,9 @@ export default function MainLayout() {
         </Header>
 
         <Content style={{ margin: 0, overflow: 'auto', paddingBottom: isMobile ? 0 : undefined }}>
-          <Outlet />
+          <Suspense fallback={<PageFallback />}>
+            <Outlet />
+          </Suspense>
         </Content>
 
         <Footer
