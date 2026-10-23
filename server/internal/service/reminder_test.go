@@ -185,6 +185,47 @@ func TestReminderService_Update(t *testing.T) {
 		assert.Equal(t, "Updated Title", resp.Title)
 	})
 
+	t.Run("time trigger with zero mileage interval", func(t *testing.T) {
+		svc, reminderRepo, vehicleRepo, _ := newReminderService(t)
+		uid := uuid.New()
+		rid := uuid.New()
+		vid := uuid.New()
+		zeroMileage := 0.0
+		days := 730
+
+		reminderRepo.EXPECT().GetByIDAndUser(gomock.Any(), rid, uid).Return(&model.Reminder{
+			BaseModel:        model.BaseModel{ID: rid},
+			VehicleID:        vid,
+			Trigger:          model.ReminderTriggerTime,
+			TimeIntervalDays: 365,
+		}, nil)
+		reminderRepo.EXPECT().Update(gomock.Any(), gomock.Any()).Return(nil)
+		vehicleRepo.EXPECT().GetByID(gomock.Any(), vid).Return(&model.Vehicle{Name: "Car"}, nil)
+
+		resp, err := svc.Update(context.Background(), rid, uid, &dto.UpdateReminderRequest{
+			MileageInterval:  &zeroMileage,
+			TimeIntervalDays: &days,
+		})
+		assert.NoError(t, err)
+		assert.Equal(t, 730, resp.TimeIntervalDays)
+	})
+
+	t.Run("switching to mileage trigger requires interval", func(t *testing.T) {
+		svc, reminderRepo, _, _ := newReminderService(t)
+		uid := uuid.New()
+		rid := uuid.New()
+		trigger := "mileage"
+
+		reminderRepo.EXPECT().GetByIDAndUser(gomock.Any(), rid, uid).Return(&model.Reminder{
+			BaseModel:        model.BaseModel{ID: rid},
+			Trigger:          model.ReminderTriggerTime,
+			TimeIntervalDays: 365,
+		}, nil)
+
+		_, err := svc.Update(context.Background(), rid, uid, &dto.UpdateReminderRequest{Trigger: &trigger})
+		assert.Equal(t, 400, err.(*apperror.AppError).Code)
+	})
+
 	t.Run("not found", func(t *testing.T) {
 		svc, reminderRepo, _, _ := newReminderService(t)
 		reminderRepo.EXPECT().GetByIDAndUser(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, gorm.ErrRecordNotFound)

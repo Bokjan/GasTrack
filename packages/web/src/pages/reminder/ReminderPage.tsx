@@ -115,7 +115,9 @@ export default function ReminderPage() {
       };
 
       if (editingReminder) {
-        await reminderApi.update(editingReminder.id, payload);
+        // 提醒所属车辆不可修改，更新接口不接受 vehicle_id
+        const { vehicle_id: _vehicleId, ...updatePayload } = payload;
+        await reminderApi.update(editingReminder.id, updatePayload);
       } else {
         await reminderApi.create(payload);
       }
@@ -297,6 +299,7 @@ export default function ReminderPage() {
             rules={[{ required: true }]}
           >
             <Select
+              disabled={!!editingReminder}
               placeholder={t('reminder.selectVehicle')}
               options={vehicles.map((v) => ({ value: v.id, label: v.name }))}
             />

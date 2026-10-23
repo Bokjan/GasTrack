@@ -79,15 +79,8 @@ func (s *ReminderService) Create(ctx context.Context, userID uuid.UUID, req *dto
 	}
 
 	// 验证触发条件参数
-	if req.Trigger == "mileage" || req.Trigger == "both" {
-		if req.MileageInterval <= 0 {
-			return nil, apperror.ErrBadRequest("reminder.mileage_required", "mileage interval is required")
-		}
-	}
-	if req.Trigger == "time" || req.Trigger == "both" {
-		if req.TimeIntervalDays <= 0 {
-			return nil, apperror.ErrBadRequest("reminder.time_required", "time interval is required")
-		}
+	if err := validateTriggerIntervals(model.ReminderTrigger(req.Trigger), req.MileageInterval, req.TimeIntervalDays); err != nil {
+		return nil, err
 	}
 
 	reminder := &model.Reminder{
@@ -223,6 +216,13 @@ func (s *ReminderService) Update(ctx context.Context, id, userID uuid.UUID, req 
 		reminder.IsEnabled = *req.IsEnabled
 	}
 
+	// 修改触发条件或间隔时，合并后的触发类型必须有对应的间隔
+	if req.Trigger != nil || req.MileageInterval != nil || req.TimeIntervalDays != nil {
+		if err := validateTriggerIntervals(reminder.Trigger, reminder.MileageInterval, reminder.TimeIntervalDays); err != nil {
+			return nil, err
+		}
+	}
+
 	// 重新计算下次触发
 	s.calculateNext(reminder)
 
@@ -251,6 +251,21 @@ func (s *ReminderService) Delete(ctx context.Context, id, userID uuid.UUID) erro
 
 	if err := s.reminderRepo.Delete(ctx, id, userID); err != nil {
 		return apperror.ErrInternal("deleting reminder", err)
+	}
+	return nil
+}
+
+// validateTriggerIntervals 校验触发类型所需的里程/时间间隔均大于 0
+func validateTriggerIntervals(trigger model.ReminderTrigger, mileageInterval float64, timeIntervalDays int) error {
+	if trigger == model.ReminderTriggerMileage || trigger == model.ReminderTriggerBoth {
+		if mileageInterval <= 0 {
+			return apperror.ErrBadRequest("reminder.mileage_required", "mileage interval is required")
+		}
+	}
+	if trigger == model.ReminderTriggerTime || trigger == model.ReminderTriggerBoth {
+		if timeIntervalDays <= 0 {
+			return apperror.ErrBadRequest("reminder.time_required", "time interval is required")
+		}
 	}
 	return nil
 }

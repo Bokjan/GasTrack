@@ -18,13 +18,14 @@ type CreateReminderRequest struct {
 }
 
 // UpdateReminderRequest 更新提醒请求
+// 间隔为 0 表示该触发方式不使用；与触发类型的匹配在 service 层合并后校验
 type UpdateReminderRequest struct {
 	Category         *string  `json:"category" validate:"omitempty,oneof=oil_change tire_rotation brake_pads air_filter transmission coolant spark_plugs battery tire_replace inspection custom"`
 	Title            *string  `json:"title" validate:"omitempty,min=1,max=200"`
 	Description      *string  `json:"description" validate:"omitempty,max=1000"`
 	Trigger          *string  `json:"trigger" validate:"omitempty,oneof=mileage time both"`
-	MileageInterval  *float64 `json:"mileage_interval" validate:"omitempty,gt=0"`
-	TimeIntervalDays *int     `json:"time_interval_days" validate:"omitempty,gt=0"`
+	MileageInterval  *float64 `json:"mileage_interval" validate:"omitempty,gte=0"`
+	TimeIntervalDays *int     `json:"time_interval_days" validate:"omitempty,gte=0"`
 	LastMileage      *float64 `json:"last_mileage" validate:"omitempty,gte=0"`
 	LastDate         *string  `json:"last_date"`
 	IsEnabled        *bool    `json:"is_enabled"`

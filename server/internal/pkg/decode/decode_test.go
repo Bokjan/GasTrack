@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"gastrack/internal/dto"
 )
 
 type sample struct {
@@ -40,4 +42,15 @@ func TestJSONValidationMessages(t *testing.T) {
 		}
 	}
 	assert.NoError(t, decodeBody(`{"name":"ab","year":2000,"price":1.5,"unit":"L"}`))
+}
+
+func TestJSONUpdateReminderFromEditForm(t *testing.T) {
+	// 编辑仅按时间触发的提醒时，前端会带上 mileage_interval: 0
+	body := `{"category":"inspection","title":"车检","description":"","trigger":"time","mileage_interval":0,"time_interval_days":730,"last_mileage":7056,"last_date":"2025-02-21"}`
+	r := httptest.NewRequest("PATCH", "/", strings.NewReader(body))
+	var dst dto.UpdateReminderRequest
+	assert.NoError(t, JSON(r, &dst))
+
+	r = httptest.NewRequest("PATCH", "/", strings.NewReader(`{"mileage_interval":-1}`))
+	assert.Error(t, JSON(r, &dst))
 }
