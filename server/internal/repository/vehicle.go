@@ -60,7 +60,7 @@ func (r *VehicleRepository) Update(ctx context.Context, vehicle *model.Vehicle) 
 	return r.db.WithContext(ctx).Save(vehicle).Error
 }
 
-// Delete 删除车辆（硬删除，会级联删除加油记录）
+// Delete 删除车辆（软删除；加油/开销记录保留，车辆不再可见后随之不可访问）
 func (r *VehicleRepository) Delete(ctx context.Context, id, userID uuid.UUID) error {
 	return r.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).Delete(&model.Vehicle{}).Error
 }

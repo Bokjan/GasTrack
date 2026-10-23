@@ -36,23 +36,36 @@ type ExchangeRateService struct {
 	logger *zap.Logger
 	client *http.Client
 
-	mu    sync.RWMutex
-	cache map[string]*exchangeRateCache // key: base currency code
+	mu          sync.RWMutex
+	cache       map[string]*exchangeRateCache // key: base currency code
+	lastFailure map[string]time.Time          // 最近一次同步拉取失败的时间（用于失败退避）
+
+	// fetchLocks 每个币种一把锁：缓存未命中时合并并发请求，只有一个请求真正调用外部 API
+	fetchLocks map[string]*sync.Mutex
 
 	stopCh chan struct{}
 }
+
+// fetchFailureBackoff 同步拉取失败后的退避时间，期间直接返回错误，避免每个请求都等待外部 API 超时
+const fetchFailureBackoff = time.Minute
 
 // supportedCurrencies 系统支持的 6 种货币
 var supportedCurrencies = []string{"CNY", "USD", "EUR", "JPY", "GBP", "KRW"}
 
 // NewExchangeRateService 创建 ExchangeRateService 实例
 func NewExchangeRateService(cfg config.ExchangeRateConfig, logger *zap.Logger) *ExchangeRateService {
+	fetchLocks := make(map[string]*sync.Mutex, len(supportedCurrencies))
+	for _, c := range supportedCurrencies {
+		fetchLocks[c] = &sync.Mutex{}
+	}
 	return &ExchangeRateService{
-		cfg:    cfg,
-		logger: logger,
-		client: &http.Client{Timeout: cfg.Timeout},
-		cache:  make(map[string]*exchangeRateCache),
-		stopCh: make(chan struct{}),
+		cfg:         cfg,
+		logger:      logger,
+		client:      &http.Client{Timeout: cfg.Timeout},
+		cache:       make(map[string]*exchangeRateCache),
+		lastFailure: make(map[string]time.Time),
+		fetchLocks:  fetchLocks,
+		stopCh:      make(chan struct{}),
 	}
 }
 
@@ -90,41 +103,64 @@ func (s *ExchangeRateService) GetRates(base string) (*dto.ExchangeRateResponse, 
 		return nil, fmt.Errorf("unsupported currency: %s", base)
 	}
 
-	s.mu.RLock()
-	cached, ok := s.cache[base]
-	s.mu.RUnlock()
-
-	if ok && time.Since(cached.fetchedAt) < s.cfg.RefreshInterval*2 {
-		return &dto.ExchangeRateResponse{
-			Base:  cached.base,
-			Date:  cached.date,
-			Rates: cached.rates,
-		}, nil
+	if cached, fresh := s.cachedRates(base); fresh {
+		return toRateResponse(cached), nil
 	}
 
-	// 缓存不存在或过期，尝试同步拉取
-	if err := s.fetchAndCache(base); err != nil {
+	// 缓存不存在或过期：同一币种同时只允许一个请求拉取
+	lock := s.fetchLocks[base]
+	lock.Lock()
+	defer lock.Unlock()
+
+	// 拿到锁后再检查一次：等待期间可能已被其他请求刷新
+	cached, fresh := s.cachedRates(base)
+	if fresh {
+		return toRateResponse(cached), nil
+	}
+
+	s.mu.RLock()
+	lastFailure := s.lastFailure[base]
+	s.mu.RUnlock()
+
+	var fetchErr error
+	if time.Since(lastFailure) < fetchFailureBackoff {
+		fetchErr = fmt.Errorf("exchange rate API recently failed, retrying after backoff")
+	} else if fetchErr = s.fetchAndCache(base); fetchErr != nil {
+		s.mu.Lock()
+		s.lastFailure[base] = time.Now()
+		s.mu.Unlock()
+	}
+
+	if fetchErr != nil {
 		// 如果有旧缓存，降级返回旧数据
-		if ok {
-			s.logger.Warn("using stale exchange rate cache", zap.String("base", base), zap.Error(err))
-			return &dto.ExchangeRateResponse{
-				Base:  cached.base,
-				Date:  cached.date,
-				Rates: cached.rates,
-			}, nil
+		if cached != nil {
+			s.logger.Warn("using stale exchange rate cache", zap.String("base", base), zap.Error(fetchErr))
+			return toRateResponse(cached), nil
 		}
-		return nil, fmt.Errorf("failed to fetch exchange rates: %w", err)
+		return nil, fmt.Errorf("failed to fetch exchange rates: %w", fetchErr)
 	}
 
-	s.mu.RLock()
-	cached = s.cache[base]
-	s.mu.RUnlock()
+	cached, _ = s.cachedRates(base)
+	return toRateResponse(cached), nil
+}
 
+// cachedRates 返回缓存（可能为 nil）及其是否仍在有效期内
+func (s *ExchangeRateService) cachedRates(base string) (*exchangeRateCache, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	cached, ok := s.cache[base]
+	if !ok {
+		return nil, false
+	}
+	return cached, time.Since(cached.fetchedAt) < s.cfg.RefreshInterval*2
+}
+
+func toRateResponse(c *exchangeRateCache) *dto.ExchangeRateResponse {
 	return &dto.ExchangeRateResponse{
-		Base:  cached.base,
-		Date:  cached.date,
-		Rates: cached.rates,
-	}, nil
+		Base:  c.base,
+		Date:  c.date,
+		Rates: c.rates,
+	}
 }
 
 // refreshAll 刷新所有支持币种的汇率缓存

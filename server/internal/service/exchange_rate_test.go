@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -95,6 +97,53 @@ func TestExchangeRateService_GetRates(t *testing.T) {
 
 		_, err := svc.GetRates("USD")
 		assert.Error(t, err)
+	})
+}
+
+func TestExchangeRateService_GetRates_Coalescing(t *testing.T) {
+	t.Run("concurrent cache misses hit the API once", func(t *testing.T) {
+		var calls atomic.Int32
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			calls.Add(1)
+			time.Sleep(50 * time.Millisecond)
+			json.NewEncoder(w).Encode(frankfurterResponse{Base: "USD", Date: "2026-04-01", Rates: map[string]float64{"CNY": 7.25}})
+		}))
+		defer server.Close()
+
+		svc := NewExchangeRateService(config.ExchangeRateConfig{
+			APIURL: server.URL, RefreshInterval: time.Hour, Timeout: 5 * time.Second,
+		}, zap.NewNop())
+
+		var wg sync.WaitGroup
+		for i := 0; i < 10; i++ {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				_, err := svc.GetRates("USD")
+				assert.NoError(t, err)
+			}()
+		}
+		wg.Wait()
+		assert.Equal(t, int32(1), calls.Load())
+	})
+
+	t.Run("failure backs off instead of retrying every request", func(t *testing.T) {
+		var calls atomic.Int32
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			calls.Add(1)
+			w.WriteHeader(http.StatusBadGateway)
+		}))
+		defer server.Close()
+
+		svc := NewExchangeRateService(config.ExchangeRateConfig{
+			APIURL: server.URL, RefreshInterval: time.Hour, Timeout: 5 * time.Second,
+		}, zap.NewNop())
+
+		for i := 0; i < 3; i++ {
+			_, err := svc.GetRates("USD")
+			assert.Error(t, err)
+		}
+		assert.Equal(t, int32(1), calls.Load())
 	})
 }
 

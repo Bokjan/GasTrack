@@ -106,7 +106,12 @@ func (s *VehicleService) List(ctx context.Context, userID uuid.UUID, includeArch
 			if batchErr != nil {
 				s.logger.Warn("failed to batch fetch shared vehicles", zap.Error(batchErr))
 			} else {
-				for vid, vehicle := range vehicleMap {
+				// 按共享列表顺序（群组名、共享时间）输出，避免 map 遍历导致顺序随机
+				for _, vid := range uniqueVehicleIDs {
+					vehicle, ok := vehicleMap[vid]
+					if !ok {
+						continue
+					}
 					resp := vehicleToResponse(vehicle)
 					if groupInfo, ok := vehicleGroupMap[vid]; ok {
 						resp.SharedFromGroupID = groupInfo.GroupID.String()

@@ -27,6 +27,9 @@ func NewExportHandler(exportService *service.ExportService, logger *zap.Logger) 
 }
 
 // ExportMyData 导出当前用户的数据
+// exportWriteTimeout 导出接口的写超时（覆盖全局 server.write_timeout）
+const exportWriteTimeout = 5 * time.Minute
+
 // GET /api/v1/users/me/export?format=csv|zip|json&scope=basic|full
 func (h *ExportHandler) ExportMyData(w http.ResponseWriter, r *http.Request) {
 	userID, ok := middleware.GetUserID(r.Context())
@@ -66,6 +69,11 @@ func (h *ExportHandler) ExportMyData(w http.ResponseWriter, r *http.Request) {
 	// 如果 scope=full 且 format=csv，自动升级为 zip（多模块单文件 CSV 不合适）
 	if scope == service.ExportScopeFull && format == service.ExportFormatCSV {
 		format = service.ExportFormatZIP
+	}
+
+	// 数据量大时导出可能超过全局 WriteTimeout，单独放宽本请求的写超时
+	if err := http.NewResponseController(w).SetWriteDeadline(time.Now().Add(exportWriteTimeout)); err != nil {
+		h.logger.Warn("failed to extend export write deadline", zap.Error(err))
 	}
 
 	data, err := h.exportService.GatherUserData(r.Context(), userID, scope)
@@ -263,7 +271,7 @@ func writeFuelRecordsCSVBody(writer *csv.Writer, data *service.UserExportData) {
 		"ID", "Vehicle ID", "Refuel Date", "Station Name",
 		"Fuel Amount", "Fuel Unit", "Unit Price", "Total Cost", "Currency",
 		"Odometer", "Distance Unit", "Is Full Tank", "Fuel Grade",
-		"Trip Distance", "Fuel Efficiency", "Note", "Created At",
+		"Trip Distance", "Fuel Efficiency", "Note", "Created At", "Recorded By",
 	})
 	for _, rec := range data.FuelRecords {
 		writer.Write([]string{
@@ -284,6 +292,7 @@ func writeFuelRecordsCSVBody(writer *csv.Writer, data *service.UserExportData) {
 			fmt.Sprintf("%.2f", rec.FuelEfficiency),
 			rec.Note,
 			rec.CreatedAt.Format(time.RFC3339),
+			rec.UserID.String(),
 		})
 	}
 }
@@ -292,7 +301,7 @@ func writeExpenseRecordsCSV(writer *csv.Writer, data *service.UserExportData) {
 	writer.Write([]string{
 		"ID", "Vehicle ID", "Category", "Maintenance Category", "Title", "Amount",
 		"Currency", "Vendor Name", "Odometer", "Distance Unit", "Note",
-		"Expense Date", "Reminder ID", "Created At",
+		"Expense Date", "Reminder ID", "Created At", "Recorded By",
 	})
 	for _, e := range data.ExpenseRecords {
 		reminderID := ""
@@ -314,6 +323,7 @@ func writeExpenseRecordsCSV(writer *csv.Writer, data *service.UserExportData) {
 			e.ExpenseDate.Format(time.RFC3339),
 			reminderID,
 			e.CreatedAt.Format(time.RFC3339),
+			e.UserID.String(),
 		})
 	}
 }

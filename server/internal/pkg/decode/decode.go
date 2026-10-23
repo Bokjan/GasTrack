@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -113,23 +114,9 @@ func formatValidationErrors(err error) error {
 		return err
 	}
 
-	var msgs []string
+	msgs := make([]string, 0, len(validationErrs))
 	for _, e := range validationErrs {
-		field := strings.ToLower(e.Field())
-		switch e.Tag() {
-		case "required":
-			msgs = append(msgs, fmt.Sprintf("%s is required", field))
-		case "email":
-			msgs = append(msgs, fmt.Sprintf("%s must be a valid email", field))
-		case "min":
-			msgs = append(msgs, fmt.Sprintf("%s must be at least %s characters", field, e.Param()))
-		case "max":
-			msgs = append(msgs, fmt.Sprintf("%s must be at most %s characters", field, e.Param()))
-		case "oneof":
-			msgs = append(msgs, fmt.Sprintf("%s must be one of: %s", field, e.Param()))
-		default:
-			msgs = append(msgs, fmt.Sprintf("%s is invalid (%s)", field, e.Tag()))
-		}
+		msgs = append(msgs, validationMessage(e))
 	}
 
 	return fmt.Errorf("validation failed: %s", strings.Join(msgs, "; "))
@@ -144,21 +131,42 @@ func GetValidationErrors(err error) []ValidationError {
 
 	result := make([]ValidationError, 0, len(validationErrs))
 	for _, e := range validationErrs {
-		field := strings.ToLower(e.Field())
-		var msg string
-		switch e.Tag() {
-		case "required":
-			msg = fmt.Sprintf("%s is required", field)
-		case "email":
-			msg = fmt.Sprintf("%s must be a valid email", field)
-		case "min":
-			msg = fmt.Sprintf("%s must be at least %s characters", field, e.Param())
-		case "max":
-			msg = fmt.Sprintf("%s must be at most %s characters", field, e.Param())
-		default:
-			msg = fmt.Sprintf("%s is invalid", field)
-		}
-		result = append(result, ValidationError{Field: field, Message: msg})
+		result = append(result, ValidationError{Field: strings.ToLower(e.Field()), Message: validationMessage(e)})
 	}
 	return result
+}
+
+// validationMessage 生成单个字段的校验错误信息；min/max 对字符串表示长度，对数值表示取值范围
+func validationMessage(e validator.FieldError) string {
+	field := strings.ToLower(e.Field())
+	isLength := false
+	switch e.Kind() {
+	case reflect.String, reflect.Slice, reflect.Map, reflect.Array:
+		isLength = true
+	}
+
+	switch e.Tag() {
+	case "required":
+		return fmt.Sprintf("%s is required", field)
+	case "email":
+		return fmt.Sprintf("%s must be a valid email", field)
+	case "min", "gte":
+		if isLength {
+			return fmt.Sprintf("%s must be at least %s characters", field, e.Param())
+		}
+		return fmt.Sprintf("%s must be at least %s", field, e.Param())
+	case "max", "lte":
+		if isLength {
+			return fmt.Sprintf("%s must be at most %s characters", field, e.Param())
+		}
+		return fmt.Sprintf("%s must be at most %s", field, e.Param())
+	case "gt":
+		return fmt.Sprintf("%s must be greater than %s", field, e.Param())
+	case "len":
+		return fmt.Sprintf("%s must be exactly %s characters", field, e.Param())
+	case "oneof":
+		return fmt.Sprintf("%s must be one of: %s", field, e.Param())
+	default:
+		return fmt.Sprintf("%s is invalid (%s)", field, e.Tag())
+	}
 }

@@ -130,11 +130,12 @@ func (r *ExpenseRecordRepository) Delete(ctx context.Context, id, vehicleID uuid
 	return r.db.WithContext(ctx).Where("id = ? AND vehicle_id = ?", id, vehicleID).Delete(&model.ExpenseRecord{}).Error
 }
 
-// ListAllByUser 查询用户的所有开销记录（用于数据导出，按日期升序）
+// ListAllByUser 查询与用户相关的所有开销记录（用于数据导出，按日期升序）：
+// 用户本人录入的记录，以及群组成员在该用户车辆上录入的记录
 func (r *ExpenseRecordRepository) ListAllByUser(ctx context.Context, userID uuid.UUID) ([]model.ExpenseRecord, error) {
 	var records []model.ExpenseRecord
 	err := r.db.WithContext(ctx).
-		Where("user_id = ?", userID).
+		Where("user_id = ? OR vehicle_id IN (SELECT id FROM vehicles WHERE user_id = ? AND deleted_at IS NULL)", userID, userID).
 		Order("expense_date ASC, created_at ASC").
 		Find(&records).Error
 	return records, err
