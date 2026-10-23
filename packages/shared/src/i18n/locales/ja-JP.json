@@ -789,7 +789,7 @@
   },
   "pwa": {
     "updateAvailable": "新しいバージョンがあります",
-    "updateDescription": "GasTrack の新バージョンが利用可能です。続行するにはページを更新してください。",
+    "updateDescription": "GasTrack の新しいバージョンがあります。編集中の内容を保存してから更新してください。",
     "refresh": "更新",
     "version": "バージョン：{{version}}",
     "buildTime": "ビルド：{{time}}",

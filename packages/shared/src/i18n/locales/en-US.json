@@ -789,7 +789,7 @@
   },
   "pwa": {
     "updateAvailable": "Update Available",
-    "updateDescription": "A new version of GasTrack is available. Please refresh to continue.",
+    "updateDescription": "A new version of GasTrack is available. Save any unfinished edits, then refresh.",
     "refresh": "Refresh",
     "version": "Version: {{version}}",
     "buildTime": "Built: {{time}}",

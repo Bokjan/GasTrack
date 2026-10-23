@@ -1,1 +1,0 @@
-{"root":["./src/index.ts","./src/api/client.ts","./src/api/index.ts","./src/constants/index.ts","./src/i18n/index.ts","./src/stores/authstore.ts","./src/stores/index.ts","./src/stores/vehiclestore.ts","./src/types/index.ts","./src/utils/index.ts"],"errors":true,"version":"5.9.3"}

@@ -13,7 +13,8 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // prompt：新版本就绪后由用户决定何时刷新，避免打断正在填写的表单
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'icons/*.png'],
       manifest: {
         name: 'GasTrack - Vehicle Energy & Cost Tracker',
@@ -50,8 +51,9 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4 MiB
         runtimeCaching: [
           {
-            // API requests — Network first, fallback to cache
-            urlPattern: /\/api\/.*/i,
+            // API requests — Network first, fallback to cache（离线可看最近数据）
+            // 数据导出体积大且包含全部个人数据，不缓存；登出时整个 api-cache 会被清除
+            urlPattern: ({ url }) => url.pathname.startsWith('/api/') && !url.pathname.endsWith('/export'),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',

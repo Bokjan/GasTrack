@@ -9,6 +9,10 @@ package-lock.json
 # ========================
 dist/
 build/
+*.tsbuildinfo
+# tsc -b 产物：Vite 会优先读取 .js 配置，入库会导致 dev 使用过期配置
+packages/web/vite.config.js
+packages/web/vite.config.d.ts
 
 # ========================
 # Environment variables
