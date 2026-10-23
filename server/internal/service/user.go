@@ -120,7 +120,7 @@ func (s *UserService) ChangePassword(ctx context.Context, userID uuid.UUID, req 
 	}
 
 	// 生成新密码 hash
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), 12)
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcryptCost)
 	if err != nil {
 		return nil, apperror.ErrInternal("hashing new password", err)
 	}

@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -26,6 +28,9 @@ import (
 
 // maxPasswordBytes bcrypt 支持的最大密码字节数
 const maxPasswordBytes = 72
+
+// bcryptCost 密码哈希成本
+const bcryptCost = 12
 
 // AuthService 认证业务逻辑
 type AuthService struct {
@@ -83,6 +88,9 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 		return nil, apperror.ErrBadRequest("auth.password_too_long", "password must be at most 72 bytes")
 	}
 
+	// 邮箱统一去空白并小写，避免大小写不同被视为两个账号
+	req.Email = NormalizeEmail(req.Email)
+
 	// 2. 检查邮箱是否已注册
 	exists, err := s.userRepo.ExistsByEmail(ctx, req.Email)
 	if err != nil {
@@ -93,7 +101,7 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	}
 
 	// 3. 密码哈希（bcrypt, cost=12）
-	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), 12)
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcryptCost)
 	if err != nil {
 		return nil, apperror.ErrInternal("hashing password", err)
 	}
@@ -151,9 +159,11 @@ func (s *AuthService) Register(ctx context.Context, req *dto.RegisterRequest) (*
 
 // Login 用户登录
 func (s *AuthService) Login(ctx context.Context, req *dto.LoginRequest) (*dto.AuthResponse, error) {
-	user, err := s.userRepo.GetByEmail(ctx, req.Email)
+	user, err := s.userRepo.GetByEmail(ctx, NormalizeEmail(req.Email))
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			// 用户不存在时同样执行一次 bcrypt 比较，使响应耗时与"密码错误"一致，防止通过耗时枚举邮箱
+			_ = bcrypt.CompareHashAndPassword(dummyPasswordHash(), []byte(req.Password))
 			return nil, apperror.ErrUnauthorized("auth.invalid_credentials", "invalid email or password")
 		}
 		return nil, apperror.ErrInternal("finding user", err)
@@ -272,6 +282,24 @@ func (s *AuthService) IssueTokenPair(ctx context.Context, user *model.User) (*dt
 }
 
 // --- 辅助函数 ---
+
+// NormalizeEmail 邮箱规范化：去除首尾空白并转为小写
+func NormalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+var (
+	dummyHashOnce sync.Once
+	dummyHash     []byte
+)
+
+// dummyPasswordHash 返回与真实密码同 cost 的占位 hash（首次使用时生成）
+func dummyPasswordHash() []byte {
+	dummyHashOnce.Do(func() {
+		dummyHash, _ = bcrypt.GenerateFromPassword([]byte("gastrack-timing-equalizer"), bcryptCost)
+	})
+	return dummyHash
+}
 
 // generateRandomToken 生成指定长度的随机 hex 字符串
 func generateRandomToken(length int) (string, error) {

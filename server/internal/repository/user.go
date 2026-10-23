@@ -36,10 +36,11 @@ func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.User
 	return &user, nil
 }
 
-// GetByEmail 根据邮箱查询用户
+// GetByEmail 根据邮箱查询用户（大小写不敏感；email 参数应已规范化为小写）
+// 历史数据中可能存在仅大小写不同的多个账号，按注册时间取最早的一个
 func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	var user model.User
-	err := r.db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	err := r.db.WithContext(ctx).Where("LOWER(email) = ?", email).Order("created_at ASC").First(&user).Error
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +72,7 @@ func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
 func (r *UserRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
 	var exists bool
 	err := r.db.WithContext(ctx).Raw(
-		"SELECT EXISTS(SELECT 1 FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1)", email,
+		"SELECT EXISTS(SELECT 1 FROM users WHERE LOWER(email) = ? AND deleted_at IS NULL LIMIT 1)", email,
 	).Scan(&exists).Error
 	return exists, err
 }

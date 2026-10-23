@@ -57,6 +57,10 @@ func New(cfg *config.DatabaseConfig, zapLogger *zap.Logger) (*gorm.DB, error) {
 	if err := widenFuelEfficiency(db); err != nil {
 		return nil, fmt.Errorf("widening fuel_records.fuel_efficiency: %w", err)
 	}
+	// 邮箱按小写匹配（登录、查重），需要表达式索引支撑；仅新增索引，不改动数据
+	if err := db.Exec("CREATE INDEX IF NOT EXISTS idx_users_email_lower ON users (LOWER(email))").Error; err != nil {
+		return nil, fmt.Errorf("creating idx_users_email_lower: %w", err)
+	}
 
 	zapLogger.Info("database connected",
 		zap.String("host", cfg.Host),

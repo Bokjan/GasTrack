@@ -172,7 +172,7 @@ func TestAuthService_Register(t *testing.T) {
 		userRepo.EXPECT().ExistsByEmail(gomock.Any(), "exists@example.com").Return(true, nil)
 
 		_, err := svc.Register(context.Background(), &dto.RegisterRequest{
-			Email:    "exists@example.com",
+			Email:    " Exists@Example.com",
 			Password: "password123",
 			Nickname: "Exists",
 		})
@@ -212,6 +212,36 @@ func TestAuthService_Login(t *testing.T) {
 			Password: "password123",
 		})
 		assert.Equal(t, 401, err.(*apperror.AppError).Code)
+	})
+
+	t.Run("email is normalized before lookup", func(t *testing.T) {
+		svc, userRepo, _, _, _ := newAuthService(t, "open")
+		userRepo.EXPECT().GetByEmail(gomock.Any(), "mixed@example.com").Return(nil, gorm.ErrRecordNotFound)
+
+		_, err := svc.Login(context.Background(), &dto.LoginRequest{Email: "  Mixed@Example.COM ", Password: "x"})
+		assert.Equal(t, 401, err.(*apperror.AppError).Code)
+	})
+
+	t.Run("unknown email costs as much as a wrong password", func(t *testing.T) {
+		svc, userRepo, _, _, _ := newAuthService(t, "open")
+		realHash, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcryptCost)
+		userRepo.EXPECT().GetByEmail(gomock.Any(), "known@example.com").Return(&model.User{
+			BaseModel: model.BaseModel{ID: uuid.New()}, PasswordHash: string(realHash), Status: "active",
+		}, nil)
+		userRepo.EXPECT().GetByEmail(gomock.Any(), "unknown@example.com").Return(nil, gorm.ErrRecordNotFound).Times(2)
+
+		// 预热占位 hash 的生成，避免计入首次耗时
+		_, _ = svc.Login(context.Background(), &dto.LoginRequest{Email: "unknown@example.com", Password: "x"})
+
+		start := time.Now()
+		_, _ = svc.Login(context.Background(), &dto.LoginRequest{Email: "known@example.com", Password: "wrong"})
+		wrongPassword := time.Since(start)
+
+		start = time.Now()
+		_, _ = svc.Login(context.Background(), &dto.LoginRequest{Email: "unknown@example.com", Password: "wrong"})
+		unknownEmail := time.Since(start)
+
+		assert.Greater(t, unknownEmail, wrongPassword/2, "unknown=%v wrong=%v", unknownEmail, wrongPassword)
 	})
 
 	t.Run("wrong password", func(t *testing.T) {
